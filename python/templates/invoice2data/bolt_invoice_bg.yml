@@ -1,0 +1,31 @@
+# Bolt's actual invoice PDF, as downloaded from the "Download PDF invoice"
+# link in a ride receipt. Bulgarian, and structurally unrelated to the English
+# email body that bolt_ride_receipt.yml reads — hence a second template.
+#
+# Only this document carries the invoice number and the net/VAT split; the
+# email body just states the gross total.
+issuer: Bolt Operations OÜ
+keywords:
+  - Фактура
+  - Bolt Operations
+fields:
+  invoice_number: 'Фактура:\s*(\d+)'
+  date: 'Дата:\s*(\d{4}-\d{2}-\d{2})'
+  # "Общо с ДДС" (total incl. VAT) is the amount actually charged.
+  amount: 'Общо с ДДС \(EUR\):\s*([\d.,]+)'
+  # Bare "Общо (EUR):" is the net total. The lookahead keeps it from matching
+  # the column header of the same name, which carries no value.
+  amount_untaxed: 'Общо \(EUR\):\s*([\d.,]+)'
+  # "с ДДС (EUR):" would match here too, so exclude the preceding "с ".
+  amount_tax: '(?<!с )ДДС \(EUR\):\s*([\d.,]+)'
+  vat_number: 'ДДС №\.:\s*([A-Z]{2}[A-Z0-9]+)'
+  company_number: 'Рег\. код:\s*(\d+)'
+  reference: 'Референтен номер:\s*(\S+)'
+  service_start: 'Начало:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2})'
+options:
+  currency: EUR
+  languages:
+    - bg
+  decimal_separator: '.'
+  date_formats:
+    - '%Y-%m-%d'

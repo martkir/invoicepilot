@@ -1,0 +1,27 @@
+# Bolt ride receipt, as it arrives in the mail body (Bolt mails the receipt and
+# links to the PDF rather than attaching it, so this template matches text, not
+# a document).
+#
+# Example of a local template: invoice2data ships 215 built-ins, none of which
+# cover Bolt. Drop more YAML files beside this one and parse_invoices.py picks
+# them up automatically.
+issuer: Bolt Operations OÜ
+keywords:
+  - Bolt Operations
+fields:
+  amount: 'Total charged\s*€\s*([\d.,]+)'
+  # The receipt dates the ride, not the document: "Thu, 2026-08-06".
+  date: '(\d{4}-\d{2}-\d{2})'
+  vat_number: 'VAT no\.\s*([A-Z]{2}[A-Z0-9]+)'
+# Ride receipts carry no invoice number, so the default requirement of
+# date+amount+invoice_number+issuer would reject every one of them.
+required_fields:
+  - date
+  - amount
+options:
+  currency: EUR
+  languages:
+    - en
+  decimal_separator: '.'
+  date_formats:
+    - '%Y-%m-%d'

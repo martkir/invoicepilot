@@ -1,0 +1,8 @@
+.venv/
+# Extracted invoices — real financial documents, never committed.
+.data/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
