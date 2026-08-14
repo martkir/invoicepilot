@@ -103,15 +103,37 @@ the manifest query is written once and appears on the six screens that use it.
 The screens, the contact sheet and the endpoint table are all emitted from
 that one structure.
 
-### Two files that are not annotated
+### The viewer
 
-- **`email.html`** is copied verbatim. `04-compose.html` loads it in an
-  `<iframe>`, and a docked panel inside that frame would annotate the preview
-  instead of the composer. What the mail is wired to is on pin 4 of the
-  composer instead.
-- **`viewer.html`** is not copied. It pages through the screens one at a time
-  in a frame, which is the same problem, and the panel already travels with
-  each screen.
+[`viewer.html`](viewer.html) pages through all fifteen screens with the arrow
+keys, the panel travelling with each one. It is the design folder's viewer with
+**one thing replaced: the screen list.**
+
+That list is the one part it cannot keep. The original discovers screens by
+fetching `index.html` and reading `.step` sections off the contact sheet, so
+titles and captions never have to be maintained twice — and this folder's
+`index.html` is a map rather than a flow diagram, with no `.step` sections in
+it. Left alone the parse would fail into a hard-coded fallback that nothing
+keeps in step, which is the drift that mechanism exists to prevent. Here the
+list has a real single source — the same table that places the pins — so it is
+written out rather than rediscovered.
+
+What it gains from being generated: the chip in the bar counts the screen's
+pins, and the caption bar carries the screen's routes and the number of open
+questions on it. Paging through the flow reads as the flow *and* as its wiring.
+
+The order is the flow's, not the filenames' — loading before the page it stands
+in for, the mail between sending it and the recipient opening it. It is the
+order that viewer already carried, plus `01b-row.html`, which the original list
+omits because nothing in the flow passes through it. It is in this folder and
+reachable, so it pages one step after the screen it opens out of.
+
+### The one file that is not annotated
+
+**`email.html`** is copied verbatim. `04-compose.html` loads it in an
+`<iframe>`, and a docked panel inside that frame would annotate the preview
+instead of the composer. It still pages in the viewer, where the caption says
+why it carries no pins; what sends it is pin 5 on the composer.
 
 ## The annotation layer itself
 

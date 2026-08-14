@@ -39,6 +39,7 @@ and backend/invoices.py; the six new ones are the plan.
 """
 
 import html
+import json
 import shutil
 from pathlib import Path
 from typing import NamedTuple
@@ -828,20 +829,187 @@ def annotate(screen: str, title: str, lede: str, pins: tuple[Pin, ...]) -> str:
     # Point the three sheets back at the folder that owns them, and add the
     # only one this folder owns. Order matters: annotations.css must win.
     for sheet in SHEETS:
-        needle = f'<link rel="stylesheet" href="{sheet}"/>'
-        if needle not in source:
-            raise SystemExit(f"{screen}: expected a link to {sheet}")
-        source = source.replace(
-            needle, f'<link rel="stylesheet" href="../share-flow-v3-light/{sheet}"/>'
+        source = swap(
+            source,
+            f'<link rel="stylesheet" href="{sheet}"/>',
+            f'<link rel="stylesheet" href="../share-flow-v3-light/{sheet}"/>',
+            screen,
         )
-    source = source.replace(
-        "</head>", '<link rel="stylesheet" href="annotations.css"/>\n</head>', 1
+    source = swap(
+        source, "</head>", '<link rel="stylesheet" href="annotations.css"/>\n</head>', screen
     )
     # So a tab holding the annotated screen is not mistaken for the real one.
-    source = source.replace(" · Invoice Pilot</title>", " · wiring · Invoice Pilot</title>", 1)
+    source = swap(
+        source, " · Invoice Pilot</title>", " · wiring · Invoice Pilot</title>", screen
+    )
 
     source = mark(source, pins, screen)
-    return source.replace("</body>", f"{legend(title, lede, pins)}</body>", 1)
+    return swap(source, "</body>", f"{legend(title, lede, pins)}</body>", screen)
+
+
+# The order the viewer pages through, which is the flow's order rather than
+# the filenames': loading comes before the page it stands in for, and the mail
+# sits between sending it and the recipient opening it. Taken from the list
+# ../share-flow-v3-light/viewer.html already carried, plus 01b-row, which that
+# list omits because nothing in the flow passes through it. It is in this
+# folder and reachable, so it pages here, one step after the screen it opens
+# out of.
+VIEWER_ORDER = (
+    "01-idle.html",
+    "01b-row.html",
+    "02-link.html",
+    "10-loading.html",
+    "03-preview.html",
+    "11-zipping.html",
+    "04-compose.html",
+    "05-from.html",
+    "12-invalid.html",
+    "06-sent.html",
+    "email.html",
+    "07-recipient.html",
+    "08-send-failed.html",
+    "09-revoked.html",
+    "13-not-found.html",
+)
+
+
+def swap(source: str, needle: str, replacement: str, where: str) -> str:
+    """`str.replace` that refuses to do nothing.
+
+    A replacement that silently misses is the failure this folder exists to
+    avoid: it leaves a file that looks generated and is not. Every rewrite goes
+    through here for the same reason every pin is anchored.
+    """
+    if needle not in source:
+        raise SystemExit(
+            f"{where}: expected to find {needle!r}. Re-read the file in "
+            f"../share-flow-v3-light/ and fix the needle in annotate.py."
+        )
+    return source.replace(needle, replacement, 1)
+
+
+def cut(source: str, start: str, end: str, replacement: str, what: str) -> str:
+    """Replace everything between two anchors, or stop naming the one that moved.
+
+    Used instead of matching the whole block: viewer.html is a hand-edited
+    one-off, and anchoring on the two ends of a region survives edits inside it
+    that an exact match of the whole thing would not.
+    """
+    head = source.find(start)
+    tail = source.find(end, head + len(start)) if head >= 0 else -1
+    if head < 0 or tail < 0:
+        raise SystemExit(
+            f"viewer.html: could not find the {what} block "
+            f"({start.strip()!r} .. {end.strip()!r}). Re-read "
+            f"../share-flow-v3-light/viewer.html and fix the anchors."
+        )
+    return source[:head] + replacement + source[tail:]
+
+
+def viewer() -> str:
+    """The paginated viewer, pointed at the annotated screens.
+
+    The screens are the design folder's viewer, with its screen list replaced.
+    That list is the one thing it cannot keep: it discovers screens by fetching
+    index.html and reading `.step` sections off the contact sheet, and this
+    folder's index.html is a map rather than a flow diagram, so the parse would
+    fail into a hard-coded fallback that nothing keeps in step. Here the list
+    has a real single source - SCREENS above - so it is written out rather than
+    rediscovered.
+    """
+    source = (SRC / "viewer.html").read_text(encoding="utf-8")
+    source = swap(
+        source,
+        '<link rel="stylesheet" href="tokens-v3.css"/>',
+        '<link rel="stylesheet" href="../share-flow-v3-light/tokens-v3.css"/>',
+        "viewer.html",
+    )
+    source = swap(
+        source,
+        "Flow viewer · Share flow v3 light",
+        "Flow viewer · Share flow v3 light, annotated",
+        "viewer.html",
+    )
+
+    entries = []
+    for name in VIEWER_ORDER:
+        stem = name.removesuffix(".html")
+        if name not in SCREENS:
+            # email.html: copied rather than annotated, and the viewer says so
+            # rather than leaving a screen with no panel unexplained.
+            entries.append(
+                {
+                    "src": name,
+                    "num": "mail",
+                    "title": "The email",
+                    "route": "no pins",
+                    "caption": "<p>The draft, copied unannotated: the composer "
+                    "loads this file in an <code>iframe</code>, and a panel "
+                    "inside that frame would annotate the preview instead of "
+                    "the composer. What sends it is pin 5 on "
+                    "<code>04-compose.html</code>.</p>",
+                }
+            )
+            continue
+
+        title, lede, pins = SCREENS[name]
+        # Distinct routes, in the order they are first pinned.
+        routes: list[str] = []
+        for pin in pins:
+            if pin.endpoint and pin.endpoint not in routes:
+                routes.append(pin.endpoint)
+        calls = " ".join(
+            f"<code>{ENDPOINTS[key].method} {html.escape(ENDPOINTS[key].path)}</code>"
+            for key in routes
+        )
+        gaps = sum(1 for pin in pins if pin.gap)
+        caption = f"<p>{html.escape(lede)}</p>"
+        caption += f"<p>{calls}</p>" if calls else "<p>No request at all.</p>"
+        if gaps:
+            caption += (
+                f"<p><b>{gaps} open question{'s' if gaps > 1 else ''}</b> on this "
+                f"screen - see the panel.</p>"
+            )
+        entries.append(
+            {
+                "src": name,
+                "num": stem.split("-")[0],
+                "title": title,
+                "route": f"{len(pins)} pin{'s' if len(pins) > 1 else ''}",
+                "caption": caption,
+            }
+        )
+
+    listing = ",\n".join(
+        "  {"
+        + ", ".join(f"{key}: {json.dumps(value)}" for key, value in entry.items())
+        + "}"
+        for entry in entries
+    )
+
+    source = cut(
+        source,
+        "// Screens are read from index.html",
+        "\nconst el = {",
+        f"""// The screen list, written out by annotate.py from the same table that
+// places the pins. The design folder's viewer discovers this by fetching
+// index.html and reading `.step` sections off it; this folder's index.html is
+// a map rather than a flow diagram, so there is nothing there to parse and
+// nothing gained by parsing it - the list already has one source.
+const SCREENS = [
+{listing},
+];
+""",
+        "screen list",
+    )
+
+    return cut(
+        source,
+        "async function loadScreens() {",
+        "\nconst slug =",
+        "async function loadScreens() {\n  return SCREENS;\n}\n",
+        "loadScreens",
+    )
 
 
 def index() -> str:
@@ -909,6 +1077,9 @@ def index() -> str:
 
   <section class="map-part">
     <h2>The screens</h2>
+    <p class="map-note">Each one carries a panel naming what fills its pinned
+      elements. <a href="viewer.html">viewer.html</a> pages through them one at
+      a time, with the routes and the open questions in the caption bar.</p>
     <ol class="map-grid">{cards}</ol>
   </section>
 
@@ -948,6 +1119,9 @@ def main() -> None:
 
     (HERE / "index.html").write_text(index(), encoding="utf-8")
     print("wrote index.html")
+
+    (HERE / "viewer.html").write_text(viewer(), encoding="utf-8")
+    print(f"wrote viewer.html ({len(VIEWER_ORDER)} screens)")
 
 
 if __name__ == "__main__":
