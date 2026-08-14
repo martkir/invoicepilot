@@ -6,7 +6,7 @@ import type { Invoice } from '../api/types'
 import { InvoiceDetail } from './InvoiceDetail'
 import { Toast } from './Toast'
 import { amount, initials, issued } from '../lib/format'
-import { Download, Expand, Eye, Refresh, SortAsc, SortDesc } from './Icons'
+import { Download, Eye, Refresh, Share } from './Icons'
 
 interface Props {
   invoices: Invoice[]
@@ -46,11 +46,11 @@ export function InvoiceTable({
   const someChecked = selected.size > 0 && selected.size < invoices.length
 
   return (
-    <section className="card">
+    <section className="card" aria-label="Invoices">
       <div className="table-head">
-        <div className="table-title">
+        <h1 className="table-title">
           Invoices <em id="doc-count">{invoices.length} documents</em>
-        </div>
+        </h1>
         <div className="tools">
           <span className="last-update">{lastUpdate}</span>
           <div className="tool-divider"></div>
@@ -59,12 +59,21 @@ export function InvoiceTable({
             <span>{scanLabel}</span>
           </button>
           <div className="tool-divider"></div>
-          <button className="icon-btn" aria-label="Download selected">
-            <Download />
-          </button>
-          <button className="icon-btn" aria-label="Expand table">
-            <Expand />
-          </button>
+          {/* The toolbar's download is gone: it was a third path to files the
+              row's own arrow already covers, drawn one stroke away from the
+              share glyph beside it. Share is labelled and filled because it is
+              this screen's primary action, and a bare glyph made the one thing
+              the screen exists for its least visible control.
+
+              The popover it opens needs POST /shares, which does not exist
+              yet. Until it does the control is inert on purpose rather than
+              wired to a placeholder. */}
+          <span className="pop-anchor">
+            <button className="share-btn" aria-expanded="false">
+              <Share />
+              <span>Share</span>
+            </button>
+          </span>
         </div>
       </div>
 
@@ -82,18 +91,20 @@ export function InvoiceTable({
                 onChange={onToggleAll}
               />
             </th>
-            <th>Vendor</th>
-            <th className="col-amount sortable">
-              <button>
-                Amount <SortAsc />
-              </button>
+            <th scope="col">Vendor</th>
+            {/* No chevron glyphs. The sorted column is a state rather than an
+                action, so it is marked by --ink against its neighbours'
+                --ink-soft; a direction marker goes back in when sorting is
+                actually wired to something. */}
+            <th className="col-amount sortable" scope="col">
+              <button>Amount</button>
             </th>
-            <th className="col-issued sortable sorted">
-              <button>
-                Issued <SortDesc />
-              </button>
+            <th className="col-issued sortable sorted" scope="col">
+              <button>Issued</button>
             </th>
-            <th className="col-actions">Actions</th>
+            <th className="col-actions" scope="col">
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody id="rows">

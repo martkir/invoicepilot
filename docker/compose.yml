@@ -1,11 +1,26 @@
+# The two containers this project runs: the database, and the built dashboard.
+#
+#   cd docker && docker compose --env-file .env up -d
+#
+# The API is deliberately not here. It runs on the host under uvicorn, which is
+# what `just api` starts and what the dashboard's nginx proxies /api to through
+# host.docker.internal below. Containerising it would mean rebuilding an image
+# on every backend edit, and the reload loop is the point of running it locally.
+#
+# Credentials come from docker/.env, which is why every command needs
+# --env-file .env: compose only reads a .env sitting in the directory it was
+# invoked from, and these are read from the one beside this file.
 services:
   postgres:
     image: postgres:18-alpine
+    container_name: invoice-pilot-postgres
     environment:
       POSTGRES_DB: invoicepilot
       POSTGRES_USER: ${POSTGRES_USERNAME}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
+      # Not 5432: a developer machine usually has a local Postgres already, and
+      # a port clash on the default is a confusing failure.
       - "57552:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -14,6 +29,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # The dashboard, built by the image and served by nginx. The container holds
+  # a build rather than the source, so a frontend change needs `--build` or
+  # 8090 goes on serving the previous bundle.
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: invoicepilot-web
+    ports:
+      - "8090:80"
+    extra_hosts:
+      # What makes the host's port 8000 reachable from inside the container,
+      # which is where docker/nginx.conf sends /api.
+      - "host.docker.internal:host-gateway"
 
 volumes:
   postgres_data:

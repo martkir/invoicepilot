@@ -60,7 +60,7 @@ class Row(NamedTuple):
 
 ROWS = [
     Row("Hetzner Online GmbH", "He", "R0012345678", "35.38", "6.72", "42.10", "03.04.2026", True),
-    Row("Amazon Web Services", "AW", "EUINV22-441907", "733.97", "139.45", "873.42", "05.04.2026", True),
+    Row("Amazon Web Services", "Am", "EUINV22-441907", "733.97", "139.45", "873.42", "05.04.2026", True),
     Row("Notion Labs Inc.", "No", "8F21C4-0031", "21.60", "0.00", "21.60", "06.04.2026", True),
     Row("Figma Inc.", "Fi", "INV-90412", "41.85", "0.00", "41.85", "09.04.2026", True),
     Row("Vercel Inc.", "Ve", "B7A2-2026-04", "34.72", "0.00", "34.72", "12.04.2026", True),
@@ -86,7 +86,7 @@ TILES = ROWS[:5]
 # each field, because that is what the panel has to lay out.
 DETAIL = {
     "Hetzner Online GmbH": {
-        "currency": "EUR",
+        "currency": "€",
         "issued_long": "3 April 2026",
         "service_start": "1 April 2026",
         "vat_number": "DE311046661",
@@ -95,7 +95,7 @@ DETAIL = {
         "subject": "Your Hetzner invoice R0012345678",
         "sender": "Hetzner Online GmbH &lt;accounting@hetzner.com&gt;",
         "mailbox": "billing@kirov.dev",
-        "received": "3 April 2026, 06:12",
+        "received": "3 April 2026 at 06:12",
         "bytes": "84 KB",
         "origin": "the attachment",
     },

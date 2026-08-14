@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="color-scheme" content="light"/>
+<title>Loading · wiring · Invoice Pilot</title>
+<meta name="description" content="37 invoices from April to June 2026, in one download. No account needed."/>
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="Loading · Invoice Pilot"/>
+<meta property="og:description" content="37 invoices from April to June 2026, in one download. No account needed."/>
+<meta name="theme-color" content="#eef0f6"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%235266eb%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4H8.4A2%202%200%200%200%206.4%206.4v11.2a2%202%200%200%200%202%202h7.2a2%202%200%200%200%202-2V8.4Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4v4h4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"/>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<link rel="stylesheet" href="../../../frontend/src/styles/dashboard.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/tokens-v3.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/reskin.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/flow.css"/>
+<link rel="stylesheet" href="annotations.css"/>
+</head>
+<body class="share-page">
+<a class="skip" href="#content">Skip to the content</a>
+<main id="content" class="share-main">
+  <header class="masthead"><a class="brand" href="index.html"><span class="mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.4 3.4H7.9A2.3 2.3 0 0 0 5.6 5.7v12.6a2.3 2.3 0 0 0 2.3 2.3h8.2a2.3 2.3 0 0 0 2.3-2.3V8.3Z"/><path d="M13.4 3.4v4.9h4.7"/></svg></span>Invoice Pilot</a><p class="shared-by">Shared with you by<b>Martin Kirov</b>martin@kirov.dev</p></header>
+  <div class="share-cols">
+    <section class="rail" aria-busy="true" aria-label="Loading this share">
+      <div>
+        <p class="rail-kicker"><span class="ftype">zip</span>One download, no account needed</p>
+        <h1 class="batch-name"><span class="sr-only">Loading this share</span>
+          <span class="skel skel-name" data-pin="1"></span></h1>
+      </div>
+      <dl class="facts" aria-hidden="true"><div><dt>Invoices</dt><dd><span class="skel skel-fact"></span></dd></div><div><dt>Documents</dt><dd><span class="skel skel-fact"></span></dd></div><div><dt>Size</dt><dd><span class="skel skel-fact"></span></dd></div><div><dt>Period</dt><dd><span class="skel skel-fact"></span></dd></div></dl>
+      <div class="get"><div class="skel skel-btn"></div></div>
+    </section>
+    <div class="stack">
+      <div class="doc-card" aria-busy="true">
+        <section class="part part-docs">
+          <div>
+            <h2 class="part-head"><span class="ftype">pdf</span>Documents</h2>
+            <p class="part-note">Loading the manifest.</p>
+          </div>
+          <div class="doc-grid"><div class="doc-tile"><div class="skel skel-thumb" data-pin="3"></div><span class="skel skel-line"></span><span class="skel skel-line is-short"></span></div><div class="doc-tile"><div class="skel skel-thumb"></div><span class="skel skel-line"></span><span class="skel skel-line is-short"></span></div><div class="doc-tile"><div class="skel skel-thumb"></div><span class="skel skel-line"></span><span class="skel skel-line is-short"></span></div><div class="doc-tile"><div class="skel skel-thumb"></div><span class="skel skel-line"></span><span class="skel skel-line is-short"></span></div><div class="doc-tile"><div class="skel skel-thumb"></div><span class="skel skel-line"></span><span class="skel skel-line is-short"></span></div><div class="doc-tile"><div class="skel skel-thumb"></div><span class="skel skel-line"></span><span class="skel skel-line is-short"></span></div></div>
+        </section>
+        <section class="part part-csv"><div class="skel-sheet" data-pin="2"><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div></div></section>
+      </div>
+    </div>
+  </div>
+  <footer class="share-foot">
+    <span>invoices.csv carries all 22 columns per invoice.</span>
+    <span class="spacer"></span>
+    <span>1 invoice has no document; it rides along in the CSV.</span>
+    <nav aria-label="Legal"><a href="#privacy">Privacy</a><a href="#terms">Terms</a></nav>
+  </footer>
+</main>
+<aside class="wiring" aria-label="Backend wiring">
+  <div class="wiring-head">
+    <p class="wiring-kicker">wiring</p>
+    <h2 class="wiring-title">Loading</h2>
+    <p class="wiring-lede">One request in flight, and the page shaped like its answer.</p>
+  </div>
+  <ol class="wiring-list">
+    <li class="wiring-item"><p class="wiring-el"><span class="wiring-n">1</span><span>The filename, pending</span></p><p class="wiring-call"><b>GET</b> /api/s/{token}</p><p class="wiring-tables"><span class="wiring-table is-new">shares · new</span><span class="wiring-table">invoices</span></p><pre class="wiring-sql">SELECT token, invoice_ids, created_at, expires_at
+FROM shares WHERE token = $1;     -- primary key, no index needed
+
+SELECT id, issued_on, data FROM invoices
+WHERE id = ANY($1::text[])
+ORDER BY issued_on DESC NULLS LAST, id;</pre><p class="wiring-note">Two queries, and the first one deliberately does not filter on expires_at. `WHERE expires_at &gt; now()` would fold an expired share into a missing one and cost the page the difference between 410 and 404 - which is the difference between the two dead-end screens. The row is fetched, then the expiry is compared.</p><p class="wiring-note">The manifest is one call for up to several hundred rows, so this is the only wait the page has. The band&#x27;s real headings stay visible - the page&#x27;s identity is known from the URL before its contents arrive.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">2</span><span>The manifest, pending</span></p><p class="wiring-call"><b>GET</b> /api/s/{token}</p><p class="wiring-tables"><span class="wiring-table is-new">shares · new</span><span class="wiring-table">invoices</span></p><pre class="wiring-sql">SELECT token, invoice_ids, created_at, expires_at
+FROM shares WHERE token = $1;     -- primary key, no index needed
+
+SELECT id, issued_on, data FROM invoices
+WHERE id = ANY($1::text[])
+ORDER BY issued_on DESC NULLS LAST, id;</pre><p class="wiring-note">Two queries, and the first one deliberately does not filter on expires_at. `WHERE expires_at &gt; now()` would fold an expired share into a missing one and cost the page the difference between 410 and 404 - which is the difference between the two dead-end screens. The row is fetched, then the expiry is compared.</p><p class="wiring-note">Same request. The placeholder is shaped like the sheet so nothing moves when the rows land, and `aria-busy` is on the regions being filled.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">3</span><span>The tiles, pending</span></p><p class="wiring-call"><b>GET</b> /api/s/{token}/thumb/{invoice_id}</p><p class="wiring-tables"><span class="wiring-table is-new">shares · new</span><span class="wiring-table">invoices</span></p><pre class="wiring-sql">SELECT invoice_ids, expires_at FROM shares WHERE token = $1;
+-- the id must appear in that snapshot, or 404
+SELECT data FROM invoices WHERE id = $1;</pre><p class="wiring-note">The membership check is the access control: a token grants exactly its own snapshot, so guessing an id out of another share buys nothing. The image itself is not in Postgres - it is thumb.webp beside the PDF, rendered at extraction, rendered on first request when it is missing so no backfill is needed.</p><p class="wiring-note">The five thumbnail requests cannot start until the manifest names which invoices they are for, so this is the second round trip, not the first.</p></li>
+  </ol>
+  <p class="wiring-foot">Generated by annotate.py from the screens in
+    <a href="../share-flow-v3-light/index.html">share-flow-v3-light</a>.
+    The full map is in <a href="index.html">index.html</a>.</p>
+</aside>
+</body>
+</html>

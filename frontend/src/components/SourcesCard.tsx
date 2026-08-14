@@ -22,8 +22,8 @@ export function SourcesCard({
   error,
 }: Props) {
   return (
-    <section className="card sources">
-      <div className="card-label">Email sources</div>
+    <section className="card sources" aria-label="Email sources">
+      <h2 className="card-label">Email sources</h2>
 
       {accounts.map((account) => (
         <div
@@ -72,17 +72,19 @@ export function SourcesCard({
         </button>
       )}
 
+      {/* No status dot on the count. A dot that is always the same colour
+          conveys no state, and the sentence already says whether anything is
+          connected. */}
       {error ? (
-        <div className="accounts-note is-error">{error}</div>
+        <p className="accounts-note is-error">{error}</p>
       ) : (
-        <div className="accounts-note">
-          <span className={`dot${accounts.length === 0 ? ' dot-idle' : ''}`}></span>
+        <p className="accounts-note">
           {accounts.length === 0
             ? 'No accounts connected'
             : accounts.length === 1
               ? '1 account connected'
               : `${accounts.length} accounts connected`}
-        </div>
+        </p>
       )}
     </section>
   )

@@ -41,7 +41,13 @@ export default function App() {
     )
 
   return (
-    <main>
+    <>
+      {/* Keyboard users land on the sources card otherwise, three tab stops
+          before the table they came for. */}
+      <a className="skip" href="#content">
+        Skip to the content
+      </a>
+      <main id="content">
         <div className="grid">
           <SourcesCard
             accounts={accounts}
@@ -65,7 +71,8 @@ export default function App() {
             onToggle={toggle}
             onToggleAll={toggleAll}
           />
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   )
 }

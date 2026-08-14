@@ -6,23 +6,26 @@
 // a dot with a trailing symbol ("1.20 €").
 const SYMBOLS: Record<string, string> = { EUR: '€', USD: '$', GBP: '£', CHF: 'CHF' }
 
-/** "1.20 €" — the amount as the dashboard shows it. */
+/** "1.20 €", the amount as the dashboard shows it. A hyphen, not a blank,
+ *  when there is no figure: blank reads as "we forgot to render it", a dash
+ *  reads as "this invoice does not carry one". A hyphen and not an em dash,
+ *  because Section 7.D bans those in visible output, data included. */
 export function amount(value?: number, currency?: string): string {
-  if (value === undefined || value === null) return '—'
+  if (value === undefined || value === null) return '-'
   if (!currency) return value.toFixed(2)
   return `${value.toFixed(2)} ${SYMBOLS[currency.toUpperCase()] ?? currency}`
 }
 
 /** "05.08.2026" from an ISO date. */
 export function issued(value: string | null): string {
-  if (!value) return '—'
+  if (!value) return '-'
   const [year, month, day] = value.split('-')
   return day && month && year ? `${day}.${month}.${year}` : value
 }
 
 /** "8 August 2026, 07:22" from an ISO timestamp. */
 export function dateTime(value?: string): string {
-  if (!value) return '—'
+  if (!value) return '-'
   const at = new Date(value)
   if (Number.isNaN(at.getTime())) return value
   return at.toLocaleString('en-GB', {
@@ -32,7 +35,7 @@ export function dateTime(value?: string): string {
 
 /** "5 August 2026" from an ISO date, spelled out for the detail panel. */
 export function longDate(value?: string | null): string {
-  if (!value) return '—'
+  if (!value) return '-'
   const on = new Date(value)
   if (Number.isNaN(on.getTime())) return value
   return on.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -61,4 +64,14 @@ export function relative(since: number): string {
   if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
   const days = Math.round(hours / 24)
   return `${days} ${days === 1 ? 'day' : 'days'} ago`
+}
+
+/** "84 KB" from a byte count. Decimal units, because that is what the file
+ *  manager the invoice gets downloaded into will say. */
+export function bytes(value: number): string {
+  if (value < 1000) return `${value} B`
+  const kb = value / 1000
+  if (kb < 1000) return `${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB`
+  const mb = kb / 1000
+  return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`
 }

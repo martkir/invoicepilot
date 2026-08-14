@@ -66,7 +66,7 @@ frontend/    Vite-served dashboard
 scripts/     run-and-exit ops tooling
 templates/   invoice2data extraction templates
 tests/       pytest suite
-docker/      Dockerfiles and compose files
+docker/      Dockerfiles, one compose file, nginx config
 ```
 
 See [STRUCTURE.md](STRUCTURE.md) for the rules governing where new code goes.
@@ -118,7 +118,8 @@ just web-install          # npm install in frontend/
 
 ```bash
 just api                  # FastAPI on http://127.0.0.1:8000  (/health)
-just web                  # dashboard on http://localhost:5173
+just web                  # dashboard on http://localhost:5173 (dev server)
+just web-deploy           # dashboard on http://localhost:8090 (built, in Docker)
 just cli config           # show resolved settings, secrets redacted
 just test                 # pytest
 just lint                 # ruff check + format --check
@@ -136,6 +137,12 @@ Run `just api` and `just web` together: the Vite dev server proxies `/api` to
 the backend, so the dashboard calls same-origin paths and neither CORS config
 nor a base-URL variable is needed.
 
+`just web-deploy` is the same dashboard built and served by nginx in a
+container on port 8090, with the same same-origin `/api` (proxied to the host's
+port 8000 rather than to Vite). The container holds a build, not the source, so
+rerun it after a frontend change or 8090 goes on serving the previous bundle.
+The API itself still runs on the host: only the dashboard is containerised.
+
 A scan runs in a background thread and the dashboard polls it. A small mailbox
 finishes in a few seconds, but the work is unbounded in principle — it
 downloads every PDF attachment, runs invoice2data over each candidate document,
@@ -143,12 +150,23 @@ and by default follows invoice links out to the vendor's own servers with a 20s
 timeout each. Pass `--no-follow-links` to the CLI (or `{"follow_links": false}`
 to `POST /scan`) to keep a scan strictly offline.
 
-### Postgres
+### Containers
+
+[docker/compose.yml](docker/compose.yml) holds the two services this project
+runs in Docker, and `docker/.env` holds their credentials, which is why every
+command below passes `--env-file .env`.
 
 ```bash
-just start-db             # docker compose up, port 57552
+just start-db             # postgres service, port 57552
 just stop-db
+just web-deploy           # web service, port 8090, rebuilding the image
+just web-down
 ```
+
+The API is deliberately not a service. It runs on the host under uvicorn, and
+the dashboard container's nginx proxies `/api` to it through
+`host.docker.internal`; containerising it would mean rebuilding an image on
+every backend edit.
 
 ## Configuration
 

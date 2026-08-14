@@ -4,18 +4,19 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="color-scheme" content="light"/>
-<title>The share page · Invoice Pilot</title>
+<title>Composer · wiring · Invoice Pilot</title>
 <meta name="description" content="37 invoices from April to June 2026, in one download. No account needed."/>
 <meta property="og:type" content="website"/>
-<meta property="og:title" content="The share page · Invoice Pilot"/>
+<meta property="og:title" content="Composer · Invoice Pilot"/>
 <meta property="og:description" content="37 invoices from April to June 2026, in one download. No account needed."/>
 <meta name="theme-color" content="#eef0f6"/>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%235266eb%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4H8.4A2%202%200%200%200%206.4%206.4v11.2a2%202%200%200%200%202%202h7.2a2%202%200%200%200%202-2V8.4Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4v4h4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"/>
 <link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
 <link rel="stylesheet" href="../../../frontend/src/styles/dashboard.css"/>
-<link rel="stylesheet" href="tokens-v3.css"/>
-<link rel="stylesheet" href="reskin.css"/>
-<link rel="stylesheet" href="flow.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/tokens-v3.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/reskin.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/flow.css"/>
+<link rel="stylesheet" href="annotations.css"/>
 </head>
 <body class="share-page">
 <a class="skip" href="#content">Skip to the content</a>
@@ -42,7 +43,27 @@
       </div>
     </section>
     <div class="stack">
-      
+      <div class="composer">
+      <h2>Send this link by email</h2>
+      <p class="composer-lede">The subject and the body are already written. The only thing
+        missing is who it goes to.</p>
+      <div class="field"><span class="field-label">From</span><span class="from-anchor"><span class="from-current" data-pin="1"><svg class="source-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 10.2V14h5.3c-.2 1.2-1.6 3.6-5.3 3.6A5.6 5.6 0 1 1 15.7 8l2.7-2.6A9.3 9.3 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6 0-1-.1-1.5H12z"/></svg>martin@kirov.dev</span><a class="icon-btn" href="05-from.html" aria-label="Send from a different mailbox" aria-expanded="false" data-pin="2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6.6 9.4 5.4 5.2 5.4-5.2"/></svg></a></span>
+        <span class="field-note">Replies come back here</span></div>
+      <div class="field"><label for="to">To</label>
+        <input id="to" name="to" type="email" required autocomplete="email"
+          placeholder="accountant@firm.com" value="anna@ledger.co" data-pin="3"/></div>
+      <div class="composer-foot">
+        <a class="btn btn-primary" href="06-sent.html" data-pin="5"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.2" y="5.2" width="17.6" height="13.6" rx="2.4"/><path d="m3.9 7.4 7 4.7a2.1 2.1 0 0 0 2.2 0l7-4.7"/></svg>Send</a>
+        <a class="btn-quiet" href="03-preview.html">Cancel</a>
+        <span class="hint">Subject: <b>Invoices, Apr to Jun 2026 (37 invoices)</b>.
+          The link is sent, not the files.</span>
+      </div>
+      <div class="mail-preview">
+        <div class="mail-preview-head">Preview: what anna@ledger.co opens
+          <a href="email.html" target="_blank" rel="noopener">Full size <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.4 3.6h6v6"/><path d="M10.2 13.8 20.4 3.6"/><path d="M18.6 13.2v5.2a2.1 2.1 0 0 1-2.1 2.1H5.7a2.1 2.1 0 0 1-2.1-2.1V7.6a2.1 2.1 0 0 1 2.1-2.1h5.2"/></svg></a></div>
+        <iframe src="email.html" title="Preview of the email that will be sent" loading="lazy" data-pin="4"></iframe>
+      </div>
+    </div>
       <div class="doc-card">
         <section class="part part-docs">
       <div>
@@ -92,5 +113,29 @@
     <nav aria-label="Legal"><a href="#privacy">Privacy</a><a href="#terms">Terms</a></nav>
   </footer>
 </main>
+<aside class="wiring" aria-label="Backend wiring">
+  <div class="wiring-head">
+    <p class="wiring-kicker">wiring</p>
+    <h2 class="wiring-title">Composer</h2>
+    <p class="wiring-lede">Two calls behind it, and one of them does not exist in any spec yet.</p>
+  </div>
+  <ol class="wiring-list">
+    <li class="wiring-item"><p class="wiring-el"><span class="wiring-n">1</span><span>From</span></p><p class="wiring-call"><b>GET</b> /api/accounts</p><p class="wiring-tables"><span class="wiring-table">no table</span></p><pre class="wiring-sql">-- no query: Unipile holds the mailboxes, not us
+GET {unipile_dsn}/api/v1/accounts</pre><p class="wiring-note">Ships today. The dashboard&#x27;s sources card and the composer&#x27;s From row are the same call; neither reads a row from Postgres.</p><p class="wiring-note">The address is stated rather than asked, so this is a read with no control attached. Defaults to the last mailbox this browser sent from, held in localStorage.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">2</span><span>The caret</span></p><p class="wiring-call"><b>GET</b> /api/accounts</p><p class="wiring-tables"><span class="wiring-table">no table</span></p><pre class="wiring-sql">-- no query: Unipile holds the mailboxes, not us
+GET {unipile_dsn}/api/v1/accounts</pre><p class="wiring-note">Ships today. The dashboard&#x27;s sources card and the composer&#x27;s From row are the same call; neither reads a row from Postgres.</p><p class="wiring-note">Rendered only when the same response holds more than one account - the count decides whether this control exists.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">3</span><span>To</span></p><p class="wiring-none">no request</p><p class="wiring-note">No request. Validated in the browser on blur; the server&#x27;s own rejection is a different screen (08-send-failed.html).</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">4</span><span>The preview</span></p><p class="wiring-call"><b>GET</b> /api/s/{token}/email/preview</p><p class="wiring-tables"><span class="wiring-table is-new">shares · new</span><span class="wiring-table">invoices</span></p><pre class="wiring-sql">-- the manifest queries again, for the summary the mail quotes
+SELECT token, invoice_ids, expires_at FROM shares WHERE token = $1;
+
+SELECT id, issued_on, data FROM invoices
+WHERE id = ANY($1::text[])
+ORDER BY issued_on DESC NULLS LAST, id;</pre><p class="wiring-note">Serves the rendered mail as a document, for the composer&#x27;s iframe to load. It exists so the preview is the bytes the send will use rather than a second template that can drift from it.</p><p class="wiring-gap"><b>Open question.</b> No route in any spec serves this. The design is explicit that the iframe must show the bytes the API is about to send rather than a mock-up - which means the mail has to be rendered server-side and fetched. Either a preview route exists, or the preview is a second template that can drift from the one that gets sent.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">5</span><span>Send</span></p><p class="wiring-call"><b>POST</b> /api/s/{token}/email  {to, from_account_id, owner_key}</p><p class="wiring-tables"><span class="wiring-table is-new">shares · new</span></p><pre class="wiring-sql">SELECT owner_key_hash, invoice_ids, expires_at
+FROM shares WHERE token = $1;
+-- compare_digest(sha256(owner_key), owner_key_hash)
+-- then Unipile: POST {unipile_dsn}/api/v1/emails
+-- no write: nothing records that a share was mailed</pre><p class="wiring-note">The one route the owner key gates. `from_account_id` arrives from the browser, so it is checked against /api/accounts on the way through - the only thing that may send as a mailbox is that mailbox&#x27;s owner. backend/unipile.py has no send function yet; this is the one call it is missing.</p><p class="wiring-note">Carries the address, the chosen account and the owner key. The share is already live - mail is the optional half of the flow.</p></li>
+  </ol>
+  <p class="wiring-foot">Generated by annotate.py from the screens in
+    <a href="../share-flow-v3-light/index.html">share-flow-v3-light</a>.
+    The full map is in <a href="index.html">index.html</a>.</p>
+</aside>
 </body>
 </html>

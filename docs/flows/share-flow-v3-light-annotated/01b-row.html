@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="color-scheme" content="light"/>
-<title>The row, opened · Invoice Pilot</title>
+<title>The row, opened · wiring · Invoice Pilot</title>
 <meta name="description" content="One invoice opened in place: the document, beside every field read off it."/>
 <meta property="og:type" content="website"/>
 <meta property="og:title" content="The row, opened · Invoice Pilot"/>
@@ -13,9 +13,10 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%235266eb%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4H8.4A2%202%200%200%200%206.4%206.4v11.2a2%202%200%200%200%202%202h7.2a2%202%200%200%200%202-2V8.4Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4v4h4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"/>
 <link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
 <link rel="stylesheet" href="../../../frontend/src/styles/dashboard.css"/>
-<link rel="stylesheet" href="tokens-v3.css"/>
-<link rel="stylesheet" href="reskin.css"/>
-<link rel="stylesheet" href="flow.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/tokens-v3.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/reskin.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/flow.css"/>
+<link rel="stylesheet" href="annotations.css"/>
 </head>
 <body>
 <a class="skip" href="#content">Skip to the content</a>
@@ -41,9 +42,9 @@
       <th class="col-amount sortable" scope="col"><button>Amount</button></th>
       <th class="col-issued sortable sorted" scope="col"><button>Issued</button></th>
       <th class="col-actions" scope="col">Actions</th></tr></thead>
-      <tbody><tr class="is-open"><td class="col-check"><input type="checkbox" aria-label="Select Hetzner Online GmbH"></td><td><div class="vendor"><span class="vendor-logo" aria-hidden="true">He</span><span class="vendor-name">Hetzner Online GmbH</span></div></td><td class="col-amount">42.10 €</td><td class="col-issued">03.04.2026</td><td class="col-actions"><div class="row-actions"><button class="icon-btn" aria-expanded="true" aria-label="Hide Hetzner Online GmbH"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 12S6.9 5.9 12 5.9 21.2 12 21.2 12 17.1 18.1 12 18.1 2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="2.9"/></svg></button><button class="icon-btn" aria-label="Download Hetzner Online GmbH"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.6v11.9"/><path d="m8.2 11.9 3.8 3.6 3.8-3.6"/><path d="M5 13v4.9A2.1 2.1 0 0 0 7.1 20h9.8a2.1 2.1 0 0 0 2.1-2.1V13"/></svg></button></div></td></tr><tr class="expansion"><td colspan="5">
+      <tbody><tr class="is-open"><td class="col-check"><input type="checkbox" aria-label="Select Hetzner Online GmbH"></td><td><div class="vendor"><span class="vendor-logo" aria-hidden="true">He</span><span class="vendor-name">Hetzner Online GmbH</span></div></td><td class="col-amount">42.10 €</td><td class="col-issued">03.04.2026</td><td class="col-actions"><div class="row-actions"><button class="icon-btn" aria-expanded="true" aria-label="Hide Hetzner Online GmbH"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 12S6.9 5.9 12 5.9 21.2 12 21.2 12 17.1 18.1 12 18.1 2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="2.9"/></svg></button><button class="icon-btn" aria-label="Download Hetzner Online GmbH"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.6v11.9"/><path d="m8.2 11.9 3.8 3.6 3.8-3.6"/><path d="M5 13v4.9A2.1 2.1 0 0 0 7.1 20h9.8a2.1 2.1 0 0 0 2.1-2.1V13"/></svg></button></div></td></tr><tr class="expansion" data-pin="1"><td colspan="5">
             <div class="exp">
-              <figure class="exp-doc">
+              <figure class="exp-doc" data-pin="2">
                 <div class="doc-alt" aria-hidden="true">
                   <span class="vendor-logo">He</span></div>
                 <figcaption class="doc-cap">
@@ -51,7 +52,7 @@
                 <p class="doc-origin"><span class="ftype">pdf</span>
                   84 KB, saved from the attachment.</p>
               </figure>
-              <div class="meta">
+              <div class="meta" data-pin="3">
                 <div class="exp-total"><span class="big">42.10 €</span>
                   <dl class="split"><div><dt>Net</dt><dd>35.38</dd></div>
                     <div><dt>VAT</dt><dd>6.72</dd></div></dl>
@@ -83,5 +84,18 @@
       <span class="pager"><span class="page-num">1</span></span></div>
   </section>
 </div></main>
+<aside class="wiring" aria-label="Backend wiring">
+  <div class="wiring-head">
+    <p class="wiring-kicker">wiring</p>
+    <h2 class="wiring-title">The row, opened</h2>
+    <p class="wiring-lede">A branch off the flow rather than a step through it. It is here because it costs one endpoint that already exists.</p>
+  </div>
+  <ol class="wiring-list">
+    <li class="wiring-item"><p class="wiring-el"><span class="wiring-n">1</span><span>The opened panel</span></p><p class="wiring-none">no request</p><p class="wiring-note">No request. Every field here was already in the row&#x27;s `data` payload from GET /api/invoices - the table renders four of them and the panel renders the rest. Opening a row is free.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">2</span><span>The document thumbnail</span></p><p class="wiring-call"><b>GET</b> /api/invoices/{invoice_id}/document</p><p class="wiring-tables"><span class="wiring-table">invoices</span></p><pre class="wiring-sql">SELECT data FROM invoices WHERE id = $1;</pre><p class="wiring-note">Ships today. The file path is built from the row&#x27;s own payload, never from the id in the URL, and the resolved path is checked to be inside .data/ before it is served. 404 when the invoice has no document, which is a real case rather than an error.</p><p class="wiring-note">The one thing on this panel that costs a request. In the draft it renders the state where no page has arrived; in production the invoice&#x27;s own PDF goes in that box.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">3</span><span>The field list</span></p><p class="wiring-none">no request</p><p class="wiring-note">No request. Fields the extractor came back empty on are not rendered at all, so what this list proves is which keys the `data` JSONB actually carries for this issuer.</p></li>
+  </ol>
+  <p class="wiring-foot">Generated by annotate.py from the screens in
+    <a href="../share-flow-v3-light/index.html">share-flow-v3-light</a>.
+    The full map is in <a href="index.html">index.html</a>.</p>
+</aside>
 </body>
 </html>

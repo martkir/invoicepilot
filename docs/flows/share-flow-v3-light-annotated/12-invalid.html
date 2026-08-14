@@ -4,18 +4,19 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="color-scheme" content="light"/>
-<title>The share page · Invoice Pilot</title>
+<title>Address needs fixing · wiring · Invoice Pilot</title>
 <meta name="description" content="37 invoices from April to June 2026, in one download. No account needed."/>
 <meta property="og:type" content="website"/>
-<meta property="og:title" content="The share page · Invoice Pilot"/>
+<meta property="og:title" content="Address needs fixing · Invoice Pilot"/>
 <meta property="og:description" content="37 invoices from April to June 2026, in one download. No account needed."/>
 <meta name="theme-color" content="#eef0f6"/>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%235266eb%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4H8.4A2%202%200%200%200%206.4%206.4v11.2a2%202%200%200%200%202%202h7.2a2%202%200%200%200%202-2V8.4Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4v4h4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"/>
 <link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
 <link rel="stylesheet" href="../../../frontend/src/styles/dashboard.css"/>
-<link rel="stylesheet" href="tokens-v3.css"/>
-<link rel="stylesheet" href="reskin.css"/>
-<link rel="stylesheet" href="flow.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/tokens-v3.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/reskin.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/flow.css"/>
+<link rel="stylesheet" href="annotations.css"/>
 </head>
 <body class="share-page">
 <a class="skip" href="#content">Skip to the content</a>
@@ -42,7 +43,29 @@
       </div>
     </section>
     <div class="stack">
-      
+      <div class="composer">
+      <h2>Send this link by email</h2>
+      <p class="composer-lede">The subject and the body are already written. The only thing
+        missing is who it goes to.</p>
+      <div class="field"><span class="field-label">From</span><span class="from-anchor"><span class="from-current"><svg class="source-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 10.2V14h5.3c-.2 1.2-1.6 3.6-5.3 3.6A5.6 5.6 0 1 1 15.7 8l2.7-2.6A9.3 9.3 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6 0-1-.1-1.5H12z"/></svg>martin@kirov.dev</span><a class="icon-btn" href="05-from.html" aria-label="Send from a different mailbox" aria-expanded="false"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6.6 9.4 5.4 5.2 5.4-5.2"/></svg></a></span>
+        <span class="field-note">Replies come back here</span></div>
+      <div class="field"><label for="to">To</label>
+        <input id="to" name="to" type="email" required autocomplete="email"
+          placeholder="accountant@firm.com" value="anna@ledger" aria-invalid="true" aria-describedby="to-error" data-pin="1"/></div>
+      <p class="field-error" id="to-error" data-pin="2">That address is missing its domain.
+        Did you mean <b>anna@ledger.co</b>?</p>
+      <div class="composer-foot">
+        <span class="btn btn-primary" aria-disabled="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.2" y="5.2" width="17.6" height="13.6" rx="2.4"/><path d="m3.9 7.4 7 4.7a2.1 2.1 0 0 0 2.2 0l7-4.7"/></svg>Send</span>
+        <a class="btn-quiet" href="03-preview.html">Cancel</a>
+        <span class="hint">Subject: <b>Invoices, Apr to Jun 2026 (37 invoices)</b>.
+          The link is sent, not the files.</span>
+      </div>
+      <div class="mail-preview">
+        <div class="mail-preview-head">Preview: what anna@ledger.co opens
+          <a href="email.html" target="_blank" rel="noopener">Full size <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.4 3.6h6v6"/><path d="M10.2 13.8 20.4 3.6"/><path d="M18.6 13.2v5.2a2.1 2.1 0 0 1-2.1 2.1H5.7a2.1 2.1 0 0 1-2.1-2.1V7.6a2.1 2.1 0 0 1 2.1-2.1h5.2"/></svg></a></div>
+        <iframe src="email.html" title="Preview of the email that will be sent" loading="lazy"></iframe>
+      </div>
+    </div>
       <div class="doc-card">
         <section class="part part-docs">
       <div>
@@ -92,5 +115,18 @@
     <nav aria-label="Legal"><a href="#privacy">Privacy</a><a href="#terms">Terms</a></nav>
   </footer>
 </main>
+<aside class="wiring" aria-label="Backend wiring">
+  <div class="wiring-head">
+    <p class="wiring-kicker">wiring</p>
+    <h2 class="wiring-title">Address needs fixing</h2>
+    <p class="wiring-lede">The one screen in the flow that costs the backend nothing at all.</p>
+  </div>
+  <ol class="wiring-list">
+    <li class="wiring-item"><p class="wiring-el"><span class="wiring-n">1</span><span>To, invalid</span></p><p class="wiring-none">no request</p><p class="wiring-note">No request. Checked in the browser on blur, before POST /api/s/{token}/email is called - `aria-invalid` and `aria-describedby` on the input, Send `aria-disabled` while it stands.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">2</span><span>The message</span></p><p class="wiring-none">no request</p><p class="wiring-note">No request. This is the cheap half that saves a round trip, not a substitute for the transport&#x27;s own rejection, which is 08-send-failed.html.</p></li>
+  </ol>
+  <p class="wiring-foot">Generated by annotate.py from the screens in
+    <a href="../share-flow-v3-light/index.html">share-flow-v3-light</a>.
+    The full map is in <a href="index.html">index.html</a>.</p>
+</aside>
 </body>
 </html>

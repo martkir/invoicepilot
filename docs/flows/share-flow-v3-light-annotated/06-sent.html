@@ -4,24 +4,27 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="color-scheme" content="light"/>
-<title>The share page · Invoice Pilot</title>
+<title>Sent · wiring · Invoice Pilot</title>
 <meta name="description" content="37 invoices from April to June 2026, in one download. No account needed."/>
 <meta property="og:type" content="website"/>
-<meta property="og:title" content="The share page · Invoice Pilot"/>
+<meta property="og:title" content="Sent · Invoice Pilot"/>
 <meta property="og:description" content="37 invoices from April to June 2026, in one download. No account needed."/>
 <meta name="theme-color" content="#eef0f6"/>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%235266eb%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4H8.4A2%202%200%200%200%206.4%206.4v11.2a2%202%200%200%200%202%202h7.2a2%202%200%200%200%202-2V8.4Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4v4h4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"/>
 <link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
 <link rel="stylesheet" href="../../../frontend/src/styles/dashboard.css"/>
-<link rel="stylesheet" href="tokens-v3.css"/>
-<link rel="stylesheet" href="reskin.css"/>
-<link rel="stylesheet" href="flow.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/tokens-v3.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/reskin.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/flow.css"/>
+<link rel="stylesheet" href="annotations.css"/>
 </head>
 <body class="share-page">
 <a class="skip" href="#content">Skip to the content</a>
 <main id="content" class="share-main">
   <header class="masthead"><a class="brand" href="index.html"><span class="mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.4 3.4H7.9A2.3 2.3 0 0 0 5.6 5.7v12.6a2.3 2.3 0 0 0 2.3 2.3h8.2a2.3 2.3 0 0 0 2.3-2.3V8.3Z"/><path d="M13.4 3.4v4.9h4.7"/></svg></span>Invoice Pilot</a><p class="shared-by">Your link<b>martin@kirov.dev</b></p></header>
-  
+  <p class="banner" role="status" data-pin="1"><span class="tick"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4.6 12.4 4.7 4.6 10.1-10"/></svg></span>
+      <span>Sent to <b>anna@ledger.co</b> from martin@kirov.dev. Replies come back to you.</span>
+      <a class="btn-quiet undo" href="04-compose.html">Send to someone else</a></p>
   <div class="share-cols">
     <section class="rail" aria-labelledby="batch-name">
       <div>
@@ -33,7 +36,7 @@
       <a class="btn btn-primary btn-lg" href="11-zipping.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.6v11.9"/><path d="m8.2 11.9 3.8 3.6 3.8-3.6"/><path d="M5 13v4.9A2.1 2.1 0 0 0 7.1 20h9.8a2.1 2.1 0 0 0 2.1-2.1V13"/></svg>Download all</a>
       <p class="get-note">36 PDFs and <b>invoices.csv</b>, zipped. 12.4 MB.</p>
     </div>
-      <div class="owner-block">
+      <div class="owner-block" data-pin="2">
         <p class="live"><b>This link is live.</b> Anyone with it can download these invoices.</p>
         <div class="rail-actions">
           <a class="btn btn-secondary" href="04-compose.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.2" y="5.2" width="17.6" height="13.6" rx="2.4"/><path d="m3.9 7.4 7 4.7a2.1 2.1 0 0 0 2.2 0l7-4.7"/></svg>Send by email</a>
@@ -92,5 +95,22 @@
     <nav aria-label="Legal"><a href="#privacy">Privacy</a><a href="#terms">Terms</a></nav>
   </footer>
 </main>
+<aside class="wiring" aria-label="Backend wiring">
+  <div class="wiring-head">
+    <p class="wiring-kicker">wiring</p>
+    <h2 class="wiring-title">Sent</h2>
+    <p class="wiring-lede">What a 204 looks like.</p>
+  </div>
+  <ol class="wiring-list">
+    <li class="wiring-item"><p class="wiring-el"><span class="wiring-n">1</span><span>Sent to anna@ledger.co</span></p><p class="wiring-call"><b>POST</b> /api/s/{token}/email  {to, from_account_id, owner_key}</p><p class="wiring-tables"><span class="wiring-table is-new">shares · new</span></p><pre class="wiring-sql">SELECT owner_key_hash, invoice_ids, expires_at
+FROM shares WHERE token = $1;
+-- compare_digest(sha256(owner_key), owner_key_hash)
+-- then Unipile: POST {unipile_dsn}/api/v1/emails
+-- no write: nothing records that a share was mailed</pre><p class="wiring-note">The one route the owner key gates. `from_account_id` arrives from the browser, so it is checked against /api/accounts on the way through - the only thing that may send as a mailbox is that mailbox&#x27;s owner. backend/unipile.py has no send function yet; this is the one call it is missing.</p><p class="wiring-note">Nothing was written. No table records that a share was mailed, so this banner is the only trace the send leaves - and the Undo beside it cannot be a server call for the same reason.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">2</span><span>The owner block, unchanged</span></p><p class="wiring-none">no request</p><p class="wiring-note">No request. Sending does not touch the share row, so nothing on the rest of the page needs to be refetched.</p></li>
+  </ol>
+  <p class="wiring-foot">Generated by annotate.py from the screens in
+    <a href="../share-flow-v3-light/index.html">share-flow-v3-light</a>.
+    The full map is in <a href="index.html">index.html</a>.</p>
+</aside>
 </body>
 </html>

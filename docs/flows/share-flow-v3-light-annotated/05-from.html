@@ -4,18 +4,19 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="color-scheme" content="light"/>
-<title>The share page · Invoice Pilot</title>
+<title>Choosing the mailbox · wiring · Invoice Pilot</title>
 <meta name="description" content="37 invoices from April to June 2026, in one download. No account needed."/>
 <meta property="og:type" content="website"/>
-<meta property="og:title" content="The share page · Invoice Pilot"/>
+<meta property="og:title" content="Choosing the mailbox · Invoice Pilot"/>
 <meta property="og:description" content="37 invoices from April to June 2026, in one download. No account needed."/>
 <meta name="theme-color" content="#eef0f6"/>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%235266eb%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4H8.4A2%202%200%200%200%206.4%206.4v11.2a2%202%200%200%200%202%202h7.2a2%202%200%200%200%202-2V8.4Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4v4h4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"/>
 <link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
 <link rel="stylesheet" href="../../../frontend/src/styles/dashboard.css"/>
-<link rel="stylesheet" href="tokens-v3.css"/>
-<link rel="stylesheet" href="reskin.css"/>
-<link rel="stylesheet" href="flow.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/tokens-v3.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/reskin.css"/>
+<link rel="stylesheet" href="../share-flow-v3-light/flow.css"/>
+<link rel="stylesheet" href="annotations.css"/>
 </head>
 <body class="share-page">
 <a class="skip" href="#content">Skip to the content</a>
@@ -42,7 +43,27 @@
       </div>
     </section>
     <div class="stack">
-      
+      <div class="composer">
+      <h2>Send this link by email</h2>
+      <p class="composer-lede">The subject and the body are already written. The only thing
+        missing is who it goes to.</p>
+      <div class="field"><span class="field-label">From</span><span class="from-anchor"><span class="from-current"><svg class="source-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 10.2V14h5.3c-.2 1.2-1.6 3.6-5.3 3.6A5.6 5.6 0 1 1 15.7 8l2.7-2.6A9.3 9.3 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6 0-1-.1-1.5H12z"/></svg>martin@kirov.dev</span><a class="icon-btn is-active" href="04-compose.html" aria-label="Send from a different mailbox" aria-expanded="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6.6 9.4 5.4 5.2 5.4-5.2"/></svg></a><div class="from-menu" role="menu"><a class="from-opt is-current" href="04-compose.html" data-pin="1"><svg class="source-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 10.2V14h5.3c-.2 1.2-1.6 3.6-5.3 3.6A5.6 5.6 0 1 1 15.7 8l2.7-2.6A9.3 9.3 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6 0-1-.1-1.5H12z"/></svg>martin@kirov.dev<span class=tick><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4.6 12.4 4.7 4.6 10.1-10"/></svg></span></a><a class="from-opt" href="04-compose.html" data-pin="2"><svg class="source-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 10.2V14h5.3c-.2 1.2-1.6 3.6-5.3 3.6A5.6 5.6 0 1 1 15.7 8l2.7-2.6A9.3 9.3 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6 0-1-.1-1.5H12z"/></svg>billing@kirov.dev</a></div></span>
+        <span class="field-note">Replies come back here</span></div>
+      <div class="field"><label for="to">To</label>
+        <input id="to" name="to" type="email" required autocomplete="email"
+          placeholder="accountant@firm.com" value="anna@ledger.co"/></div>
+      <div class="composer-foot">
+        <a class="btn btn-primary" href="06-sent.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.2" y="5.2" width="17.6" height="13.6" rx="2.4"/><path d="m3.9 7.4 7 4.7a2.1 2.1 0 0 0 2.2 0l7-4.7"/></svg>Send</a>
+        <a class="btn-quiet" href="03-preview.html">Cancel</a>
+        <span class="hint">Subject: <b>Invoices, Apr to Jun 2026 (37 invoices)</b>.
+          The link is sent, not the files.</span>
+      </div>
+      <div class="mail-preview">
+        <div class="mail-preview-head">Preview: what anna@ledger.co opens
+          <a href="email.html" target="_blank" rel="noopener">Full size <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.4 3.6h6v6"/><path d="M10.2 13.8 20.4 3.6"/><path d="M18.6 13.2v5.2a2.1 2.1 0 0 1-2.1 2.1H5.7a2.1 2.1 0 0 1-2.1-2.1V7.6a2.1 2.1 0 0 1 2.1-2.1h5.2"/></svg></a></div>
+        <iframe src="email.html" title="Preview of the email that will be sent" loading="lazy"></iframe>
+      </div>
+    </div>
       <div class="doc-card">
         <section class="part part-docs">
       <div>
@@ -92,5 +113,19 @@
     <nav aria-label="Legal"><a href="#privacy">Privacy</a><a href="#terms">Terms</a></nav>
   </footer>
 </main>
+<aside class="wiring" aria-label="Backend wiring">
+  <div class="wiring-head">
+    <p class="wiring-kicker">wiring</p>
+    <h2 class="wiring-title">Choosing the mailbox</h2>
+    <p class="wiring-lede">A menu over data the composer already has.</p>
+  </div>
+  <ol class="wiring-list">
+    <li class="wiring-item"><p class="wiring-el"><span class="wiring-n">1</span><span>The current mailbox</span></p><p class="wiring-call"><b>GET</b> /api/accounts</p><p class="wiring-tables"><span class="wiring-table">no table</span></p><pre class="wiring-sql">-- no query: Unipile holds the mailboxes, not us
+GET {unipile_dsn}/api/v1/accounts</pre><p class="wiring-note">Ships today. The dashboard&#x27;s sources card and the composer&#x27;s From row are the same call; neither reads a row from Postgres.</p><p class="wiring-note">No second request: the menu is the same response the From row read. It keeps the current address in the list and ticks it, so it answers &#x27;which am I on&#x27; as well as &#x27;what else&#x27;.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">2</span><span>The other mailbox</span></p><p class="wiring-none">no request</p><p class="wiring-note">No request. Picking one writes it to localStorage and changes `from_account_id` on the send.</p></li>
+  </ol>
+  <p class="wiring-foot">Generated by annotate.py from the screens in
+    <a href="../share-flow-v3-light/index.html">share-flow-v3-light</a>.
+    The full map is in <a href="index.html">index.html</a>.</p>
+</aside>
 </body>
 </html>

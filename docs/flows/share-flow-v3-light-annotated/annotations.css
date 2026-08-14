@@ -1,0 +1,452 @@
+/* annotations.css: the wiring layer, and nothing else.
+   ==========================================================================
+   This is the only stylesheet this folder owns. The screens link the real
+   three (tokens-v3.css, reskin.css, flow.css) out of ../share-flow-v3-light/,
+   untouched, so an annotated screen renders exactly what the design folder
+   renders and cannot drift from it. Everything here is additive: pins, the
+   docked panel, and the legend inside it.
+
+   Two rules this file keeps to, so the annotation can never be mistaken for
+   the design:
+
+   · Nothing here restyles a product element. The pin is drawn in ::after on
+     the element it marks, so no node is inserted into the markup and no box
+     changes size. annotate.py adds one attribute, `data-pin`, and nothing
+     else.
+   · The annotation palette is deliberately outside Mercury's. The pins are
+     amber; the flow's one accent is electric blue and its one status colour
+     is red, and a third meaning drawn in either of those would read as part
+     of the product. Spacing, radii, and type come from the real tokens,
+     because the panel should still look like it belongs to this repo. */
+
+:root {
+    --pin: #8a5a00;
+    --pin-face: #fff6e0;
+    --pin-line: #d9a441;
+    --panel-w: 380px;
+}
+
+/* ------------------------------------------------------------- the pin --- */
+/* `position: relative` is what lets the badge sit on the corner of whatever
+   it marks — which is also why the five positioned elements in flow.css are
+   excluded. Pinning .rail would turn `position: sticky` into `relative` and
+   silently unstick the left column; the others are absolute and would jump to
+   the wrong origin. annotate.py marks inner elements instead, and this guard
+   is here so a pin added later cannot break the layout it documents. */
+[data-pin]:not(.rail):not(.doc-card):not(.share-pop):not(.from-menu) {
+    position: relative;
+}
+
+[data-pin] {
+    outline: 1px dashed var(--pin-line);
+    outline-offset: 3px;
+}
+
+[data-pin]::after {
+    content: attr(data-pin);
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    z-index: var(--z-raised);
+    display: grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border: 1px solid var(--pin-line);
+    border-radius: var(--r-pill);
+    background: var(--pin-face);
+    color: var(--pin);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    pointer-events: none;
+}
+
+/* A cell in the manifest is 30px tall and its neighbour is 4px away, so the
+   corner badge would sit on top of the column to its left. Inside a sheet the
+   pin goes to the right edge instead. */
+.sheet [data-pin]::after,
+td[data-pin]::after,
+th[data-pin]::after {
+    top: -8px;
+    left: auto;
+    right: -8px;
+}
+
+/* -------------------------------------------------------- the panel ------ */
+/* Fixed rather than in the flow: every screen here scrolls a different amount,
+   and the wiring should be readable from row 37 of the manifest without
+   scrolling back to the top. `body` gets the width back as padding so nothing
+   in the product ends up underneath it. */
+body {
+    padding-right: var(--panel-w);
+}
+
+.wiring {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: var(--z-overlay);
+    display: flex;
+    overflow-y: auto;
+    flex-direction: column;
+    width: var(--panel-w);
+    height: 100vh;
+    padding: var(--s-lg);
+    border-left: 1px solid var(--rule);
+    background: var(--paper);
+    gap: var(--s-md);
+}
+
+.wiring-head {
+    padding-bottom: var(--s-sm);
+    border-bottom: 1px solid var(--rule);
+}
+
+.wiring-kicker {
+    margin: 0 0 var(--s-xxs);
+    color: var(--pin);
+    font-family: var(--font-mono);
+    font-size: var(--t-caption);
+}
+
+.wiring-title {
+    margin: 0;
+    font-size: var(--t-body-md);
+    font-weight: 500;
+}
+
+.wiring-lede {
+    margin: var(--s-xs) 0 0;
+    color: var(--ink-soft);
+    font-size: var(--t-caption);
+    line-height: 1.5;
+}
+
+.wiring-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.wiring-item {
+    padding: var(--s-sm) 0;
+    border-top: 1px solid var(--rule-soft);
+}
+
+.wiring-item:first-child {
+    border-top: 0;
+}
+
+.wiring-el {
+    display: flex;
+    align-items: baseline;
+    margin: 0 0 var(--s-xs);
+    font-size: var(--t-body-sm);
+    gap: var(--s-xs);
+}
+
+.wiring-n {
+    flex: none;
+    display: grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border: 1px solid var(--pin-line);
+    border-radius: var(--r-pill);
+    background: var(--pin-face);
+    color: var(--pin);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+/* The request line, set as one string in mono because that is how it is read
+   in a log and in the network tab. */
+.wiring-call {
+    margin: 0;
+    padding: var(--s-xs);
+    border-radius: var(--r-xs);
+    background: var(--canvas-deep);
+    font-family: var(--font-mono);
+    font-size: var(--t-caption);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.wiring-call b {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.wiring-none {
+    margin: 0;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: var(--t-caption);
+}
+
+/* Table names are the one thing this folder exists to make findable, so they
+   are a chip rather than a word in a sentence. */
+.wiring-tables {
+    display: flex;
+    flex-wrap: wrap;
+    margin: var(--s-xs) 0 0;
+    gap: var(--s-xxs);
+}
+
+.wiring-table {
+    padding: 2px var(--s-xs);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-xs);
+    background: var(--canvas);
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+
+.wiring-table.is-new {
+    border-color: var(--pin-line);
+    background: var(--pin-face);
+    color: var(--pin);
+}
+
+.wiring-sql {
+    overflow-x: auto;
+    margin: var(--s-xs) 0 0;
+    padding: var(--s-xs);
+    border-left: 2px solid var(--rule);
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+    tab-size: 2;
+    white-space: pre;
+}
+
+.wiring-note {
+    margin: var(--s-xs) 0 0;
+    color: var(--ink-soft);
+    font-size: var(--t-caption);
+    line-height: 1.55;
+}
+
+/* An open question about the backend, not a description of it. Flagged rather
+   than folded into the prose, because the difference between "this is how it
+   works" and "nothing answers this yet" is the whole value of the folder. */
+.wiring-gap {
+    margin: var(--s-xs) 0 0;
+    padding: var(--s-xs);
+    border-left: 2px solid var(--danger);
+    color: var(--ink);
+    font-size: var(--t-caption);
+    line-height: 1.55;
+}
+
+.wiring-gap b {
+    color: var(--danger);
+    font-weight: 500;
+}
+
+.wiring-foot {
+    padding-top: var(--s-sm);
+    border-top: 1px solid var(--rule);
+    color: var(--ink-soft);
+    font-size: var(--t-caption);
+    line-height: 1.5;
+}
+
+.wiring-foot a {
+    color: var(--link);
+}
+
+/* Under 1400px the panel would leave the product less room than it needs, so
+   it stops being a panel and becomes the last section of the page. The pins
+   still mark the same elements; only the legend moves. */
+@media (max-width: 1400px) {
+    body {
+        padding-right: 0;
+    }
+
+    .wiring {
+        position: static;
+        width: auto;
+        height: auto;
+        border-top: 1px solid var(--rule);
+        border-left: 0;
+    }
+}
+
+/* ------------------------------------------------------------ the index --- */
+/* index.html is the one page in this folder that is not a product screen, so
+   it links neither dashboard.css nor flow.css: it would inherit their rules
+   for bare `td` and `th` and fight them for its own table. What it needs
+   instead is written here, against the same tokens. */
+
+.map-body {
+    /* No docked panel on this page - it is all legend. */
+    padding: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: var(--t-body-sm);
+    line-height: 1.6;
+}
+
+.map {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: var(--s-xxl) var(--s-lg) var(--s-section);
+}
+
+.map-head h1 {
+    margin: var(--s-xxs) 0 0;
+    font-size: var(--t-display-md);
+    font-weight: 500;
+    letter-spacing: var(--track-lg);
+    line-height: 1.15;
+}
+
+.map-lede {
+    max-width: 62ch;
+    margin: var(--s-md) 0 0;
+    color: var(--ink-soft);
+}
+
+.map a {
+    color: var(--link);
+}
+
+.map code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+}
+
+.map-part {
+    margin-top: var(--s-section);
+}
+
+.map-part h2 {
+    margin: 0 0 var(--s-sm);
+    padding-bottom: var(--s-xs);
+    border-bottom: 1px solid var(--rule);
+    font-size: var(--t-body-lg);
+    font-weight: 500;
+}
+
+.map-note {
+    max-width: 62ch;
+    margin: 0 0 var(--s-md);
+    color: var(--ink-soft);
+    font-size: var(--t-caption);
+}
+
+/* The screens, as a contact sheet. */
+.map-grid {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: var(--s-xs);
+    list-style: none;
+}
+
+.map-card a {
+    display: grid;
+    height: 100%;
+    padding: var(--s-sm);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sm);
+    background: var(--paper);
+    color: inherit;
+    gap: 2px;
+    text-decoration: none;
+}
+
+.map-card a:hover {
+    border-color: var(--primary);
+}
+
+.map-file {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+
+.map-title {
+    font-size: var(--t-body-sm);
+}
+
+.map-count {
+    color: var(--pin);
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+
+/* The endpoints. */
+.map-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.map-table th {
+    padding: var(--s-xs);
+    border-bottom: 1px solid var(--rule);
+    color: var(--ink-soft);
+    font-size: var(--t-caption);
+    font-weight: 500;
+    text-align: left;
+}
+
+.map-table td {
+    padding: var(--s-xs);
+    border-bottom: 1px solid var(--rule-soft);
+    font-size: var(--t-caption);
+    vertical-align: top;
+}
+
+.map-table code {
+    overflow-wrap: anywhere;
+}
+
+.map-table em {
+    display: block;
+    color: var(--ink-soft);
+    font-size: 11px;
+    font-style: normal;
+}
+
+.map-tables,
+.map-screens {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-xxs);
+}
+
+.map-screens a {
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+
+/* The open questions. Numbered, because the list is short enough to point at
+   in a conversation and long enough that it needs to be. */
+.map-gaps {
+    margin: 0;
+    padding-left: var(--s-lg);
+}
+
+.map-gaps li {
+    margin-bottom: var(--s-md);
+}
+
+.map-gaps p {
+    max-width: 62ch;
+    margin: var(--s-xxs) 0 0;
+    color: var(--ink-soft);
+    font-size: var(--t-caption);
+}

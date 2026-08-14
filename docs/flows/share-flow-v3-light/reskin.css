@@ -82,14 +82,12 @@ html {
 }
 
 /* ------------------------------------------------------------- labels ---- */
-/* dashboard.css sets the sources label, the table head and the detail-panel
-   headings in letter-spaced upper case. Section 4.1 bans both the caps and
-   the positive tracking, so all three come back to sentence case at 12px,
-   weight 500, in --ink-soft. Nothing on any screen in this folder is set
-   above 500 (Section 4.1) or below 12px. */
+/* dashboard.css set the sources label and the table head in letter-spaced
+   upper case. Section 4.1 bans both the caps and the positive tracking, so
+   both come back to sentence case at 12px, weight 500, in --ink-soft. Nothing
+   on any screen in this folder is set above 500 (Section 4.1) or below 12px. */
 .card-label,
-thead th,
-.meta h3 {
+thead th {
     text-transform: none;
     letter-spacing: var(--track-sm);
     font-weight: 500;
@@ -98,8 +96,7 @@ thead th,
 }
 
 .card-label,
-.table-title,
-.meta h3 {
+.table-title {
     margin: 0;
 }
 
@@ -156,8 +153,8 @@ tbody tr:hover {
     background: var(--paper-hi);
 }
 
-/* The accent marks a selection. The open row is dealt with further down, and
-   it deliberately does not take this tint. */
+/* The accent marks a selection, and only a selection: an open row is a
+   disclosure, and it takes a surface step in dashboard.css instead. */
 tbody tr.selected {
     background: var(--primary-soft);
 }
@@ -214,7 +211,6 @@ td.col-issued {
    shadow to collapse under it, so the movement has to carry it alone. */
 .icon-btn,
 .update-btn,
-.share-btn,
 .add-source,
 .page-num,
 .per-page,
@@ -228,7 +224,6 @@ td.col-issued {
 
 .icon-btn:active,
 .update-btn:active,
-.share-btn:active,
 .add-source:active {
     transform: translateY(1px);
 }
@@ -245,38 +240,6 @@ td.col-issued {
 .toast-close:hover {
     color: var(--ink);
     background: var(--paper-hi);
-}
-
-/* The share control is the screen's primary action, so it is the one filled
-   shape in the toolbar and the one place the accent is spent on this screen
-   apart from the focus ring. It carries its label: as a lone glyph, the single
-   thing this screen exists for was its hardest control to find, and it sat
-   beside a download arrow one stroke away from its own. Filled against
-   Update's outline, so the pair reads as a rank rather than two equal
-   choices. */
-.share-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    height: 32px;
-    padding: 0 13px;
-    border: 1px solid transparent;
-    border-radius: var(--r-pill);
-    font-size: var(--t-body-sm);
-    font-weight: 500;
-    color: var(--on-primary);
-    background: var(--primary);
-}
-
-/* Darkens rather than brightens, for the reason .btn-primary gives: white over
-   --primary-bright is 3.4:1 and fails AA for a label (Section 4.2, 4.5). */
-.share-btn:hover {
-    background: var(--primary-deep);
-}
-
-/* While its own popover is open the control stays pressed. */
-.share-btn.is-active {
-    background: var(--primary-deep);
 }
 
 .update-btn {
@@ -358,288 +321,6 @@ input[type=checkbox]:checked {
 
 input[type=checkbox]:checked::after {
     border-color: var(--on-primary);
-}
-
-/* ------------------------------------------------------ expanded row ----- */
-/* Clicking a row opens the vendor's own document beside every field the parser
-   read off it, inside the table rather than over it. The direction is the one
-   picked in docs/ui-sketches/invoice-preview/; what follows is that panel in
-   Mercury, and it changes three things about the shipped rules.
-
-   1. The open row drops the accent. A ticked row is --primary-soft and an open
-      row was drawing the same tint, so two unrelated states were one colour.
-      Disclosure is neither an action nor a selection (Section 4.2), so the row
-      and its panel take --canvas: the page colour, cut into the card as a
-      well, which also makes the two read as one block instead of a row with a
-      stranger underneath. Ticking an open row still shows the accent, because
-      that part is still a selection.
-   2. The panel is a document column plus what is left, not two equal halves,
-      and the document in it is a thumbnail rather than a viewer. Nobody reads
-      an A4 page at any width this panel can afford, so the box is sized to be
-      recognised rather than read, at the 3:4 proportion the share page's
-      thumbnails already use. Reading the document is what opening it full size
-      is for. What is left over is around 640px at the table's real width,
-      which is what a payment reference and a subject line need to sit on one
-      line.
-   3. The fields sit on the hairline rhythm the rail's facts already use. One
-      label/value pattern in the product, not two. */
-tbody tr.is-open td,
-.expansion td {
-    background: var(--canvas-deep);
-}
-
-/* No hairline between the row and its own panel: the well is one shape. */
-tbody tr.is-open {
-    border-bottom: 0;
-}
-
-/* A selection is still a selection while the row is open. */
-tbody tr.is-open.selected td {
-    background: var(--primary-soft);
-}
-
-/* Open is a state, so the control that toggles it is marked in --ink, the same
-   way the sorted column and the current page are. */
-tbody tr.is-open .icon-btn[aria-expanded="true"] {
-    color: var(--ink);
-    background: transparent;
-}
-
-/* The row is clickable; the panel it opens is not. Without this the pointer
-   cursor tbody tr:hover sets carries on across the whole panel and promises a
-   click that does nothing (Section 4.5). */
-.expansion td,
-.expansion:hover td {
-    cursor: default;
-    border-bottom: 1px solid var(--line);
-}
-
-.exp {
-    grid-template-columns: 240px minmax(0, 1fr);
-    gap: var(--s-lg);
-    padding: var(--s-lg);
-    /* The panel arrives from the row that opened it. Height is what actually
-       changes, and height is not animatable on a table row, so the movement is
-       carried by the contents: transform and opacity, over 300ms, once. */
-    animation: open-in var(--d-base) var(--ease-emphasized) both;
-}
-
-@keyframes open-in {
-    from {
-        opacity: 0;
-        transform: translateY(-6px);
-    }
-}
-
-.exp-doc {
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-xs);
-    margin: 0;
-}
-
-/* One page proportion for documents across the product. --r-sm because this
-   sits inside a panel that is itself inside a card (Section 4.4). */
-.doc-frame,
-.doc-alt,
-.doc-none {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 3 / 4;
-    border-radius: var(--r-sm);
-}
-
-.doc-frame {
-    border-color: var(--line);
-    /* The rendered page stays light because it is a photograph of a document
-       rather than a piece of chrome. Only the frame is re-dressed. */
-    background: var(--cloud);
-}
-
-/* The panel in the state where the page-1 render has not arrived: the vendor's
-   mark on a blank sheet, which is the same alt case the share page's
-   thumbnails draw. Production puts the <iframe class="doc-frame"> in this box
-   and this stays behind it. It is not a mock-up of a document, which is the
-   thing Section 4.9 rules out. */
-.doc-alt {
-    display: grid;
-    place-items: center;
-    border: 1px solid var(--line);
-    background: var(--cloud);
-}
-
-.doc-alt .vendor-logo {
-    width: 56px;
-    height: 56px;
-    border-radius: var(--r-md);
-    font-size: var(--t-body-lg);
-}
-
-/* An invoice that never had a document. Solid, not dashed: a dashed edge is
-   the add-a-source affordance on this screen, and there is nothing to drop
-   here. */
-.doc-none {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: var(--s-xs);
-    padding: var(--s-lg);
-    border: 1px solid var(--line);
-    /* The same surface as .doc-alt, because this is the same box in another
-       state. --canvas-deep, which the shipped rule used, is now the colour of
-       the well it sits in, so the fill would have done nothing. */
-    background: var(--cloud);
-}
-
-.doc-none b {
-    font-size: var(--t-body-sm);
-    font-weight: 500;
-    color: var(--ink);
-}
-
-.doc-none p {
-    margin: 0;
-    font-size: var(--t-caption);
-    line-height: 1.5;
-    color: var(--ink-soft);
-    text-wrap: pretty;
-}
-
-.doc-cap {
-    min-width: 0;
-}
-
-.doc-cap .file {
-    font-family: var(--num);
-    font-size: var(--t-caption);
-    letter-spacing: 0;
-    color: var(--ink);
-    overflow-wrap: anywhere;
-}
-
-.doc-origin {
-    display: flex;
-    align-items: baseline;
-    gap: var(--s-xs);
-    margin: 0;
-    font-size: var(--t-caption);
-    color: var(--ink-soft);
-}
-
-/* v2 inset this column by the document's own text padding so the fields lined
-   up with the words on the page. The document is its own panel now, so the
-   inset lined up with nothing. */
-.meta {
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-lg);
-    padding: 0;
-}
-
-/* The amount is what the row was opened to check, so it leads, and the split
-   it is made of sits beside it rather than three rows down a list. */
-.exp-total {
-    display: flex;
-    align-items: baseline;
-    gap: var(--s-md);
-    margin: 0;
-    padding-bottom: var(--s-sm);
-    border-bottom: 1px solid var(--line);
-}
-
-.exp-total .big {
-    font-family: var(--num);
-    font-size: var(--t-body-xl);
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0;
-    color: var(--ink);
-}
-
-.exp-total .split {
-    display: flex;
-    gap: var(--s-md);
-    margin: 0;
-    font-size: var(--t-caption);
-}
-
-.exp-total .split div {
-    display: flex;
-    gap: var(--s-xs);
-}
-
-.exp-total .split dt {
-    color: var(--ink-soft);
-}
-
-.exp-total .split dd {
-    margin: 0;
-    font-family: var(--num);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0;
-    color: var(--ink);
-}
-
-.meta h3 {
-    margin: 0 0 var(--s-xs);
-    font-size: var(--t-body-sm);
-    font-weight: 500;
-    letter-spacing: var(--track-sm);
-    color: var(--ink);
-}
-
-/* The gap between one group and the next is --s-md, set once on .meta. The
-   shipped rule added 18px under each group's last pair on top of it. */
-.meta h3 + .pairs {
-    margin-bottom: 0;
-}
-
-.pairs {
-    /* 132px is what "Company number" measures at this size. The value column
-       takes the rest, so a reference that runs long wraps under itself rather
-       than pushing the labels. */
-    grid-template-columns: 132px minmax(0, 1fr);
-    /* No column gap: the rule under a pair has to cross both cells as one
-       line, and a gap breaks it into two segments with a nick between them.
-       The value column carries the separation as padding instead. */
-    gap: 0;
-    font-size: var(--t-body-sm);
-}
-
-.pairs .k,
-.pairs .v {
-    padding: var(--s-xs) 0;
-    border-bottom: 1px solid var(--line);
-}
-
-.pairs .k {
-    color: var(--ink-soft);
-}
-
-.pairs .v {
-    padding-left: var(--s-md);
-    color: var(--ink);
-}
-
-/* Identifiers are read character by character, so they are set the way the
-   manifest sets them: mono, tabular, no tracking. Prose values are not. */
-.pairs .v.is-id {
-    font-family: var(--num);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0;
-}
-
-/* Below this the document and the fields stop being side by side, so the
-   document stops being a column and becomes a page-sized panel at the top.
-   The breakpoint is the one dashboard.css already uses for this panel. */
-@media (max-width: 940px) {
-    .exp {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .exp-doc {
-        max-width: 240px;
-    }
 }
 
 .toast {

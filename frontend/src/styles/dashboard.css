@@ -190,12 +190,48 @@ main {
     transform: translateY(1px);
 }
 
-/* An icon button that is holding something open — the row detail today, a
-   share popover later — is a state, and states are where the accent is
-   allowed to sit on a surface. */
-.icon-btn.is-active {
-    color: var(--ink);
-    background: var(--primary-soft);
+/* Sharing is the screen's primary action, so it is the one filled shape in the
+   toolbar and the one place the accent is spent here apart from the focus
+   ring. It carries its label: as a lone glyph the single thing this screen
+   exists for was its hardest control to find, and it sat beside a download
+   arrow one stroke away from its own. Filled against Update's outline, so the
+   pair reads as a rank rather than two equal choices. */
+.share-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 13px;
+    border: 1px solid transparent;
+    border-radius: var(--r-pill);
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+    color: var(--on-primary);
+    background: var(--primary);
+    transition:
+        color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard),
+        border-color var(--d-fast) var(--ease-standard),
+        transform var(--d-fast) var(--ease-standard);
+}
+
+/* Darkens rather than brightens: white over --primary-bright is 3.4:1 and
+   fails AA for a label (Section 4.2, Section 4.5). */
+.share-btn:hover {
+    background: var(--primary-deep);
+}
+
+.share-btn:active {
+    transform: translateY(1px);
+}
+
+/* While its own popover is open the control stays pressed. */
+.share-btn.is-active {
+    background: var(--primary-deep);
+}
+
+.pop-anchor {
+    position: relative;
 }
 
 /* The download action is an <a>, so it needs the link decoration removed. */
@@ -249,25 +285,15 @@ a.icon-btn {
     transform: translateY(1px);
 }
 
+/* No status dot on the count. A dot that is always the same colour conveys no
+   state, and Section 7.A allows none by default; the sentence beside it
+   already says whether anything is connected. */
 .accounts-note {
     padding: 10px 4px 2px;
     margin: var(--s-xs) 0 0;
     font-size: var(--t-caption);
     color: var(--ink-soft);
-    display: flex;
-    align-items: center;
-    gap: 6px;
     border-top: 1px solid var(--line-2);
-}
-
-/* On a light canvas a tint lighter than the accent has nowhere to sit, so the
-   live dot takes --primary itself: 4.1:1, past the 3:1 non-text bar. */
-.dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--primary);
-    flex: none;
 }
 
 /* ---------- table ---------- */
@@ -735,10 +761,6 @@ tr:focus-within .row-actions {
     cursor: default;
 }
 
-.dot-idle {
-    background: var(--ink-soft);
-}
-
 /* The one place --danger appears on this screen, and it is an error
    (Section 1.B). */
 .accounts-note.is-error {
@@ -746,98 +768,267 @@ tr:focus-within .row-actions {
 }
 
 /* ---- expanded invoice row ---------------------------------------------- */
-/* The detail opens inside the table rather than over it, so the rows above and
-   below stay readable and there is nothing to dismiss. */
+/* Clicking a row opens the vendor's own document beside every field the parser
+   read off it, inside the table rather than over it. The direction is the one
+   picked in docs/ui-sketches/invoice-preview/, drawn in
+   docs/flows/share-flow-v3-light/01b-row.html.
+
+   The panel answers one question, whether the parser read the document
+   correctly, so it puts the document beside the fields taken off it. Three
+   decisions follow from that:
+
+   1. The open row does not take the accent. A ticked row is --primary-soft,
+      and disclosure was drawing the same tint, so two unrelated states were
+      one colour. Open is neither an action nor a selection (Section 4.2), so
+      the row and its panel take --canvas-deep: the page colour, cut into the
+      card as a well, which also makes the two read as one block instead of a
+      row with a stranger underneath. A row that is ticked *and* open still
+      shows the accent, because that half of it is still a selection.
+   2. The document is a thumbnail, not a viewer. No width this panel can
+      afford makes an A4 page readable, so the box is sized to be recognised,
+      at the same 3:4 proportion as the share page's tiles. Reading the
+      document is what the row's own download is for. What is left over is
+      around 640px at the table's real width, which is what a payment
+      reference and a subject line need to sit on one line.
+   3. The fields sit on a hairline rhythm, with identifiers in mono so they
+      can be read a character at a time. */
 
 tbody tr:hover td {
     cursor: pointer;
 }
 
-tbody tr.is-open td {
+tbody tr.is-open td,
+.expansion td {
+    background: var(--canvas-deep);
+}
+
+/* No hairline between the row and its own panel: the well is one shape. */
+tbody tr.is-open {
+    border-bottom: 0;
+}
+
+/* A selection is still a selection while the row is open. */
+tbody tr.is-open.selected td {
     background: var(--primary-soft);
 }
 
+/* Open is a state, so the control that toggles it is marked in --ink, the same
+   way the sorted column and the current page are. */
 tbody tr.is-open .icon-btn[aria-expanded="true"] {
     color: var(--ink);
-    background: var(--primary-soft);
+    background: transparent;
 }
 
-.expansion td {
+/* The row is clickable; the panel it opens is not. Without this the pointer
+   cursor set above carries on across the whole panel and promises a click that
+   does nothing (Section 4.5). */
+.expansion td,
+.expansion:hover td {
     padding: 0;
-    background: var(--primary-faint);
+    cursor: default;
     border-bottom: 1px solid var(--line);
 }
 
 .exp {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    padding: 18px 16px 20px;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: var(--s-lg);
+    padding: var(--s-lg);
+    /* The panel arrives from the row that opened it. Height is what actually
+       changes, and height is not animatable on a table row, so the movement is
+       carried by the contents: transform and opacity, over 300ms, once. */
+    animation: open-in var(--d-base) var(--ease-emphasized) both;
+}
+
+@keyframes open-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
 }
 
 .exp-doc {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-xs);
     min-width: 0;
+    margin: 0;
 }
 
-/* The document's own padding insets its text; matching it here lines the
-   fields up with the text on the page rather than with the frame's edge. */
-.meta {
-    padding-left: 23px;
-    padding-right: 23px;
-}
-
-/* Bounded, or one open invoice pushes the rest of the list off screen. The
-   rendered page inside stays as the vendor sent it; only the frame around it
-   is dressed. */
-.doc-frame {
+/* One page proportion for documents across the product. --r-sm because this
+   sits inside a panel that is itself inside a card (Section 4.4). */
+.doc-frame,
+.doc-alt,
+.doc-none {
     width: 100%;
-    height: 340px;
-    border: 1px solid var(--line);
+    height: auto;
+    aspect-ratio: 3 / 4;
     border-radius: var(--r-sm);
+}
+
+/* The rendered page stays light because it is a photograph of a document
+   rather than a piece of chrome. Only the frame around it is dressed. */
+.doc-frame {
+    border: 1px solid var(--line);
     background: var(--cloud);
 }
 
+/* The same box before the render arrives: the vendor's mark on a blank sheet,
+   which is the alt case the share page's thumbnails draw. */
+.doc-alt {
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    background: var(--cloud);
+}
+
+.doc-alt .vendor-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--r-md);
+    font-size: var(--t-body-lg);
+}
+
+/* An invoice that never had a document. Solid, not dashed: a dashed edge is
+   the add-a-source affordance on this screen, and there is nothing to drop
+   here. The fill matches .doc-alt because this is the same box in another
+   state. */
 .doc-none {
-    height: 340px;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 24px;
-    border: 1px dashed var(--hairline-strong);
-    border-radius: var(--r-sm);
-    background: var(--canvas-deep);
+    gap: var(--s-xs);
+    padding: var(--s-lg);
+    border: 1px solid var(--line);
+    background: var(--cloud);
 }
 
 .doc-none b {
     font-size: var(--t-body-sm);
     font-weight: 500;
+    color: var(--ink);
 }
 
 .doc-none p {
-    margin: 7px 0 0;
+    margin: 0;
     font-size: var(--t-caption);
-    line-height: 1.55;
+    line-height: 1.5;
     color: var(--ink-soft);
+    text-wrap: pretty;
+}
+
+/* The file name gets a line to itself. Sharing one with the type chip pushed
+   every name past the column and broke it mid-date. */
+.doc-cap {
+    min-width: 0;
+}
+
+.doc-cap .file {
+    font-family: var(--num);
+    font-size: var(--t-caption);
+    letter-spacing: 0;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
+.doc-origin {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-xs);
+    margin: 0;
+    font-size: var(--t-caption);
+    color: var(--ink-soft);
+}
+
+/* A file type is a token, not a heading, so it is set in mono at the caption
+   size, lower case, at --r-xs: pill is the signature of a control (Section
+   4.7) and this is not one. */
+.ftype {
+    flex: none;
+    padding: 2px var(--s-xs);
+    border-radius: var(--r-xs);
+    background: var(--paper-hi);
+    color: var(--ink-soft);
+    font-family: var(--num);
+    font-size: var(--t-caption);
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.4;
+}
+
+.meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-lg);
+    min-width: 0;
+}
+
+/* The amount is what the row was opened to check, so it leads, and the split
+   it is made of sits beside it rather than three rows down a list. It is not
+   repeated in the pairs below: two answers to one question. */
+.exp-total {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-md);
+    margin: 0;
+    padding-bottom: var(--s-sm);
+    border-bottom: 1px solid var(--line);
+}
+
+.exp-total .big {
+    font-family: var(--num);
+    font-size: var(--t-body-xl);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    color: var(--ink);
+}
+
+.exp-total .split {
+    display: flex;
+    gap: var(--s-md);
+    margin: 0;
+    font-size: var(--t-caption);
+}
+
+.exp-total .split div {
+    display: flex;
+    gap: var(--s-xs);
+}
+
+.exp-total .split dt {
+    color: var(--ink-soft);
+}
+
+.exp-total .split dd {
+    margin: 0;
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    color: var(--ink);
 }
 
 .meta h3 {
     margin: 0 0 var(--s-xs);
-    font-size: var(--t-caption);
+    font-size: var(--t-body-sm);
     font-weight: 500;
     letter-spacing: var(--track-sm);
     text-transform: none;
-    color: var(--ink-soft);
-}
-
-.meta h3 + .pairs {
-    margin-bottom: 18px;
+    color: var(--ink);
 }
 
 .pairs {
     display: grid;
-    grid-template-columns: 112px 1fr;
-    gap: 7px 14px;
-    font-size: var(--t-caption);
+    /* 132px is what "Company number" measures at this size. The value column
+       takes the rest, so a reference that runs long wraps under itself rather
+       than pushing the labels.
+
+       No column gap: the rule under a pair has to cross both cells as one
+       line, and a gap breaks it into two segments with a nick between them.
+       The value column carries the separation as padding instead. */
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: 0;
+    font-size: var(--t-body-sm);
 }
 
 /* Each pair is its own subgrid cell pair, so a long value wraps under itself
@@ -846,19 +1037,41 @@ tbody tr.is-open .icon-btn[aria-expanded="true"] {
     display: contents;
 }
 
+.pairs .k,
+.pairs .v {
+    padding: var(--s-xs) 0;
+    border-bottom: 1px solid var(--line);
+}
+
 .pairs .k {
     color: var(--ink-soft);
 }
 
 .pairs .v {
     min-width: 0;
+    padding-left: var(--s-md);
     color: var(--ink);
     overflow-wrap: anywhere;
 }
 
+/* Identifiers are read character by character, so they are set the way the
+   share page's manifest sets them: mono, tabular, no tracking. Prose values
+   are not. */
+.pairs .v.is-id {
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+
+/* Below this the document and the fields stop being side by side, so the
+   document stops being a column and becomes a page-sized panel at the top. */
 @media (max-width: 940px) {
     .exp {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .exp-doc {
+        max-width: 240px;
     }
 }
 

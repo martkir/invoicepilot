@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="color-scheme" content="light"/>
+<meta name="supported-color-schemes" content="light"/>
+<title>Email draft · Invoice Pilot</title>
+
+<!-- The draft as the recipient receives it. Deliberately NOT linked to
+     tokens.css, tokens-v3.css or dashboard.css: mail clients strip <link> and
+     most <style>, so every value here is inlined and the palette is
+     duplicated on purpose. This is the one carve-out Section 1.A allows, and
+     the literals below are Mercury's own; if the tokens move, this file moves
+     with them. 600px, tables, no flexbox, no custom properties: the format
+     that survives Outlook.
+
+     Redesign notes against share-flow-v2/email.html:
+
+     · Light, on the same canvas as the product. #eef0f6 page, #fbfcfd card,
+       #1e1e2a text, #5a5a66 secondary. The light twin of
+       ../share-flow-v3/email.html: same markup, same copy, palette swapped
+       token for token.
+     · The branded band is no longer a slab of the accent. Section 4.2 rations
+       --primary to the real actions, and in this mail there is exactly one:
+       the button. The band became the canvas-deep tone the app uses for
+       chrome that should recede, which on a light surface is a step down from
+       the card rather than up.
+     · Geist and Geist Mono, weights 400 and 500 only, no upper case. The
+       figures are mono so the three of them line up.
+     · One webfont link for the clients that honour it (Apple Mail, Gmail
+       webmail) and the system stack behind it for the ones that do not. A
+       mail that falls back to Helvetica is fine; a mail that waits for a font
+       is not, so no @import and no font-display games.
+     · Every em dash is gone (Section 7.D), including the two in the
+       plain-text alternative at the foot of this file.
+
+     Subject:  Invoices, Apr to Jun 2026 (37 invoices)
+     From:     Martin Kirov <martin@kirov.dev>   (the connected mailbox)
+     Reply-To: martin@kirov.dev                  (replies reach a human)
+     Sent via: Unipile POST /api/v1/emails
+     Attachments: none. The link is the payload. -->
+
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+</head>
+<body style="margin:0;padding:0;background:#eef0f6;">
+
+<!-- Preheader: the grey line the inbox shows next to the subject, and the last
+     chance to catch a wrong batch before anyone clicks. -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  37 invoices, Apr 1 to Jun 30 2026, in one download. No account needed.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background:#eef0f6;padding:32px 12px;">
+<tr><td align="center">
+
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
+         style="width:600px;max-width:100%;background:#fbfcfd;border-radius:16px;overflow:hidden;
+                border:1px solid #c9cad0;
+                font-family:'Geist',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+
+    <!-- The band recedes rather than shouts: wordmark left, the two facts that
+         identify this batch right. -->
+    <tr><td style="background:#e4e6ef;border-bottom:1px solid #c9cad0;padding:24px 30px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="font-size:16px;font-weight:500;color:#1e1e2a;letter-spacing:-.01em;">
+            Invoice&nbsp;Pilot
+          </td>
+          <td align="right" style="font-size:12px;line-height:1.5;color:#5a5a66;
+                     font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">
+            37 invoices<br/>Apr to Jun 2026
+          </td>
+        </tr>
+      </table>
+      <div style="padding-top:24px;font-size:26px;line-height:1.2;font-weight:500;color:#1e1e2a;
+                  letter-spacing:-.02em;">
+        Martin shared Q2<br/>invoices with you
+      </div>
+      <div style="padding-top:10px;font-size:14px;line-height:1.5;color:#5a5a66;">
+        Every invoice from April to June, in one download
+      </div>
+    </td></tr>
+
+    <!-- The few facts that identify the batch, in the hairline label/value
+         rhythm of a receipt. Values are mono, so the three of them align. -->
+    <tr><td style="padding:26px 30px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:0 0 12px;font-size:14px;color:#5a5a66;">Invoices</td>
+          <td align="right" style="padding:0 0 12px;font-size:14px;color:#1e1e2a;
+                     font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">37</td>
+        </tr>
+        <tr><td colspan="2" style="border-top:1px solid #e6e7ea;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+        <tr>
+          <td style="padding:12px 0;font-size:14px;color:#5a5a66;">Period</td>
+          <td align="right" style="padding:12px 0;font-size:14px;color:#1e1e2a;
+                     font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">
+            Apr 1 - Jun 30, 2026
+          </td>
+        </tr>
+        <tr><td colspan="2" style="border-top:1px solid #e6e7ea;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+        <tr>
+          <td style="padding:12px 0;font-size:14px;color:#5a5a66;">Download
+            <div style="padding-top:4px;font-size:12px;color:#5a5a66;">36 PDFs and invoices.csv</div>
+          </td>
+          <td align="right" style="padding:12px 0;font-size:14px;color:#1e1e2a;
+                     font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">
+            invoices-2026-Q2.zip
+            <div style="padding-top:4px;font-size:12px;color:#5a5a66;">12.4 MB</div>
+          </td>
+        </tr>
+        <tr><td colspan="2" style="border-top:1px solid #c9cad0;font-size:0;line-height:0;">&nbsp;</td></tr>
+      </table>
+    </td></tr>
+
+    <!-- One action, and the only place the accent appears. A padded anchor,
+         not an image or a div, so it survives a client that drops backgrounds
+         and still reads as the thing to click. -->
+    <tr><td style="padding:24px 30px 0;">
+      <a href="https://invoicepilot.app/s/7Kq2mXbN4vRt9wLpZaHc3f"
+         style="display:block;padding:16px 0;background:#5266eb;color:#ffffff;font-size:16px;
+                font-weight:500;text-align:center;text-decoration:none;border-radius:9999px;">
+        View and download
+      </a>
+      <div style="padding-top:14px;font-size:12px;line-height:1.6;color:#5a5a66;">
+        The page lists every invoice with its amount, date and filename, so you can check the batch
+        before you download it. No account, nothing to install.
+      </div>
+    </td></tr>
+
+    <tr><td style="height:28px;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+  </table>
+
+  <!-- Outside the card, the way a receipt puts the legal line under it. The raw
+       URL lives here for people who want to see where a link goes. -->
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
+         style="width:600px;max-width:100%;
+                font-family:'Geist',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <tr><td align="center" style="padding:20px 24px 0;font-size:12px;line-height:1.75;color:#5a5a66;">
+      Anyone with this link can download these invoices; Martin can turn it off at any time.<br/>
+      <a href="https://invoicepilot.app/s/7Kq2mXbN4vRt9wLpZaHc3f" style="color:#33333f;
+         font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">
+        invoicepilot.app/s/7Kq2mXbN4vRt9wLpZaHc3f</a><br/>
+      Sent with Invoice Pilot on Martin&rsquo;s behalf. Reply to this message to reach him.
+    </td></tr>
+  </table>
+
+</td></tr>
+</table>
+
+<!-- Plain-text alternative, always sent alongside:
+
+Martin shared Q2 invoices with you: every invoice from April to June,
+in one download.
+
+Invoices       37
+Period         Apr 1 - Jun 30, 2026
+Download       invoices-2026-Q2.zip, 12.4 MB, 36 PDFs and invoices.csv
+
+View and download: https://invoicepilot.app/s/7Kq2mXbN4vRt9wLpZaHc3f
+
+The page lists every invoice with its amount, date and filename, so you
+can check the batch before you download it. No account, nothing to
+install.
+
+Anyone with this link can download these invoices; Martin can turn it off
+at any time. Reply to reach Martin.
+Sent with Invoice Pilot on Martin's behalf.
+
+No unsubscribe line: this is a one-to-one message a person asked to send,
+not a mailing. A list-unsubscribe header on it would be a lie. -->
+
+</body>
+</html>
