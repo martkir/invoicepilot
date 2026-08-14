@@ -1,0 +1,167 @@
+/* Mercury light, landed once as custom properties.
+   ==========================================================================
+   Shipped from docs/flows/share-flow-v3-light/tokens-v3.css, which is the
+   light twin of docs/flows/share-flow-v3. Section numbers in the comments
+   below refer to .claude/skills/mercury-ui-light. If a decision changes in one
+   folder it changes in the other, and then it changes here.
+
+   The mockups' draft-only @font-face @import is gone: the families are
+   self-hosted through @fontsource-variable/geist and
+   @fontsource-variable/geist-mono, imported in main.tsx, because a share page
+   that stalls on fonts.gstatic.com is a share page that stalls (Section 3.A).
+   The stack falls back to the system fonts, so an offline open degrades to
+   roughly what the app looked like before. */
+
+:root {
+    color-scheme: light;
+
+    /* ---------------------------------------------------------- type ---- */
+    /* Geist for text, Geist Mono for every figure: money, dates, counts, byte
+       sizes, filenames, tokens. No third family (Section 4.1). */
+    --font: "Geist Variable", "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --num: var(--font-mono);
+
+    /* Mercury's scale verbatim. The only liberty is the clamp on display-md,
+       so the filename on the share page does not overflow a phone. */
+    --t-display-xl: 65px;
+    --t-display-lg: 49px;
+    --t-display-md: clamp(28px, 4.2vw, 42px);
+    --t-body-xl: 24px;
+    --t-body-lg: 18px;
+    --t-body-md: 16px;
+    --t-body-sm: 14px;
+    --t-caption: 12px;
+
+    /* Tracking tightens with size and never goes positive (Section 4.1).
+       There is deliberately no --track-label: positive tracking is banned
+       here, so that token is gone rather than zeroed under a name that invites
+       its return. */
+    --track-xl: -0.03em;
+    --track-lg: -0.025em;
+    --track-md: -0.02em;
+    --track-sm: -0.01em;
+
+    /* --------------------------------------------------------- colour --- */
+    --primary: #5266eb;
+    --primary-bright: #7483ef;
+    --primary-deep: #3c4dc5;
+    --on-primary: #ffffff;
+
+    --ink: #1e1e2a;
+    --ink-soft: #5a5a66;
+    --on-ink: #fbfcfd;
+
+    --canvas: #eef0f6;
+    --canvas-deep: #e4e6ef;
+    --paper: #fbfcfd;
+    --cloud: #f4f5f9;
+
+    --hairline: #e4e6ef;
+    --hairline-strong: #70707d;
+
+    --link: #33333f;
+    --link-pressed: #5a5a66;
+    --accent-pale-blue: #cdddff;
+
+    /* ------------------------------------------------- derived surfaces --- */
+    /* Not new colours: compositions of the tokens above, written as color-mix
+       so they cannot drift from them. Mercury ships one hairline value and it
+       is the same hex as --canvas-deep, which is correct for a border drawn on
+       --canvas and nearly invisible for a divider drawn *inside* a --paper
+       card. A table of rows needs that divider, so it is derived here once
+       rather than eyeballed per screen.
+
+       The percentages are lower than the dark twin's because a line on a
+       bright surface needs less of the strong hairline to read: 34% lands on
+       #c9cad0, which is the quiet card edge a light UI wants. */
+    --rule: color-mix(in oklab, var(--hairline-strong) 34%, var(--paper));
+    --rule-soft: color-mix(in oklab, var(--hairline-strong) 14%, var(--paper));
+
+    /* The hover step. Elevation is contrast in this system, so it is always a
+       step toward --ink and never a shadow (Section 4.12). */
+    --paper-hi: color-mix(in oklab, var(--ink) 7%, var(--paper));
+
+    /* Low-emphasis primary backgrounds: a selected row, an active control, the
+       current page in the pager. --primary itself stays rationed to actions
+       and focus rings (Section 4.2). */
+    --primary-soft: color-mix(in oklab, var(--primary) 20%, var(--canvas));
+    --primary-faint: color-mix(in oklab, var(--primary) 9%, var(--canvas));
+
+    /* ---------------------------------------------------------- status --- */
+    /* Section 1.B: one status colour, defined once, and only ever an error.
+       #b3261e holds 5.7:1 on --canvas and 6.4:1 on --paper, both past AA, and
+       still holds 4.8:1 on its own soft tint. There is no success colour and
+       no warning colour. */
+    --danger: #b3261e;
+    --danger-soft: color-mix(in oklab, var(--danger) 12%, var(--canvas));
+
+    /* ---------------------------------------------------------- radii ---- */
+    /* Mercury's scale, and one rule for spending it (Section 4.4): interactive
+       elements are pill, containers are lg, things inside other things are sm
+       or xs. The checkbox is the one documented exception. */
+    --r-none: 0px;
+    --r-xs: 4px;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-xl: 32px;
+    --r-pill: 9999px;
+
+    /* -------------------------------------------------------- spacing ---- */
+    --s-xxs: 4px;
+    --s-xs: 8px;
+    --s-sm: 12px;
+    --s-md: 16px;
+    --s-lg: 24px;
+    --s-xl: 32px;
+    --s-xxl: 48px;
+    --s-section: 72px;
+
+    /* -------------------------------------------------------- shadows ---- */
+    /* Flatness is law (Section 4.4). Every shadow token resolves to none, and
+       they are kept as names only so that a stray var(--sh-2) resolves to
+       nothing instead of to a shadow. */
+    --sh-1: none;
+    --sh-2: none;
+    --sh-3: none;
+    --edge: none;
+
+    /* --------------------------------------------------------- motion ---- */
+    --d-fast: 150ms;
+    --d-base: 300ms;
+    --d-slow: 500ms;
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-emphasized: cubic-bezier(0.65, 0.05, 0.36, 1);
+
+    /* -------------------------------------------------------- z-index ---- */
+    --z-raised: 10;
+    --z-sticky: 20;
+    --z-popover: 40;
+    --z-overlay: 60;
+
+    /* ------------------------------------------- aliases for the app ----- */
+    /* The names the pre-Mercury dashboard.css spent on every screen. They are
+       repointed rather than removed so nothing has to be renamed in one pass:
+       --red-* becomes the one accent, --white becomes the card surface, --page
+       becomes the canvas. New code should use the Mercury names above. */
+    --red-700: var(--primary-deep);
+    --red-600: var(--primary);
+    --red-500: var(--primary-bright);
+    --red-050: var(--primary-soft);
+    --red-025: var(--primary-faint);
+
+    --ink-2: var(--ink-soft);
+    --muted: var(--ink-soft);
+    --line: var(--rule);
+    --line-2: var(--rule-soft);
+    --page: var(--canvas);
+    --white: var(--paper);
+
+    /* The small scale the sheets still ask for, mapped onto Mercury's steps
+       rather than kept as a parallel one. */
+    --t-body: var(--t-body-sm);
+    --t-sm: var(--t-body-sm);
+    --t-xs: var(--t-caption);
+    --t-2xs: var(--t-caption);
+}

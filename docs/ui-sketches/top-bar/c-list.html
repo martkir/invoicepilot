@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>C · List</title>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); color: var(--ink); background: var(--white); }
+.page { max-width: 720px; margin: 0 auto; padding: 56px 28px 80px; }
+
+/* No cards, no table chrome. The invoices are the page; everything else is a
+   quiet line above them. Grouping by month replaces the date column. */
+.head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 34px; }
+.head h1 { margin: 0 0 6px; font-size: 27px; font-weight: 700; letter-spacing: -.025em; }
+.sources { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); }
+.sources svg.g { width: 13px; height: 13px; }
+.sources button { border: 0; background: none; padding: 0; font: inherit; color: var(--red-600);
+  cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.sources .sep { color: var(--line); }
+.update { margin-left: auto; flex: none; display: flex; align-items: center; gap: 7px;
+  height: 34px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px;
+  background: none; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.update:hover { border-color: var(--red-600); color: var(--red-600); }
+
+.month { display: flex; align-items: baseline; gap: 10px; margin: 30px 0 4px; }
+.month:first-of-type { margin-top: 0; }
+.month h2 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--muted); }
+.month .total { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--ink-2);
+  font-variant-numeric: tabular-nums; }
+
+.row { display: flex; align-items: center; gap: 14px; padding: 14px 8px;
+  border-bottom: 1px solid var(--line-2); border-radius: var(--r-sm); }
+.row:hover { background: var(--red-025); }
+.logo { width: 34px; height: 34px; flex: none; display: grid; place-items: center;
+  border-radius: 50%; color: #fff; font-size: 12px; font-weight: 700; }
+.who { flex: 1; min-width: 0; }
+.name { display: block; font-size: 14px; font-weight: 600; letter-spacing: -.005em; }
+.day { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.amount { flex: none; font-size: 14.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="head">
+    <div>
+      <h1>Invoices</h1>
+      <div class="sources">
+        <svg class="g" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 10.2V14h5.3c-.2 1.2-1.6 3.6-5.3 3.6A5.6 5.6 0 1 1 15.7 8l2.7-2.6A9.3 9.3 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6 0-1-.1-1.5H12z"/></svg>
+        kiraesq124@gmail.com
+        <span class="sep">·</span>
+        <button>add source</button>
+      </div>
+    </div>
+    <button class="update">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg>
+      Update
+    </button>
+  </div>
+
+  <div class="month"><h2>August 2026</h2><span class="total">82.27 €</span></div>
+  <div class="row"><span class="logo" style="background:#34A853">Bo</span><span class="who"><span class="name">Bolt Operations OÜ</span><span class="day">6 August</span></span><span class="amount">2.37 €</span></div>
+  <div class="row"><span class="logo" style="background:#232F3E">Am</span><span class="who"><span class="name">Amazon</span><span class="day">2 August</span></span><span class="amount">64.90 €</span></div>
+  <div class="row"><span class="logo" style="background:#0D0D0D">Fi</span><span class="who"><span class="name">Figma</span><span class="day">1 August</span></span><span class="amount">15.00 €</span></div>
+
+  <div class="month"><h2>July 2026</h2><span class="total">34.15 €</span></div>
+  <div class="row"><span class="logo" style="background:#4A154B">Sl</span><span class="who"><span class="name">Slack</span><span class="day">28 July</span></span><span class="amount">21.75 €</span></div>
+  <div class="row"><span class="logo" style="background:#0D0D0D">Ub</span><span class="who"><span class="name">Uber</span><span class="day">24 July</span></span><span class="amount">12.40 €</span></div>
+</div>
+</body>
+</html>

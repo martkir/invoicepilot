@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Source connection flow</title>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 40px 32px 80px; font-family: var(--font); color: var(--ink); background: var(--page); }
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.02em; }
+.lede { margin: 0 0 10px; max-width: 70ch; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
+.note { max-width: 70ch; margin: 0 0 30px; padding: 10px 12px; border-left: 3px solid var(--red-600);
+        border-radius: var(--r-sm); background: var(--red-025); font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
+.key { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 30px; }
+.step { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.step-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--line-2); }
+.num { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 50%;
+       background: var(--red-600); color: var(--white); font-size: 11px; font-weight: 700; }
+h2 { margin: 0; font-size: 14.5px; font-weight: 650; }
+.badge { padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700;
+         text-transform: uppercase; letter-spacing: .03em; }
+.b-built { color: #1B7F4B; background: #E6F4EC; }
+.b-new { color: var(--red-700); background: var(--red-050); }
+.open { margin-left: auto; font-size: 12px; color: var(--muted); text-decoration: none; }
+.open:hover { color: var(--red-600); }
+.caption { margin: 0; padding: 12px 16px 14px; font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
+.caption code { font-size: 11.5px; padding: 1px 4px; border-radius: 4px; background: var(--line-2); }
+.frame { height: 186px; border-top: 1px solid var(--line-2); overflow: hidden; background: var(--page); }
+iframe { width: 1400px; height: 465px; border: 0; transform: scale(.4); transform-origin: 0 0; }
+.arrow { display: grid; place-items: center; padding: 12px 0; }
+.arrow span { padding: 4px 14px 4px 0; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.arrow span::before { content: "\2193 "; color: var(--red-600); font-weight: 700; }
+@media (max-width: 760px) { .frame { height: 132px; } iframe { transform: scale(.28); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Source connection flow</h1>
+  <p class="lede">Connect, disconnect, and what happens when credentials expire — as eight screens.
+  Each frame is a real page using the app&rsquo;s own <code>tokens.css</code> and
+  <code>dashboard.css</code>, so these cannot drift from the product.</p>
+  <p class="note"><b>Two simplifications drive this flow.</b> Disconnect acts on a single click,
+  with no confirmation step. And expired credentials are not a separate state &mdash; a lapsed
+  account is presented exactly as a disconnected one (screen 4), so there is no reconnect path and
+  no wrong-account case to handle. You simply add the source again.</p>
+  <div class="key"><span class="badge b-built">Built</span><span class="badge b-new">To build</span></div>
+  
+    <section class="step">
+      <div class="step-head">
+        <span class="num">1</span><h2>Idle</h2>
+        <span class="badge b-built">Built</span>
+        <a class="open" href="01-idle.html" target="_blank">open full screen ↗</a>
+      </div>
+      <p class="caption">Resting state. The unlink button is hidden until the row is hovered, so a destructive action never sits in the way.</p>
+      <div class="frame"><iframe src="01-idle.html" loading="lazy" title="Idle"></iframe></div>
+    </section><div class="arrow"><span>hover a source</span></div>
+    <section class="step">
+      <div class="step-head">
+        <span class="num">2</span><h2>Hover a source</h2>
+        <span class="badge b-built">Built</span>
+        <a class="open" href="02-hover.html" target="_blank">open full screen ↗</a>
+      </div>
+      <p class="caption">Hovering reveals the unlink button. One click disconnects — there is no confirmation step. Worth knowing: this <b>cannot be undone</b>. Disconnecting discards the credentials Unipile holds, so getting the mailbox back means authorizing it again.</p>
+      <div class="frame"><iframe src="02-hover.html" loading="lazy" title="Hover a source"></iframe></div>
+    </section><div class="arrow"><span>click the unlink icon</span></div>
+    <section class="step">
+      <div class="step-head">
+        <span class="num">3</span><h2>Removing</h2>
+        <span class="badge b-new">To build</span>
+        <a class="open" href="03-removing.html" target="_blank">open full screen ↗</a>
+      </div>
+      <p class="caption"><code>DELETE /accounts/{id}</code> in flight. The icon becomes a spinner and is disabled, so the click has feedback and cannot be double-fired.</p>
+      <div class="frame"><iframe src="03-removing.html" loading="lazy" title="Removing"></iframe></div>
+    </section><div class="arrow"><span>204 No Content</span></div>
+    <section class="step">
+      <div class="step-head">
+        <span class="num">4</span><h2>Disconnected</h2>
+        <span class="badge b-built">Built</span>
+        <a class="open" href="04-disconnected.html" target="_blank">open full screen ↗</a>
+      </div>
+      <p class="caption">One state, two causes: you disconnected it, <b>or its credentials expired</b>. An expired mailbox is shown exactly as if it had never been connected — there is no separate “reconnect” concept to reason about. The <b>invoices remain</b> either way; they record what was spent, which does not stop being true because the mailbox went away.</p>
+      <div class="frame"><iframe src="04-disconnected.html" loading="lazy" title="Disconnected"></iframe></div>
+    </section><div class="arrow"><span>click Add source</span></div>
+    <section class="step">
+      <div class="step-head">
+        <span class="num">5</span><h2>Getting the link</h2>
+        <span class="badge b-new">To build</span>
+        <a class="open" href="05-opening.html" target="_blank">open full screen ↗</a>
+      </div>
+      <p class="caption"><code>POST /accounts/connect</code> is fetching the wizard URL. The browser tab was <b>already opened synchronously on click</b> — opening it after the await gets popup-blocked.</p>
+      <div class="frame"><iframe src="05-opening.html" loading="lazy" title="Getting the link"></iframe></div>
+    </section><div class="arrow"><span>tab navigates to Unipile</span></div>
+    <section class="step">
+      <div class="step-head">
+        <span class="num">6</span><h2>Waiting for you</h2>
+        <span class="badge b-new">To build</span>
+        <a class="open" href="06-waiting.html" target="_blank">open full screen ↗</a>
+      </div>
+      <p class="caption">Polling <code>GET /accounts</code> every 3s. Cancel stops it immediately — today it would poll for five minutes with no way out.</p>
+      <div class="frame"><iframe src="06-waiting.html" loading="lazy" title="Waiting for you"></iframe></div>
+    </section><div class="arrow"><span>you approve in the tab</span></div>
+    <section class="step">
+      <div class="step-head">
+        <span class="num">7</span><h2>Connected</h2>
+        <span class="badge b-built">Built</span>
+        <a class="open" href="07-connected.html" target="_blank">open full screen ↗</a>
+      </div>
+      <p class="caption">The account appears with status OK. A connect always mints a <b>new account_id</b>; the invoices still match because they are keyed on content, not on the account.</p>
+      <div class="frame"><iframe src="07-connected.html" loading="lazy" title="Connected"></iframe></div>
+    </section>
+    <section class="step">
+      <div class="step-head">
+        <span class="num">8</span><h2>Connect failed</h2>
+        <span class="badge b-new">To build</span>
+        <a class="open" href="08-failed.html" target="_blank">open full screen ↗</a>
+      </div>
+      <p class="caption">Any <code>UnipileError</code> surfaces here as a 502 detail rather than a silent no-op.</p>
+      <div class="frame"><iframe src="08-failed.html" loading="lazy" title="Connect failed"></iframe></div>
+    </section>
+</div>
+</body>
+</html>

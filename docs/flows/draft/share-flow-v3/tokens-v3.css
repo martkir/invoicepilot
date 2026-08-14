@@ -1,0 +1,181 @@
+/* tokens-v3.css: Mercury, landed once as custom properties.
+   ==========================================================================
+   Loaded *after* the app's own tokens.css and it redefines the same custom
+   properties, which is the trick this folder inherits from v2: the shipped
+   dashboard.css is linked untouched, so every screen here still renders the
+   real product; it just renders it in Mercury. Nothing was forked to see the
+   change.
+
+   Shipping this for real means pasting the :root block below over
+   frontend/src/styles/tokens.css and folding reskin.css into dashboard.css.
+
+   What v3 changes against v2 is written up in audit.md. The short version is
+   that v2 was a warm, light, shadowed, grained system built around an oxide
+   red, and Mercury is none of those things: it is dark, strictly flat, and
+   built around one electric blue. So the palette inverts, every shadow token
+   resolves to none, the grain overlay is deleted rather than re-tinted, and
+   the radius, type and motion scales are replaced with Mercury's own.
+
+   Section numbers in the comments below refer to .claude/skills/mercury-ui.
+
+   Production note: the font is the one external dependency these screens
+   have. In the app that becomes @fontsource-variable/geist and
+   @fontsource-variable/geist-mono, self-hosted, because a share page that stalls on
+   fonts.gstatic.com is a share page that stalls (Section 3.A). The @import
+   below is the draft-only form. */
+
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap");
+
+:root {
+    color-scheme: dark;
+
+    /* ---------------------------------------------------------- type ---- */
+    /* Geist for text, Geist Mono for every figure. No third family: the
+       contact sheet in v2 set its headings in Fraunces, which made two
+       typefaces in one folder (Section 4.1). */
+    --font: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --num: var(--font-mono);
+
+    /* Mercury's scale verbatim. The only liberty is the clamp on display-md,
+       so the filename on the share page does not overflow a phone. */
+    --t-display-xl: 65px;
+    --t-display-lg: 49px;
+    --t-display-md: clamp(28px, 4.2vw, 42px);
+    --t-body-xl: 24px;
+    --t-body-lg: 18px;
+    --t-body-md: 16px;
+    --t-body-sm: 14px;
+    --t-caption: 12px;
+
+    /* Tracking tightens with size and never goes positive (Section 4.1).
+       v2 carried --track-label: 0.02em on every small label; positive
+       tracking is banned here, so that token is gone rather than zeroed
+       under a name that invites its return. */
+    --track-xl: -0.03em;
+    --track-lg: -0.025em;
+    --track-md: -0.02em;
+    --track-sm: -0.01em;
+
+    /* --------------------------------------------------------- colour --- */
+    --primary: #5266eb;
+    --primary-bright: #7483ef;
+    --primary-deep: #3c4dc5;
+    --on-primary: #ffffff;
+
+    --ink: #fbfcfd;
+    --ink-soft: #c3c3cc;
+    --on-ink: #1e1e2a;
+
+    --canvas: #1e1e2a;
+    --canvas-deep: #171721;
+    --paper: #272735;
+    --cloud: #f4f5f9;
+
+    --hairline: #272735;
+    --hairline-strong: #70707d;
+
+    --link: #ededf3;
+    --link-pressed: #c3c3cc;
+    --accent-pale-blue: #cdddff;
+
+    /* ------------------------------------------------- derived surfaces --- */
+    /* Not new colours: compositions of the tokens above, written as
+       color-mix so they cannot drift from them. Mercury ships one hairline
+       value and it is the same hex as --paper, which is correct for a border
+       drawn on --canvas and invisible for a divider drawn *inside* a card.
+       A manifest of 37 rows needs that divider, so it is derived here once
+       rather than eyeballed per screen. */
+    --rule: color-mix(in oklab, var(--hairline-strong) 45%, var(--paper));
+    --rule-soft: color-mix(in oklab, var(--hairline-strong) 22%, var(--paper));
+
+    /* The hover lift. Elevation is contrast in this system, so "raised" means
+       a step toward --ink, never a shadow. */
+    --paper-hi: color-mix(in oklab, var(--ink) 7%, var(--paper));
+
+    /* Low-emphasis primary backgrounds: a selected row, the active share
+       control, the current page in the pager. --primary itself stays rationed
+       to actions and focus rings (Section 4.2). */
+    --primary-soft: color-mix(in oklab, var(--primary) 20%, var(--canvas));
+    --primary-faint: color-mix(in oklab, var(--primary) 9%, var(--canvas));
+
+    /* ---------------------------------------------------------- status --- */
+    /* Section 1.B: one status colour, defined once, and only ever an error.
+       #ff6b6b holds 5.9:1 on --canvas and 5.1:1 on --paper, both past AA.
+       There is no success colour and no warning colour: the sent banner is
+       carried by its sentence and a tick in --ink, which is why v2's green
+       never came back. */
+    --danger: #ff6b6b;
+    --danger-soft: color-mix(in oklab, var(--danger) 15%, var(--canvas));
+
+    /* ---------------------------------------------------------- radii ---- */
+    /* Mercury's scale, and one rule for spending it (Section 4.4):
+       interactive elements are pill, containers are lg, things inside other
+       things are sm or xs. v2 varied radius "for interest" across a six-step
+       scale with 3px, 5px, 9px and 14px literals on top of it. */
+    --r-none: 0px;
+    --r-xs: 4px;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-xl: 32px;
+    --r-pill: 9999px;
+
+    /* -------------------------------------------------------- spacing ---- */
+    --s-xxs: 4px;
+    --s-xs: 8px;
+    --s-sm: 12px;
+    --s-md: 16px;
+    --s-lg: 24px;
+    --s-xl: 32px;
+    --s-xxl: 48px;
+    --s-section: 72px;
+
+    /* -------------------------------------------------------- shadows ---- */
+    /* Flatness is law (Section 4.4). Every shadow token resolves to none, and
+       they are kept as names only so that a stray var(--sh-2) inherited from
+       v2's markup resolves to nothing instead of to a shadow. */
+    --sh-1: none;
+    --sh-2: none;
+    --sh-3: none;
+    --edge: none;
+
+    /* --------------------------------------------------------- motion ---- */
+    --d-fast: 150ms;
+    --d-base: 300ms;
+    --d-slow: 500ms;
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-emphasized: cubic-bezier(0.65, 0.05, 0.36, 1);
+
+    /* -------------------------------------------------------- z-index ---- */
+    --z-raised: 10;
+    --z-sticky: 20;
+    --z-popover: 40;
+    --z-overlay: 60;
+
+    /* ------------------------------------------- aliases for the app ----- */
+    /* dashboard.css spends these names on every screen it ships. Repointing
+       them here is what lets the real stylesheet render dark without being
+       edited: --red-* becomes the one accent, --white becomes the card
+       surface, --page becomes the canvas. Nothing in the app has to know. */
+    --red-700: var(--primary-deep);
+    --red-600: var(--primary);
+    --red-500: var(--primary-bright);
+    --red-050: var(--primary-soft);
+    --red-025: var(--primary-faint);
+
+    --ink-2: var(--ink-soft);
+    --muted: var(--ink-soft);
+    --line: var(--rule);
+    --line-2: var(--rule-soft);
+    --page: var(--canvas);
+    --white: var(--paper);
+
+    /* v2 shipped --t-body/--t-sm/--t-xs/--t-2xs and reskin.css plus flow.css
+       still want a small scale. Mapped onto Mercury's steps rather than kept
+       as a parallel one. */
+    --t-body: var(--t-body-sm);
+    --t-sm: var(--t-body-sm);
+    --t-xs: var(--t-caption);
+    --t-2xs: var(--t-caption);
+}

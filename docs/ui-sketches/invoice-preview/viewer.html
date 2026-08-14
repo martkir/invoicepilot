@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Preview sketch viewer</title>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<style>
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; display: flex; flex-direction: column;
+  font-family: var(--font, system-ui, sans-serif);
+  color: var(--ink, #17171a); background: var(--page, #f6f6f7);
+}
+
+/* ---- top bar ---------------------------------------------------------- */
+.bar {
+  flex: none; display: flex; align-items: center; gap: 14px;
+  padding: 0 14px; height: 52px;
+  background: var(--white, #fff); border-bottom: 1px solid var(--line, #e4e4e7);
+}
+.home { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+  text-decoration: none; color: var(--muted, #74747c); white-space: nowrap; }
+.home:hover { color: var(--red-600, #d33); }
+
+.nav { display: flex; align-items: center; gap: 4px; }
+.nav button { width: 30px; height: 30px; display: grid; place-items: center;
+  border: 1px solid var(--line, #e4e4e7); border-radius: var(--r-sm, 6px);
+  background: var(--white, #fff); color: var(--ink-2, #45454d); font-size: 14px; cursor: pointer; }
+.nav button:hover:not(:disabled) { border-color: var(--red-600, #d33); color: var(--red-600, #d33); }
+.nav button:disabled { opacity: .35; cursor: default; }
+.count { min-width: 52px; text-align: center; font-size: 12px; font-weight: 600;
+  color: var(--muted, #74747c); font-variant-numeric: tabular-nums; }
+
+.title { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+.title h1 { margin: 0; font-size: 14.5px; font-weight: 650; letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.title .sub { font-size: 11.5px; color: var(--muted, #74747c); white-space: nowrap; }
+
+.spacer { margin-left: auto; }
+
+.seg { display: flex; border: 1px solid var(--line, #e4e4e7); border-radius: var(--r-sm, 6px); overflow: hidden; }
+.seg button { padding: 0 9px; height: 28px; border: 0; background: var(--white, #fff);
+  font-family: inherit; font-size: 11px; font-weight: 600; color: var(--muted, #74747c); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line, #e4e4e7); }
+.seg button[aria-pressed="true"] { background: var(--red-600, #d33); color: #fff; }
+
+.open { font-size: 12px; text-decoration: none; color: var(--muted, #74747c); white-space: nowrap; }
+.open:hover { color: var(--red-600, #d33); }
+
+/* ---- dot strip -------------------------------------------------------- */
+.dots { flex: none; display: flex; gap: 4px; align-items: center; padding: 7px 14px;
+  overflow-x: auto; background: var(--white, #fff); border-bottom: 1px solid var(--line-2, #efeff1); }
+.dots button { flex: none; min-width: 26px; height: 22px; padding: 0 8px;
+  border: 1px solid transparent; border-radius: 999px;
+  background: var(--line-2, #efeff1); color: var(--muted, #74747c);
+  font-family: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.dots button:hover { border-color: var(--red-600, #d33); color: var(--red-600, #d33); }
+.dots button[aria-current="true"] { background: var(--red-600, #d33); color: #fff; }
+
+/* ---- stage ------------------------------------------------------------ */
+.stage { flex: 1; min-height: 0; position: relative; display: grid; place-items: start center;
+  overflow: auto; background: var(--page, #f6f6f7); }
+iframe { width: 100%; height: 100%; border: 0; background: var(--page, #f6f6f7); display: block; }
+.stage[data-w="1280"] iframe, .stage[data-w="480"] iframe {
+  height: 100%; border-left: 1px solid var(--line, #e4e4e7); border-right: 1px solid var(--line, #e4e4e7); }
+.stage[data-w="1280"] iframe { width: 1280px; }
+.stage[data-w="480"]  iframe { width: 480px; }
+
+/* Compare: every sketch at once, which is the whole point of alternatives —
+   you judge them against each other, not one after the other. */
+.stage[data-mode="compare"] { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  place-items: stretch; gap: 0; overflow: hidden; }
+.pane { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--line, #e4e4e7); }
+.pane:last-child { border-right: 0; }
+.pane-head { flex: none; display: flex; align-items: center; gap: 7px; padding: 7px 10px;
+  background: var(--white, #fff); border-bottom: 1px solid var(--line-2, #efeff1); }
+.pane-tag { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%;
+  background: var(--red-600, #d33); color: #fff; font-size: 10px; font-weight: 700; }
+.pane-head b { font-size: 12px; font-weight: 650; }
+.pane-head a { margin-left: auto; font-size: 11px; color: var(--muted, #74747c); text-decoration: none; }
+.pane-head a:hover { color: var(--red-600, #d33); }
+.pane iframe { flex: 1; width: 100%; }
+
+/* ---- caption ---------------------------------------------------------- */
+.caption { flex: none; padding: 11px 16px; max-height: 30vh; overflow: auto;
+  background: var(--white, #fff); border-top: 1px solid var(--line, #e4e4e7);
+  font-size: 12.5px; line-height: 1.6; color: var(--ink-2, #45454d); }
+.caption[hidden] { display: none; }
+.caption p { margin: 0 0 8px; }
+.caption ul { margin: 0; padding-left: 17px; }
+.caption li { margin-bottom: 3px; }
+.caption b { color: var(--ink, #17171a); }
+
+/* ---- help ------------------------------------------------------------- */
+.help { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center;
+  background: rgba(20,20,25,.55); }
+.help[hidden] { display: none; }
+.help-card { background: var(--white, #fff); border-radius: var(--r-lg, 12px);
+  padding: 20px 24px; min-width: 300px; box-shadow: 0 18px 50px rgba(0,0,0,.25); }
+.help-card h2 { margin: 0 0 12px; font-size: 14px; }
+.help-card dl { display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; margin: 0; font-size: 12.5px; }
+.help-card dt { font-weight: 700; color: var(--ink, #17171a); }
+.help-card dd { margin: 0; color: var(--ink-2, #45454d); }
+kbd { display: inline-block; padding: 1px 5px; border-radius: 4px;
+  border: 1px solid var(--line, #e4e4e7); background: var(--line-2, #efeff1);
+  font: inherit; font-size: 11px; font-weight: 700; }
+
+@media (max-width: 820px) {
+  .title .sub, .seg[data-role="width"], .home span { display: none; }
+  .stage[data-mode="compare"] { grid-auto-flow: row; grid-auto-rows: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <a class="home" href="index.html" title="Back to the overview (g)">◧ <span>Overview</span></a>
+  <div class="nav">
+    <button id="prev" title="Previous (←)">◀</button>
+    <span class="count" id="count">– / –</span>
+    <button id="next" title="Next (→)">▶</button>
+  </div>
+  <div class="title">
+    <h1 id="title">Loading…</h1>
+    <span class="sub" id="sub"></span>
+  </div>
+  <div class="spacer"></div>
+  <div class="seg" data-role="mode" role="group" aria-label="View mode">
+    <button data-mode="single" aria-pressed="true">Single</button>
+    <button data-mode="compare" aria-pressed="false">Compare</button>
+  </div>
+  <div class="seg" data-role="width" role="group" aria-label="Viewport width">
+    <button data-w="fit" aria-pressed="true">Fit</button>
+    <button data-w="1280" aria-pressed="false">1280</button>
+    <button data-w="480" aria-pressed="false">480</button>
+  </div>
+  <a class="open" id="open" href="#" target="_blank" title="Open this sketch in its own tab">full screen ↗</a>
+  <a class="open" href="#" id="helpBtn" title="Keyboard shortcuts (?)">?</a>
+</div>
+
+<div class="dots" id="dots"></div>
+
+<div class="stage" id="stage" data-w="fit" data-mode="single">
+  <iframe id="frame" title="Sketch"></iframe>
+</div>
+
+<div class="caption" id="caption"></div>
+
+<div class="help" id="help" hidden>
+  <div class="help-card">
+    <h2>Keyboard</h2>
+    <dl>
+      <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>previous / next sketch</dd>
+      <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>same, home-row</dd>
+      <dt><kbd>a</kbd> <kbd>b</kbd> <kbd>c</kbd></dt><dd>jump straight to a sketch</dd>
+      <dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>jump by position</dd>
+      <dt><kbd>s</kbd></dt><dd>single ⇄ compare</dd>
+      <dt><kbd>w</kbd></dt><dd>cycle viewport width</dd>
+      <dt><kbd>c</kbd></dt><dd>toggle the notes panel</dd>
+      <dt><kbd>g</kbd></dt><dd>back to the overview</dd>
+      <dt><kbd>?</kbd> <kbd>Esc</kbd></dt><dd>show / close this</dd>
+    </dl>
+  </div>
+</div>
+
+<script>
+// Sketches are read from index.html so titles and notes never have to be
+// maintained twice. Under file:// a fetch of a sibling file is blocked, so the
+// static list below is what actually runs when the page is opened directly.
+const FALLBACK = [
+  {
+    src: 'a-modal.html', tag: 'A', title: 'Modal',
+    sub: 'centred, document above its data',
+    notes: '<p>The document and the fields read as one column, top to bottom.</p>'
+      + '<ul><li>Works at any width &mdash; the same layout on a laptop and a phone</li>'
+      + '<li>You <b>scroll</b> to get from the document to the fields</li>'
+      + '<li>Familiar; nothing to learn</li>'
+      + '<li>Wastes the sides of a wide screen</li></ul>',
+  },
+  {
+    src: 'b-split.html', tag: 'B', title: 'Split',
+    sub: 'document beside its data',
+    notes: '<p>Document left, extracted fields right, each scrolling independently.</p>'
+      + '<ul><li><b>Both visible at once</b> &mdash; you can check a number against the page '
+      + 'without scrolling, which is the whole point of a preview</li>'
+      + '<li>Best use of a wide screen</li>'
+      + '<li>Needs ~1040px; collapses to stacked below 860px</li></ul>',
+  },
+  {
+    src: 'c-drawer.html', tag: 'C', title: 'Drawer',
+    sub: 'slides in, list stays visible',
+    notes: '<p>A panel from the right. The invoice list stays on screen behind it.</p>'
+      + '<ul><li><b>Keeps context</b> &mdash; you can see which row you opened</li>'
+      + '<li>Natural home for next/previous stepping through invoices</li>'
+      + '<li>Narrow, so the page renders small and the fields wrap</li>'
+      + '<li>Least room for the document, which is the main thing you came to see</li></ul>',
+  },
+  {
+    src: 'd-inline.html', tag: 'D', title: 'Inline',
+    sub: 'the row expands in place',
+    notes: '<p>No overlay at all. Clicking a row opens the detail <b>inside the table</b>, between '
+      + 'the row and the one below it.</p>'
+      + '<ul><li><b>Most context of any version</b> — the row stays put and its neighbours stay '
+      + 'readable</li><li>Nothing to dismiss; clicking the row again closes it</li>'
+      + '<li>Document height must be capped, or one invoice pushes the list off screen</li>'
+      + '<li>Two open rows at once would get unwieldy — likely single-open</li>'
+      + '<li>No modal, scrim or focus trap: the least new machinery to build</li></ul>',
+  },
+  {
+    src: 'e-refined.html', tag: 'E', title: 'Inline, refined',
+    sub: 'D, with the fields given a hierarchy',
+    notes: '<p>Version <b>D</b>&rsquo;s layout, with the fields given a hierarchy instead of three '
+      + 'equal key/value lists.</p>'
+      + '<ul><li><b>The money leads</b> — largest thing on the panel, net/VAT beside it</li>'
+      + '<li>Invoice number and date get their own paired cells</li>'
+      + '<li>Identifiers monospaced so they read character by character</li>'
+      + '<li><b>Provenance reads as one sentence</b> at the bottom, not five rows</li>'
+      + '<li>More CSS than D, and the hierarchy is an opinion about what matters</li></ul>',
+  },
+];
+
+const el = {
+  frame: document.getElementById('frame'),
+  stage: document.getElementById('stage'),
+  title: document.getElementById('title'),
+  sub: document.getElementById('sub'),
+  count: document.getElementById('count'),
+  caption: document.getElementById('caption'),
+  dots: document.getElementById('dots'),
+  prev: document.getElementById('prev'),
+  next: document.getElementById('next'),
+  open: document.getElementById('open'),
+  help: document.getElementById('help'),
+};
+
+let sketches = [];
+let idx = 0;
+
+async function loadSketches() {
+  try {
+    const html = await (await fetch('index.html', { cache: 'no-cache' })).text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const opts = [...doc.querySelectorAll('.opt')];
+    if (!opts.length) throw new Error('no .opt sections');
+    return opts.map(opt => ({
+      src: opt.querySelector('.open')?.getAttribute('href')
+        || opt.querySelector('iframe')?.getAttribute('src'),
+      tag: opt.querySelector('.tag')?.textContent.trim() || '',
+      title: opt.querySelector('h2')?.textContent.trim() || '',
+      sub: opt.querySelector('.sub')?.textContent.trim() || '',
+      notes: opt.querySelector('.notes')?.innerHTML || '',
+    })).filter(s => s.src);
+  } catch (err) {
+    console.warn('Falling back to a static list:', err);
+    return FALLBACK;
+  }
+}
+
+const WIDTHS = ['fit', '1280', '480'];
+
+function setWidth(w) {
+  el.stage.dataset.w = w;
+  document.querySelectorAll('.seg[data-role="width"] button')
+    .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.w === w)));
+}
+
+function setMode(mode) {
+  el.stage.dataset.mode = mode;
+  document.querySelectorAll('.seg[data-role="mode"] button')
+    .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+  render();
+}
+
+function renderCompare() {
+  el.stage.replaceChildren(...sketches.map(s => {
+    const pane = document.createElement('div');
+    pane.className = 'pane';
+    const head = document.createElement('div');
+    head.className = 'pane-head';
+    head.innerHTML = `<span class="pane-tag">${s.tag}</span><b></b>`
+      + `<a href="${s.src}" target="_blank">↗</a>`;
+    head.querySelector('b').textContent = s.title;
+    const frame = document.createElement('iframe');
+    frame.src = s.src;
+    frame.title = s.title;
+    pane.append(head, frame);
+    return pane;
+  }));
+}
+
+function render() {
+  const s = sketches[idx];
+  if (!s) return;
+
+  if (el.stage.dataset.mode === 'compare') {
+    renderCompare();
+    el.title.textContent = 'All sketches';
+    el.sub.textContent = `${sketches.length} side by side`;
+    el.count.textContent = `${sketches.length} up`;
+    el.prev.disabled = el.next.disabled = true;
+  } else {
+    if (!el.stage.contains(el.frame)) el.stage.replaceChildren(el.frame);
+    if (el.frame.getAttribute('src') !== s.src) el.frame.src = s.src;
+    el.title.textContent = `${s.tag} · ${s.title}`;
+    el.sub.textContent = s.sub;
+    el.count.textContent = `${idx + 1} / ${sketches.length}`;
+    el.prev.disabled = idx === 0;
+    el.next.disabled = idx === sketches.length - 1;
+  }
+
+  el.open.href = s.src;
+  el.caption.innerHTML = s.notes;
+  el.caption.hidden = el.caption.dataset.off === '1' || !s.notes;
+  document.title = `${s.tag} · ${s.title} — sketches`;
+  location.hash = s.src.replace(/\.html$/, '');
+
+  [...el.dots.children].forEach((b, i) =>
+    b.setAttribute('aria-current', String(i === idx && el.stage.dataset.mode === 'single')));
+}
+
+function go(n) {
+  idx = Math.max(0, Math.min(sketches.length - 1, n));
+  if (el.stage.dataset.mode === 'compare') setMode('single');
+  else render();
+}
+
+function buildDots() {
+  el.dots.replaceChildren(...sketches.map((s, i) => {
+    const b = document.createElement('button');
+    b.textContent = s.tag || String(i + 1);
+    b.title = s.title;
+    b.onclick = () => go(i);
+    return b;
+  }));
+}
+
+function toggleHelp(on) {
+  el.help.hidden = on === undefined ? !el.help.hidden : !on;
+}
+
+el.prev.onclick = () => go(idx - 1);
+el.next.onclick = () => go(idx + 1);
+document.querySelectorAll('.seg[data-role="width"] button')
+  .forEach(b => (b.onclick = () => setWidth(b.dataset.w)));
+document.querySelectorAll('.seg[data-role="mode"] button')
+  .forEach(b => (b.onclick = () => setMode(b.dataset.mode)));
+document.getElementById('helpBtn').onclick = e => { e.preventDefault(); toggleHelp(); };
+el.help.onclick = () => toggleHelp(false);
+
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+
+  if (k === 'Escape') return toggleHelp(false);
+  if (k === '?') { e.preventDefault(); return toggleHelp(); }
+  if (k === 'ArrowLeft' || k === 'k') { e.preventDefault(); return go(idx - 1); }
+  if (k === 'ArrowRight' || k === 'j' || k === ' ') { e.preventDefault(); return go(idx + 1); }
+  if (k === 'Home') { e.preventDefault(); return go(0); }
+  if (k === 'End') { e.preventDefault(); return go(sketches.length - 1); }
+  if (k === 'g') { location.href = 'index.html'; return; }
+  if (k === 's') { return setMode(el.stage.dataset.mode === 'single' ? 'compare' : 'single'); }
+  if (k === 'w') { return setWidth(WIDTHS[(WIDTHS.indexOf(el.stage.dataset.w) + 1) % WIDTHS.length]); }
+  if (k === 'c') {
+    el.caption.dataset.off = el.caption.dataset.off === '1' ? '0' : '1';
+    el.caption.hidden = el.caption.dataset.off === '1';
+    return;
+  }
+  // Sketches are lettered, so the letter is the most natural jump key.
+  const byTag = sketches.findIndex(s => s.tag.toLowerCase() === k.toLowerCase());
+  if (byTag !== -1 && /^[a-z]$/i.test(k)) { e.preventDefault(); return go(byTag); }
+  if (/^[1-9]$/.test(k)) { e.preventDefault(); return go(Number(k) - 1); }
+});
+
+// Arrow keys land on the iframe once it has focus, so mirror them back out.
+el.frame.addEventListener('load', () => {
+  try {
+    el.frame.contentDocument.addEventListener('keydown', e => {
+      if (['ArrowLeft', 'ArrowRight', 'j', 'k', ' ', 'g', 'c', 'w', 's'].includes(e.key)) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: e.key }));
+      }
+    });
+  } catch { /* cross-origin: nothing to mirror */ }
+});
+
+window.addEventListener('hashchange', () => {
+  const i = sketches.findIndex(s => s.src.replace(/\.html$/, '') === location.hash.slice(1));
+  if (i !== -1 && i !== idx) go(i);
+});
+
+(async () => {
+  sketches = await loadSketches();
+  buildDots();
+  const start = sketches.findIndex(s => s.src.replace(/\.html$/, '') === location.hash.slice(1));
+  go(start === -1 ? 0 : start);
+})();
+</script>
+</body>
+</html>

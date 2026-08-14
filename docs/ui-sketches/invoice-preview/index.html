@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Invoice preview &mdash; 3 directions</title>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 40px 32px 80px; font-family: var(--font); color: var(--ink); background: var(--page); }
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.02em; }
+.lede { margin: 0 0 12px; max-width: 74ch; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
+.note { max-width: 74ch; margin: 0 0 34px; padding: 10px 12px; border-left: 3px solid var(--red-600);
+  border-radius: var(--r-sm); background: var(--red-025); font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
+.opt { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 26px; }
+.opt-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line-2); }
+.tag { width: 24px; height: 24px; flex: none; display: grid; place-items: center; border-radius: 50%;
+  background: var(--red-600); color: #fff; font-size: 12px; font-weight: 700; }
+h2 { margin: 0; font-size: 15px; font-weight: 650; }
+.sub { font-size: 12.5px; color: var(--muted); }
+.open { margin-left: auto; font-size: 12px; color: var(--muted); text-decoration: none; }
+.open:hover { color: var(--red-600); }
+.body { display: grid; grid-template-columns: 1fr 320px; }
+.frame { height: 380px; overflow: hidden; background: var(--page); border-right: 1px solid var(--line-2); }
+iframe { width: 1400px; height: 760px; border: 0; transform: scale(.5); transform-origin: 0 0; }
+.notes { padding: 14px 16px; font-size: 12.5px; line-height: 1.6; }
+.notes p { margin: 0 0 10px; color: var(--ink-2); }
+.notes ul { margin: 0; padding-left: 16px; color: var(--ink-2); }
+.notes li { margin-bottom: 5px; }
+.notes b { color: var(--ink); }
+@media (max-width: 900px) { .body { grid-template-columns: 1fr; } .frame { border-right: 0; border-bottom: 1px solid var(--line-2); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Invoice preview &mdash; five directions</h1>
+  <p class="lede">What the <b>view</b> action opens: the vendor&rsquo;s own document, and every field
+  the parser pulled out of it. Same content in all five; they differ in where the document sits
+  relative to its data.</p>
+  <p class="note"><b>Two things every version has to handle.</b> Not every invoice has a document
+  &mdash; when a receipt only ever existed as an email body there is no PDF, just
+  <code>source.html</code>, and the preview must show the fields with an explanation instead of an
+  empty frame. And the fields shown are the real ones from <code>invoice.json</code>; the page image
+  is a drawn placeholder, because the actual PDF is a live financial record and does not belong
+  referenced from <code>docs/</code>.</p>
+
+  <section class="opt">
+    <div class="opt-head"><span class="tag">A</span><h2>Modal</h2>
+      <span class="sub">centred, document above its data</span>
+      <a class="open" href="a-modal.html" target="_blank">open ↗</a></div>
+    <div class="body">
+      <div class="frame"><iframe src="a-modal.html" loading="lazy"></iframe></div>
+      <div class="notes"><p>The document and the fields read as one column, top to bottom.</p><ul><li>Works at any width &mdash; the same layout on a laptop and a phone</li><li>You <b>scroll</b> to get from the document to the fields</li><li>Familiar; nothing to learn</li><li>Wastes the sides of a wide screen</li></ul></div>
+    </div>
+  </section>
+  <section class="opt">
+    <div class="opt-head"><span class="tag">B</span><h2>Split</h2>
+      <span class="sub">document beside its data</span>
+      <a class="open" href="b-split.html" target="_blank">open ↗</a></div>
+    <div class="body">
+      <div class="frame"><iframe src="b-split.html" loading="lazy"></iframe></div>
+      <div class="notes"><p>Document left, extracted fields right, each scrolling independently.</p><ul><li><b>Both visible at once</b> &mdash; you can check a number against the page without scrolling, which is the whole point of a preview</li><li>Best use of a wide screen</li><li>Needs ~1040px; collapses to stacked below 860px</li></ul></div>
+    </div>
+  </section>
+  <section class="opt">
+    <div class="opt-head"><span class="tag">C</span><h2>Drawer</h2>
+      <span class="sub">slides in, list stays visible</span>
+      <a class="open" href="c-drawer.html" target="_blank">open ↗</a></div>
+    <div class="body">
+      <div class="frame"><iframe src="c-drawer.html" loading="lazy"></iframe></div>
+      <div class="notes"><p>A panel from the right. The invoice list stays on screen behind it.</p><ul><li><b>Keeps context</b> &mdash; you can see which row you opened</li><li>Natural home for next/previous stepping through invoices</li><li>Narrow, so the page renders small and the fields wrap</li><li>Least room for the document, which is the main thing you came to see</li></ul></div>
+    </div>
+  </section>
+  <section class="opt">
+    <div class="opt-head"><span class="tag">D</span><h2>Inline</h2>
+      <span class="sub">the row expands in place</span>
+      <a class="open" href="d-inline.html" target="_blank">open ↗</a></div>
+    <div class="body">
+      <div class="frame"><iframe src="d-inline.html" loading="lazy"></iframe></div>
+      <div class="notes"><p>No overlay at all. Clicking a row opens the detail <b>inside the table</b>, between the row and the one below it.</p><ul><li><b>Most context of any version</b> — the row stays put and its neighbours stay readable</li><li>Nothing to dismiss; clicking the row again closes it</li><li>Document height must be capped, or one invoice pushes the rest of the list off screen</li><li>Two open rows at once would get unwieldy — likely single-open</li><li>No modal, no scrim, no focus trap: the least new machinery to build</li></ul></div>
+    </div>
+  </section>
+  <section class="opt">
+    <div class="opt-head"><span class="tag">E</span><h2>Inline, refined</h2>
+      <span class="sub">D, given a hierarchy. The direction that was taken</span>
+      <a class="open" href="e-refined.html" target="_blank">open ↗</a></div>
+    <div class="body">
+      <div class="frame"><iframe src="e-refined.html" loading="lazy"></iframe></div>
+      <div class="notes"><p>Version <b>D</b>&rsquo;s layout, with the fields given a hierarchy instead of three equal key/value lists. Rebuilt on the design system the share flow landed; the same screen sits in that flow as <a href="../../flows/share-flow-v3-light/viewer.html#01b-row">step 1b</a>, whose <code>build.py</code> is canonical for this markup.</p><ul><li><b>The money leads</b> - the amount is what you opened the row to check, so it is the panel&rsquo;s headline with net and VAT beside it, and it is not repeated in the list below</li><li>Every other field is a label/value row on the same hairline rhythm the share page uses, and identifiers are monospaced so they can be read character by character</li><li><b>The document is a thumbnail, not a viewer</b> - no width this panel can afford makes an A4 page readable, so the box is sized to be recognised and reading it is what opening it full size is for</li><li><b>The open row drops the accent.</b> A ticked row carries it; disclosure was borrowing the same tint, so two unrelated states were one colour. The row and its panel take the page colour instead, cut into the card as a well</li><li>Still more CSS to maintain than D, and the hierarchy is still an opinion about what matters</li></ul></div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

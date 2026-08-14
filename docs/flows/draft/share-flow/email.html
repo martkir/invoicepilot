@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Email draft</title>
+<!-- The draft as the recipient receives it. Deliberately NOT linked to
+     tokens.css or dashboard.css: mail clients strip <link> and most <style>,
+     so every value here is inlined and the palette is duplicated on purpose.
+     600px, tables, no flexbox, no web fonts — the format that survives Outlook.
+
+     Shaped like a Bolt receipt: a branded band, one heading, a figure that
+     matters, a short label/value block, one action, then quiet link rows. No
+     thumbnails, no vendor list, no marketing — the page has all of that, and
+     an inbox is not where anyone reviews 37 invoices.
+
+     Subject:  Invoices — Apr–Jun 2026 (37 invoices)
+     From:     Martin Kirov <martin@kirov.dev>   (the connected mailbox)
+     Reply-To: martin@kirov.dev                  (replies reach a human)
+     Sent via: Unipile POST /api/v1/emails
+     Attachments: none — the link is the payload. -->
+</head>
+<body style="margin:0;padding:0;background:#FBF9FA;">
+
+<!-- Preheader: the grey line the inbox shows next to the subject, and the last
+     chance to catch a wrong batch before anyone clicks. -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+  37 invoices, Apr 1 – Jun 30 2026, in one download. No account needed.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background:#FBF9FA;padding:24px 12px;">
+<tr><td align="center">
+
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
+         style="width:600px;max-width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;
+                font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+
+    <!-- Branded band: wordmark left, the two facts that identify this batch
+         right. Same job as Bolt's "Total / date" corner. -->
+    <tr><td style="background:#D91F2C;padding:22px 28px 26px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="font-size:15px;font-weight:700;color:#FFFFFF;letter-spacing:-.01em;">
+            Invoice&nbsp;Pilot
+          </td>
+          <td align="right" style="font-size:11.5px;line-height:1.5;color:#FBD3D6;">
+            37 invoices<br/>Apr – Jun 2026
+          </td>
+        </tr>
+      </table>
+      <div style="padding-top:22px;font-size:23px;line-height:1.25;font-weight:700;color:#FFFFFF;
+                  letter-spacing:-.02em;">
+        Martin shared Q2<br/>invoices with you
+      </div>
+      <div style="padding-top:8px;font-size:13.5px;color:#F7C7CB;">
+        Every invoice from April to June, in one download
+      </div>
+    </td></tr>
+
+    <!-- The few facts that identify the batch, in the hairline label/value
+         rhythm of a receipt. -->
+    <tr><td style="padding:24px 28px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:0 0 11px;font-size:13.5px;color:#4A4145;">Invoices</td>
+          <td align="right" style="padding:0 0 11px;font-size:13.5px;color:#181113;">37</td>
+        </tr>
+        <tr><td colspan="2" style="border-top:1px solid #F5F1F2;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+        <tr>
+          <td style="padding:11px 0;font-size:13.5px;color:#4A4145;">Period</td>
+          <td align="right" style="padding:11px 0;font-size:13.5px;color:#181113;">
+            Apr 1 – Jun 30, 2026
+          </td>
+        </tr>
+        <tr><td colspan="2" style="border-top:1px solid #F5F1F2;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+        <tr>
+          <td style="padding:11px 0;font-size:13.5px;color:#4A4145;">Download
+            <div style="padding-top:2px;font-size:11.5px;color:#8A7F83;">36 PDFs + invoices.csv</div>
+          </td>
+          <td align="right" style="padding:11px 0;font-size:13.5px;color:#181113;">
+            invoices-2026-Q2.zip
+            <div style="padding-top:2px;font-size:11.5px;color:#8A7F83;">12.4 MB</div>
+          </td>
+        </tr>
+        <tr><td colspan="2" style="border-top:1px solid #EDE7E8;font-size:0;line-height:0;">&nbsp;</td></tr>
+      </table>
+    </td></tr>
+
+    <!-- One action. A padded anchor, not an image or a div, so it survives a
+         client that drops backgrounds and still reads as the thing to click. -->
+    <tr><td style="padding:22px 28px 0;">
+      <a href="https://invoicepilot.app/s/7Kq2mXbN4vRt9wLpZaHc3f"
+         style="display:block;padding:14px 0;background:#D91F2C;color:#FFFFFF;font-size:14.5px;
+                font-weight:650;text-align:center;text-decoration:none;border-radius:10px;">
+        View &amp; download
+      </a>
+      <div style="padding-top:10px;font-size:11.5px;line-height:1.6;color:#8A7F83;">
+        The page lists every invoice with its amount, date and filename, and any one of them can be
+        opened before you download. No account, nothing to install.
+      </div>
+    </td></tr>
+
+    <tr><td style="height:26px;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+  </table>
+
+  <!-- Outside the card, the way a receipt puts the legal line under it. The raw
+       URL lives here for people who want to see where a link goes. -->
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
+         style="width:600px;max-width:100%;
+                font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <tr><td align="center" style="padding:18px 24px 0;font-size:11px;line-height:1.7;color:#8A7F83;">
+      Anyone with this link can download these invoices; Martin can turn it off at any time.<br/>
+      <a href="https://invoicepilot.app/s/7Kq2mXbN4vRt9wLpZaHc3f" style="color:#8A7F83;">
+        invoicepilot.app/s/7Kq2mXbN4vRt9wLpZaHc3f</a><br/>
+      Sent with Invoice Pilot on Martin&rsquo;s behalf
+    </td></tr>
+  </table>
+
+</td></tr>
+</table>
+
+<!-- Plain-text alternative, always sent alongside:
+
+Martin shared Q2 invoices with you — every invoice from April to June,
+in one download.
+
+Invoices       37
+Period         Apr 1 – Jun 30, 2026
+Download       invoices-2026-Q2.zip — 12.4 MB, 36 PDFs + invoices.csv
+
+View & download: https://invoicepilot.app/s/7Kq2mXbN4vRt9wLpZaHc3f
+
+The page lists every invoice with its amount, date and filename, and any
+one of them can be opened before you download. No account, nothing to
+install.
+
+Anyone with this link can download these invoices; Martin can turn it off
+at any time. Reply to reach Martin.
+Sent with Invoice Pilot on Martin's behalf. -->
+
+</body>
+</html>

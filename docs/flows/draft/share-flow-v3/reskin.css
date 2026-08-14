@@ -1,0 +1,394 @@
+/* reskin.css: the diff against chrome that already ships.
+   ==========================================================================
+   Every selector here overrides something in frontend/src/styles/dashboard.css.
+   It is kept apart from flow.css on purpose: flow.css is UI that does not
+   exist yet, this file is a diff against UI that does. When the redesign is
+   accepted these rules fold into dashboard.css and this file disappears;
+   flow.css does not.
+
+   Nothing below invents a component. dashboard.css is written almost entirely
+   against custom properties, so tokens-v3.css does most of the work on its
+   own; what is left is the eight places it hard-codes a colour, the shadows,
+   the radii that predate the scale, the weights above 500, and the uppercase
+   labels. */
+
+/* ---------------------------------------------------------------- page --- */
+/* v2 layered a radial accent wash and a fixed 3.5% grain overlay over the
+   canvas. Both are gone: Section 4.4 rules out texture ornament and ambient
+   gradients outright, and on a dark canvas the wash was the more visible of
+   the two. A flat surface is the design, not a symptom. */
+body {
+    font-family: var(--font);
+    font-size: var(--t-body-sm);
+    line-height: 1.5;
+    letter-spacing: var(--track-sm);
+    background: var(--canvas);
+    color: var(--ink);
+    /* Every figure in this product is compared against the one above it. */
+    font-variant-numeric: tabular-nums;
+    text-rendering: optimizeLegibility;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* ------------------------------------------------------------- a11y ------ */
+.skip {
+    position: absolute;
+    left: var(--s-sm);
+    top: -48px;
+    z-index: var(--z-overlay);
+    padding: var(--s-sm) var(--s-lg);
+    border-radius: var(--r-pill);
+    background: var(--primary);
+    color: var(--on-primary);
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+    text-decoration: none;
+    transition: top var(--d-base) var(--ease-standard);
+}
+
+.skip:focus-visible {
+    top: var(--s-sm);
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* One focus ring for the whole product. An outline, not the outline-plus-halo
+   pair v2 used: the halo was a box-shadow, and there are no box-shadows here. */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--r-xs);
+}
+
+/* ------------------------------------------------------------ surfaces --- */
+/* A card is a fill on the canvas plus a hairline. That is the entire
+   elevation story now; v2 gave every card two tinted shadows and a 1px inner
+   highlight along its top edge. */
+.card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+}
+
+/* ------------------------------------------------------------- labels ---- */
+/* dashboard.css sets the sources label, the table head and the detail-panel
+   headings in letter-spaced upper case. Section 4.1 bans both the caps and
+   the positive tracking, so all three come back to sentence case at 12px,
+   weight 500, in --ink-soft. Nothing on any screen in this folder is set
+   above 500 (Section 4.1) or below 12px. */
+.card-label,
+thead th,
+.meta h3 {
+    text-transform: none;
+    letter-spacing: var(--track-sm);
+    font-weight: 500;
+    font-size: var(--t-caption);
+    color: var(--ink-soft);
+}
+
+.card-label,
+.table-title,
+.meta h3 {
+    margin: 0;
+}
+
+.accounts-note {
+    margin: var(--s-xs) 0 0;
+    font-size: var(--t-caption);
+    border-top: 1px solid var(--line-2);
+}
+
+.table-title,
+.vendor-name,
+.update-btn,
+.add-source,
+.page-num,
+.toast b,
+.source-confirm button,
+td.col-amount {
+    font-weight: 500;
+}
+
+.table-title em {
+    font-weight: 400;
+    font-size: var(--t-caption);
+}
+
+/* ------------------------------------------------------------- table ----- */
+/* The tinted header band was one of the places the accent leaked onto a
+   surface that is not an action. A heading and a hairline under it are
+   enough. */
+thead th {
+    height: 36px;
+    background: transparent;
+    border-bottom: 1px solid var(--line);
+}
+
+/* The sorted column is a state, not an action, so it is marked with --ink
+   against the --ink-soft of its neighbours rather than with the accent.
+   Section 4.2 rations --primary to the one or two real actions per screen,
+   and on this screen those are Share and Download. */
+th.sorted button {
+    color: var(--ink);
+}
+
+th.sortable button:hover {
+    color: var(--ink);
+}
+
+tbody tr {
+    border-bottom: 1px solid var(--line-2);
+    transition: background var(--d-fast) var(--ease-standard);
+}
+
+tbody tr:hover {
+    background: var(--paper-hi);
+}
+
+tbody tr.selected,
+tbody tr.is-open td {
+    background: var(--primary-soft);
+}
+
+.source:hover,
+.source.is-removing,
+.source.is-pending {
+    background: var(--paper-hi);
+}
+
+/* Initials in a circle is the avatar default, and an avatar is a person.
+   A rounded square at --r-sm holds a two-letter mark better and stops a
+   vendor from reading as one.
+
+   The ten brand colours v2 carried inline are gone with it: ten saturated
+   fills on a dark canvas is ten accents, and the colour consistency lock
+   (Section 4.2) allows one. What identifies the vendor is its name, in the
+   cell immediately to the right. */
+.vendor-logo {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-sm);
+    background: var(--paper-hi);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: var(--t-caption);
+    font-weight: 500;
+    letter-spacing: 0;
+}
+
+td.col-amount,
+td.col-issued,
+.last-update,
+.per-page {
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+
+td.col-amount {
+    color: var(--ink);
+}
+
+td.col-issued {
+    color: var(--ink-soft);
+}
+
+.tool-divider {
+    background: var(--line);
+}
+
+/* --------------------------------------------------------- interaction --- */
+/* Every control gets the same three states. The press is a 1px drop with no
+   shadow to collapse under it, so the movement has to carry it alone. */
+.icon-btn,
+.update-btn,
+.share-btn,
+.add-source,
+.page-num,
+.per-page,
+.toast-close {
+    transition:
+        color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard),
+        border-color var(--d-fast) var(--ease-standard),
+        transform var(--d-fast) var(--ease-standard);
+}
+
+.icon-btn:active,
+.update-btn:active,
+.share-btn:active,
+.add-source:active {
+    transform: translateY(1px);
+}
+
+/* Interactive means pill (Section 4.4). A 26px square control at --r-pill is
+   a circle, which is what an icon button should have been all along. */
+.icon-btn,
+.toast-close {
+    border-radius: var(--r-pill);
+    color: var(--ink-soft);
+}
+
+.icon-btn:hover,
+.toast-close:hover {
+    color: var(--ink);
+    background: var(--paper-hi);
+}
+
+/* The share control is the screen's primary action, so it is the one filled
+   shape in the toolbar and the one place the accent is spent on this screen
+   apart from the focus ring. It carries its label: as a lone glyph, the single
+   thing this screen exists for was its hardest control to find, and it sat
+   beside a download arrow one stroke away from its own. Filled against
+   Update's outline, so the pair reads as a rank rather than two equal
+   choices. */
+.share-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 13px;
+    border: 1px solid transparent;
+    border-radius: var(--r-pill);
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+    color: var(--on-primary);
+    background: var(--primary);
+}
+
+/* Darkens rather than brightens, for the reason .btn-primary gives: white over
+   --primary-bright is 3.4:1 and fails AA for a label (Section 4.2, 4.5). */
+.share-btn:hover {
+    background: var(--primary-deep);
+}
+
+/* While its own popover is open the control stays pressed. */
+.share-btn.is-active {
+    background: var(--primary-deep);
+}
+
+.update-btn {
+    height: 32px;
+    border-radius: var(--r-pill);
+    border-color: var(--line);
+    background: var(--canvas-deep);
+    color: var(--ink-soft);
+}
+
+.update-btn:hover {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--paper-hi);
+}
+
+.update-btn[data-busy="true"] {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--paper-hi);
+}
+
+.add-source {
+    border-radius: var(--r-pill);
+    border: 1px dashed var(--hairline-strong);
+    color: var(--ink-soft);
+}
+
+.add-source:hover {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--paper-hi);
+}
+
+/* The current page is a state, so it reads as one: a filled pill in the
+   neutral family rather than a tinted accent chip. */
+.page-num {
+    border-radius: var(--r-pill);
+    background: var(--paper-hi);
+    color: var(--ink);
+    font-family: var(--num);
+}
+
+.per-page {
+    border-radius: var(--r-pill);
+}
+
+.per-page:hover {
+    background: var(--paper-hi);
+}
+
+/* The checkbox decides what gets shared, so it is the one control on the
+   dashboard that carries the accent when it is on.
+
+   It keeps --r-xs rather than the pill the radius rule gives interactive
+   elements: a pill checkbox is a circle, a circle is a radio button, and a
+   multi-select control that looks single-select is worse than an
+   inconsistent radius. */
+input[type=checkbox] {
+    border: 1.5px solid var(--hairline-strong);
+    border-radius: var(--r-xs);
+    background: var(--canvas-deep);
+    transition:
+        border-color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard);
+}
+
+input[type=checkbox]:hover {
+    border-color: var(--ink-soft);
+}
+
+input[type=checkbox]:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+input[type=checkbox]:checked::after {
+    border-color: var(--on-primary);
+}
+
+/* ------------------------------------------------------ expanded row ----- */
+/* The rendered first page of a PDF stays light, because it is a photograph of
+   a document rather than a piece of chrome. The frame around it is what gets
+   re-dressed. Not on any screen in this folder; kept in step anyway. */
+.doc-frame {
+    border-radius: var(--r-sm);
+    border-color: var(--line);
+    background: var(--cloud);
+}
+
+.doc-none {
+    border-radius: var(--r-sm);
+    border-color: var(--hairline-strong);
+    background: var(--canvas-deep);
+}
+
+.toast {
+    border-radius: var(--r-md);
+    border-color: var(--line);
+    background: var(--paper);
+}
+
+/* -------------------------------------------------------------- motion --- */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}

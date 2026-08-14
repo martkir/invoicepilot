@@ -1,0 +1,141 @@
+/* tokens-v2.css — the palette, type scale and motion the redesign proposes.
+   ==========================================================================
+   Loaded *after* the app's own tokens.css, and it redefines the same custom
+   properties. That is the whole trick of this folder: the shipped
+   dashboard.css is linked untouched, so every screen here still renders the
+   real product — it just renders it in the redesigned palette. Nothing had to
+   be forked to see the change.
+
+   Shipping this for real means pasting the :root block below over
+   frontend/src/styles/tokens.css. Nothing else in the app has to move.
+
+   What changed and why is written up in audit.md; the short version:
+
+   1. One type family with actual character, and a mono for every figure.
+   2. One accent. The green that carried "success" is gone — see audit.md,
+      "Colour and surfaces", for what replaced it.
+   3. One grey family, warmed. v1 mixed a pink-tinted grey (#EDE7E8) with
+      cool-black shadows (rgba(0,0,0,.09), rgba(20,20,25,.55)).
+   4. Shadows carry the background's hue instead of neutral black.
+   5. Radii, z-indexes and durations become scales instead of literals. */
+
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap");
+
+:root {
+    /* ---------------------------------------------------------- type ---- */
+    /* Geist over the -apple-system/Inter stack v1 inherited. Inter is the
+       default AI font and the system stack is not a decision at all; Geist
+       is drawn tight and slightly mechanical, which suits a page whose job
+       is to be read as a document. Falls back to the old stack verbatim, so
+       an offline open degrades to exactly what v1 looked like.
+
+       Production: @fontsource-variable/geist rather than this CDN — the app
+       has no font dependency today (checked frontend/package.json: React 19
+       and Vite, nothing else), and a share page that stalls on fonts.gstatic
+       is a share page that stalls. */
+    --font: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    /* Every figure on these screens is money, a date, a count or a byte size,
+       and all of them get compared down a column. Mono + tabular is not a
+       stylistic choice here, it is what makes the columns line up. */
+    --num: var(--font-mono);
+
+    --t-display: clamp(1.75rem, 1.15rem + 2.1vw, 2.5rem);
+    --t-h1: 1.3125rem;
+    --t-h2: 1.0625rem;
+    --t-body: 0.875rem;
+    --t-sm: 0.8125rem;
+    --t-xs: 0.75rem;
+    --t-2xs: 0.6875rem;
+
+    /* Negative tracking on display sizes, positive on the small labels —
+       both are corrections for what the eye does at those sizes. */
+    --track-display: -0.03em;
+    --track-tight: -0.012em;
+    --track-label: 0.02em;
+
+    /* ------------------------------------------------------- surfaces ---- */
+    /* One grey family, all of it warmed toward the accent's hue (~14°) so
+       nothing on the page reads as a different temperature from anything
+       else. v1's greys were pink; the shadows under them were black or
+       blue-black, which is the mix the audit flagged. */
+    --ink: #191210;
+    --ink-2: #4B403B;
+    --muted: #8B7C74;
+    --line: #E8E0DB;
+    --line-2: #F3EDE9;
+    --page: #FAF7F4;
+    --white: #FFFFFF;
+
+    /* The card surface is a hair warmer than pure white so a card on the page
+       is a surface rather than a hole. Kept separate from --white, which
+       still means "actual white" (text on the accent, mostly). */
+    --paper: #FFFDFB;
+
+    /* ---------------------------------------------------------- accent --- */
+    /* v1's #D91F2C is a signal red: 71% saturation, the colour of an error.
+       #A8382C is the same hue family pulled down to 58% and darkened — oxide,
+       ink-on-paper, still unmistakably the product's red. It also passes 4.5:1
+       on --paper as text, which #D91F2C did not.
+
+       The --red-* names are kept because dashboard.css spends them
+       everywhere; --accent-* is what new code should use. */
+    --accent-700: #7E271F;
+    --accent-600: #A8382C;
+    --accent-500: #BE4E3E;
+    --accent-100: #F0DCD5;
+    --accent-050: #FAEEE9;
+    --accent-025: #FDF7F4;
+
+    --red-700: var(--accent-700);
+    --red-600: var(--accent-600);
+    --red-500: var(--accent-500);
+    --red-050: var(--accent-050);
+    --red-025: var(--accent-025);
+
+    /* ---------------------------------------------------------- radii ---- */
+    /* Varied deliberately: tight on things that sit inside other things,
+       soft on the containers. v1 had a three-step scale and then bypassed it
+       with 3px, 4px, 14px and 999px literals. */
+    --r-xs: 4px;
+    --r-sm: 7px;
+    --r-md: 10px;
+    --r-lg: 16px;
+    --r-xl: 22px;
+    --r-pill: 999px;
+
+    /* -------------------------------------------------------- shadows ---- */
+    /* Tinted with the page's own hue (a warm 40,24,16) rather than black, and
+       layered — a tight contact shadow plus a wide soft one, which is what
+       makes an element look lifted rather than blurred. One light source,
+       above and slightly forward: every offset here is +y only. */
+    --sh-1: 0 1px 1px rgba(40, 24, 16, .04), 0 1px 3px rgba(40, 24, 16, .05);
+    --sh-2: 0 1px 2px rgba(40, 24, 16, .05), 0 8px 20px -8px rgba(40, 24, 16, .14);
+    --sh-3: 0 1px 2px rgba(40, 24, 16, .06), 0 20px 44px -14px rgba(40, 24, 16, .26);
+
+    /* The 1px inner highlight along a raised surface's top edge. Cheap, and
+       it is most of what separates a "card" from a rectangle. */
+    --edge: inset 0 1px 0 rgba(255, 255, 255, .9);
+
+    /* ------------------------------------------------------- z-index ----- */
+    --z-raised: 10;
+    --z-sticky: 20;
+    --z-popover: 40;
+    --z-overlay: 60;
+
+    /* -------------------------------------------------------- motion ----- */
+    /* One fast duration for colour changes, one medium for anything that
+       moves, and a spring for the things that should feel physical. */
+    --t-fast: 130ms;
+    --t-mid: 220ms;
+    --ease-out: cubic-bezier(.22, .61, .36, 1);
+    --ease-spring: cubic-bezier(.34, 1.36, .5, 1);
+
+    /* --------------------------------------------------------- grain ----- */
+    /* A fixed, pointer-events-none fractal-noise overlay. At 3.5% it is not
+       visible as texture; what it does is stop large flat fills from reading
+       as vector output. Inlined as a data URI so the page still has exactly
+       zero network dependencies beyond the font. */
+    --grain: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+}

@@ -1,0 +1,941 @@
+/* Dashboard layout and chrome, in Mercury light.
+   ==========================================================================
+   The layout is the original mockup's; the skin is
+   docs/flows/share-flow-v3-light/reskin.css, folded in here as that file's
+   ship step. Section numbers refer to .claude/skills/mercury-ui-light.
+
+   The rules that carry the system, so they are not undone one commit at a
+   time: nothing is set above weight 500 or below 12px, nothing is in upper
+   case, no tracking is positive, every size comes off the scale in tokens.css,
+   and there are no shadows — elevation is the --canvas / --paper / --paper-hi
+   contrast ladder plus hairlines and space (Section 4.4). --primary is
+   rationed to real actions, active states and the focus ring (Section 4.2),
+   and --danger is the one status colour and only ever an error (Section 1.B).
+   Every figure is set in --num. */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font);
+    font-size: var(--t-body-sm);
+    line-height: 1.5;
+    letter-spacing: var(--track-sm);
+    background: var(--canvas);
+    color: var(--ink);
+    /* Every figure in this product is compared against the one above it. */
+    font-variant-numeric: tabular-nums;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+}
+
+button {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+svg {
+    display: block;
+}
+
+/* ---------- a11y ---------- */
+/* One focus ring for the whole product. An outline, not an outline-plus-halo
+   pair: the halo would be a box-shadow, and there are no box-shadows here. */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--r-xs);
+}
+
+.skip {
+    position: absolute;
+    left: var(--s-sm);
+    top: -48px;
+    z-index: var(--z-overlay);
+    padding: var(--s-sm) var(--s-lg);
+    border-radius: var(--r-pill);
+    background: var(--primary);
+    color: var(--on-primary);
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+    text-decoration: none;
+    transition: top var(--d-base) var(--ease-standard);
+}
+
+.skip:focus-visible {
+    top: var(--s-sm);
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* ---------- header ---------- */
+main {
+    max-width: 1280px;
+    margin: 0 auto;
+    /* The top value carried the old 52px header; without one, the content
+       needs its own breathing room above the first card. */
+    padding: 26px 24px 48px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 264px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+/* A card is a fill on the canvas plus a hairline. That is the entire elevation
+   story: no shadow, no inner highlight along the top edge. */
+.card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+}
+
+/* ---------- sources ---------- */
+.sources {
+    padding: 12px;
+}
+
+/* Section 4.1 bans upper case and positive tracking, so every small label in
+   the product is sentence case at 12px, weight 500, in --ink-soft. */
+.card-label {
+    margin: 0;
+    padding: 0 4px 8px;
+    font-size: var(--t-caption);
+    font-weight: 500;
+    letter-spacing: var(--track-sm);
+    color: var(--ink-soft);
+}
+
+.source {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 4px 7px 6px;
+    border-radius: var(--r-sm);
+}
+
+.source:hover {
+    background: var(--paper-hi);
+}
+
+.source-mark {
+    width: 16px;
+    height: 16px;
+    flex: none;
+}
+
+.source-mail {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--t-body-sm);
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Interactive means pill (Section 4.4). A 26px square control at --r-pill is
+   a circle, which is what an icon button should have been all along. */
+.icon-btn {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-pill);
+    color: var(--ink-soft);
+    transition:
+        color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard),
+        border-color var(--d-fast) var(--ease-standard),
+        transform var(--d-fast) var(--ease-standard);
+}
+
+.icon-btn:hover {
+    color: var(--ink);
+    background: var(--paper-hi);
+}
+
+/* The press is a 1px drop with no shadow to collapse under it, so the movement
+   has to carry it alone. */
+.icon-btn:active {
+    transform: translateY(1px);
+}
+
+/* An icon button that is holding something open — the row detail today, a
+   share popover later — is a state, and states are where the accent is
+   allowed to sit on a surface. */
+.icon-btn.is-active {
+    color: var(--ink);
+    background: var(--primary-soft);
+}
+
+/* The download action is an <a>, so it needs the link decoration removed. */
+a.icon-btn {
+    text-decoration: none;
+}
+
+
+.source .icon-btn {
+    opacity: 0;
+    transition:
+        opacity var(--d-fast) var(--ease-standard),
+        color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard),
+        transform var(--d-fast) var(--ease-standard);
+}
+
+.source:hover .icon-btn,
+.source .icon-btn:focus-visible {
+    opacity: 1;
+}
+
+.add-source {
+    margin-top: 8px;
+    width: 100%;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px dashed var(--hairline-strong);
+    border-radius: var(--r-pill);
+    color: var(--ink-soft);
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+    transition:
+        color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard),
+        border-color var(--d-fast) var(--ease-standard),
+        transform var(--d-fast) var(--ease-standard);
+}
+
+.add-source:hover {
+    color: var(--ink);
+    background: var(--paper-hi);
+    border-color: var(--hairline-strong);
+    border-style: solid;
+}
+
+.add-source:active {
+    transform: translateY(1px);
+}
+
+.accounts-note {
+    padding: 10px 4px 2px;
+    margin: var(--s-xs) 0 0;
+    font-size: var(--t-caption);
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-top: 1px solid var(--line-2);
+}
+
+/* On a light canvas a tint lighter than the accent has nowhere to sit, so the
+   live dot takes --primary itself: 4.1:1, past the 3:1 non-text bar. */
+.dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--primary);
+    flex: none;
+}
+
+/* ---------- table ---------- */
+.table-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+}
+
+.table-title {
+    margin: 0;
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+    letter-spacing: var(--track-sm);
+}
+
+.table-title em {
+    font-style: normal;
+    color: var(--ink-soft);
+    font-weight: 400;
+    margin-left: 6px;
+    font-size: var(--t-caption);
+}
+
+.tools {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.tool-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--line);
+    margin: 0 6px;
+}
+
+.last-update {
+    font-family: var(--num);
+    font-size: var(--t-caption);
+    letter-spacing: 0;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.update-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 11px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+    color: var(--ink-soft);
+    background: var(--canvas-deep);
+    transition:
+        color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard),
+        border-color var(--d-fast) var(--ease-standard),
+        transform var(--d-fast) var(--ease-standard);
+}
+
+.update-btn:hover {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--paper-hi);
+}
+
+.update-btn:active {
+    transform: translateY(1px);
+}
+
+.update-btn[data-busy="true"] {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--paper-hi);
+    pointer-events: none;
+}
+
+.update-btn[data-busy="true"] svg {
+    animation: spin .9s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes flash-in {
+    0% {
+        background: var(--primary-soft);
+    }
+
+    100% {
+        background: transparent;
+    }
+}
+
+tbody tr.is-new {
+    animation: flash-in 2.2s ease-out;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 0 12px;
+}
+
+/* The tinted header band was one of the places the accent leaked onto a
+   surface that is not an action. A heading and a hairline under it are
+   enough. */
+thead th {
+    height: 36px;
+    background: transparent;
+    font-size: var(--t-caption);
+    font-weight: 500;
+    letter-spacing: var(--track-sm);
+    text-transform: none;
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+}
+
+th.sortable button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+}
+
+th.sortable button:hover {
+    color: var(--ink);
+}
+
+/* The sorted column is a state, not an action, so it is marked with --ink
+   against the --ink-soft of its neighbours rather than with the accent. */
+th.sorted button {
+    color: var(--ink);
+}
+
+.col-check {
+    width: 40px;
+    padding-right: 0;
+}
+
+.col-amount {
+    width: 130px;
+    text-align: right;
+}
+
+.col-issued {
+    width: 130px;
+}
+
+.col-actions {
+    width: 110px;
+}
+
+td.col-amount,
+td.col-issued {
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+
+td.col-amount {
+    text-align: right;
+    font-weight: 500;
+    color: var(--ink);
+}
+
+td.col-issued {
+    color: var(--ink-soft);
+}
+
+tbody tr {
+    border-bottom: 1px solid var(--line-2);
+    transition: background var(--d-fast) var(--ease-standard);
+}
+
+tbody tr:last-child {
+    border-bottom: none;
+}
+
+tbody tr:hover {
+    background: var(--paper-hi);
+}
+
+tbody tr.selected {
+    background: var(--primary-soft);
+}
+
+tbody td {
+    height: 52px;
+}
+
+.vendor {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Initials in a circle is the avatar default, and an avatar is a person. A
+   rounded square at --r-sm holds a two-letter mark better and stops a vendor
+   from reading as one.
+
+   No per-vendor fill: ten saturated colours is ten accents, and the colour
+   consistency lock (Section 4.2) allows one. What identifies the vendor is its
+   name, in the cell immediately to the right. */
+.vendor-logo {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-sm);
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--paper-hi);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: var(--t-caption);
+    font-weight: 500;
+    letter-spacing: 0;
+}
+
+.vendor-name {
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.vendor-sub {
+    font-size: var(--t-caption);
+    color: var(--ink-soft);
+    line-height: 1.3;
+}
+
+/* The checkbox decides what gets acted on, so it is the one control on the
+   dashboard that carries the accent when it is on.
+
+   It keeps --r-xs rather than the pill the radius rule gives interactive
+   elements: a pill checkbox is a circle, a circle is a radio button, and a
+   multi-select control that looks single-select is worse than an inconsistent
+   radius. */
+input[type=checkbox] {
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    border: 1.5px solid var(--hairline-strong);
+    border-radius: var(--r-xs);
+    /* --paper, not --canvas-deep: a grey-filled box on a light card reads as
+       disabled, where an empty one with a strong edge reads as unticked. */
+    background: var(--paper);
+    cursor: pointer;
+    position: relative;
+    transition:
+        border-color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard);
+}
+
+input[type=checkbox]:hover {
+    border-color: var(--ink-soft);
+}
+
+input[type=checkbox]:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+input[type=checkbox]:checked::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--on-primary);
+    border-width: 0 1.8px 1.8px 0;
+    transform: rotate(42deg);
+}
+
+.row-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    opacity: .35;
+    transition: opacity var(--d-fast) var(--ease-standard);
+}
+
+tr:hover .row-actions,
+tr:focus-within .row-actions {
+    opacity: 1;
+}
+
+.table-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--line);
+    font-size: var(--t-caption);
+    color: var(--ink-soft);
+}
+
+.pager {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* The current page is a state, so it reads as one: a filled pill in the
+   neutral family rather than a tinted accent chip. */
+.page-num {
+    min-width: 26px;
+    height: 26px;
+    padding: 0 7px;
+    border-radius: var(--r-pill);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--num);
+    font-size: var(--t-caption);
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--ink);
+    background: var(--paper-hi);
+    transition:
+        color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard);
+}
+
+.per-page {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: var(--r-pill);
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    color: var(--ink-soft);
+    transition: background var(--d-fast) var(--ease-standard);
+}
+
+.per-page:hover {
+    background: var(--paper-hi);
+}
+
+@media (max-width:880px) {
+    .grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .col-issued {
+        display: none;
+    }
+
+    main {
+        padding: 16px 12px 40px;
+    }
+}
+
+/* Small text buttons inside a source row — today only the Cancel that aborts
+   a pending connection. */
+.source-confirm {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+}
+
+.source-confirm button {
+    height: 24px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    font-size: var(--t-caption);
+    font-weight: 500;
+    font-family: inherit;
+    border: 1px solid transparent;
+    background: none;
+    cursor: pointer;
+    transition:
+        color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard),
+        border-color var(--d-fast) var(--ease-standard);
+}
+
+.source-confirm .confirm-no {
+    color: var(--ink-soft);
+    border-color: var(--line);
+}
+
+.source-confirm .confirm-no:hover {
+    color: var(--ink);
+    background: var(--paper-hi);
+}
+
+/* Disconnect acts on a single click with no confirmation, so the only feedback
+   is here: the icon becomes a spinner, stays visible, and stops accepting
+   input so it cannot be double-fired. */
+.source.is-removing {
+    background: var(--paper-hi);
+}
+
+.source.is-removing .icon-btn,
+.icon-btn.is-busy {
+    opacity: 1;
+    cursor: default;
+}
+
+/* A connection the user is part-way through approving in the Unipile tab. */
+.source.is-pending {
+    background: var(--paper-hi);
+    border: 1px dashed var(--line);
+}
+
+.source.is-pending .source-confirm {
+    opacity: 1;
+}
+
+.source-mark.is-dim {
+    opacity: .35;
+}
+
+.source.is-pending .source-mail {
+    color: var(--ink-soft);
+    font-style: italic;
+}
+
+.pending-hint {
+    margin-top: 6px;
+    padding: 0 6px;
+    font-size: var(--t-caption);
+    line-height: 1.45;
+    color: var(--ink-soft);
+}
+
+.spinner {
+    width: 13px;
+    height: 13px;
+    flex: none;
+    border-radius: 50%;
+    border: 2px solid var(--primary-soft);
+    border-top-color: var(--primary);
+    animation: spin .7s linear infinite;
+}
+
+.add-source.is-busy {
+    color: var(--ink-soft);
+    cursor: default;
+}
+
+.dot-idle {
+    background: var(--ink-soft);
+}
+
+/* The one place --danger appears on this screen, and it is an error
+   (Section 1.B). */
+.accounts-note.is-error {
+    color: var(--danger);
+}
+
+/* ---- expanded invoice row ---------------------------------------------- */
+/* The detail opens inside the table rather than over it, so the rows above and
+   below stay readable and there is nothing to dismiss. */
+
+tbody tr:hover td {
+    cursor: pointer;
+}
+
+tbody tr.is-open td {
+    background: var(--primary-soft);
+}
+
+tbody tr.is-open .icon-btn[aria-expanded="true"] {
+    color: var(--ink);
+    background: var(--primary-soft);
+}
+
+.expansion td {
+    padding: 0;
+    background: var(--primary-faint);
+    border-bottom: 1px solid var(--line);
+}
+
+.exp {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 18px 16px 20px;
+}
+
+.exp-doc {
+    min-width: 0;
+}
+
+/* The document's own padding insets its text; matching it here lines the
+   fields up with the text on the page rather than with the frame's edge. */
+.meta {
+    padding-left: 23px;
+    padding-right: 23px;
+}
+
+/* Bounded, or one open invoice pushes the rest of the list off screen. The
+   rendered page inside stays as the vendor sent it; only the frame around it
+   is dressed. */
+.doc-frame {
+    width: 100%;
+    height: 340px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--cloud);
+}
+
+.doc-none {
+    height: 340px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 24px;
+    border: 1px dashed var(--hairline-strong);
+    border-radius: var(--r-sm);
+    background: var(--canvas-deep);
+}
+
+.doc-none b {
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+}
+
+.doc-none p {
+    margin: 7px 0 0;
+    font-size: var(--t-caption);
+    line-height: 1.55;
+    color: var(--ink-soft);
+}
+
+.meta h3 {
+    margin: 0 0 var(--s-xs);
+    font-size: var(--t-caption);
+    font-weight: 500;
+    letter-spacing: var(--track-sm);
+    text-transform: none;
+    color: var(--ink-soft);
+}
+
+.meta h3 + .pairs {
+    margin-bottom: 18px;
+}
+
+.pairs {
+    display: grid;
+    grid-template-columns: 112px 1fr;
+    gap: 7px 14px;
+    font-size: var(--t-caption);
+}
+
+/* Each pair is its own subgrid cell pair, so a long value wraps under itself
+   instead of pushing the label column. */
+.pair {
+    display: contents;
+}
+
+.pairs .k {
+    color: var(--ink-soft);
+}
+
+.pairs .v {
+    min-width: 0;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 940px) {
+    .exp {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---- transient notice --------------------------------------------------- */
+.toast-wrap {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 22px;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    z-index: var(--z-sticky);
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(560px, calc(100vw - 32px));
+    padding: 11px 12px 11px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--paper);
+    font-size: var(--t-caption);
+    line-height: 1.45;
+    color: var(--ink-soft);
+    pointer-events: auto;
+    animation: toast-in var(--d-fast) var(--ease-standard);
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+.toast b {
+    color: var(--ink);
+    font-weight: 500;
+}
+
+.toast-close {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: none;
+    color: var(--ink-soft);
+    font-family: inherit;
+    font-size: var(--t-body-md);
+    line-height: 1;
+    cursor: pointer;
+    transition:
+        color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard);
+}
+
+.toast-close:hover {
+    color: var(--ink);
+    background: var(--paper-hi);
+}
+
+/* -------------------------------------------------------------- motion --- */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}

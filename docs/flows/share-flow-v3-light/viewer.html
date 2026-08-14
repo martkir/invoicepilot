@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="color-scheme" content="light"/>
+<title>Flow viewer · Share flow v3 light</title>
+<meta name="theme-color" content="#eef0f6"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%235266eb%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4H8.4A2%202%200%200%200%206.4%206.4v11.2a2%202%200%200%200%202%202h7.2a2%202%200%200%200%202-2V8.4Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4v4h4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"/>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<link rel="stylesheet" href="tokens-v3.css"/>
+<style>
+/* The viewer is chrome around the screens, so it stays quiet: the same
+   palette and type as the product, one accent, nothing competing with the
+   frame in the middle. Flat throughout, including the help overlay, which in
+   v2 was a blurred scrim over a shadowed card.
+
+   The light twin of ../share-flow-v3/viewer.html. Identical apart from the
+   var() fallbacks, the scrim, and the one accent glyph below. */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font, system-ui, sans-serif);
+  font-size: var(--t-body-sm, 14px);
+  letter-spacing: var(--track-sm, -.01em);
+  color: var(--ink, #eef0f6);
+  background: var(--canvas, #eef0f6);
+}
+:focus-visible {
+  outline: 2px solid var(--primary, #5266eb);
+  outline-offset: 2px;
+  border-radius: var(--r-xs, 4px);
+}
+
+/* ---- top bar ---------------------------------------------------------- */
+.bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--s-sm, 12px);
+  padding: 0 var(--s-md, 16px);
+  height: 56px;
+  background: var(--canvas-deep, #e4e6ef);
+  border-bottom: 1px solid var(--line, #c9cad0);
+}
+.home {
+  display: flex; align-items: center; gap: var(--s-xs, 8px);
+  font-size: var(--t-caption, 12px); font-weight: 500; text-decoration: none;
+  color: var(--link, #33333f); white-space: nowrap;
+}
+.home:hover { color: var(--ink, #1e1e2a); }
+
+.nav { display: flex; align-items: center; gap: var(--s-xxs, 4px); }
+.nav button {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border: 1px solid var(--line, #c9cad0); border-radius: var(--r-pill, 9999px);
+  background: transparent; color: var(--ink-soft, #5a5a66);
+  font-size: 13px; cursor: pointer;
+  transition: color 150ms, border-color 150ms, background 150ms, transform 150ms;
+}
+.nav button:hover:not(:disabled) {
+  color: var(--ink, #1e1e2a);
+  border-color: var(--hairline-strong, #70707d);
+  background: var(--paper-hi, #e9eaed);
+}
+.nav button:active:not(:disabled) { transform: translateY(1px); }
+.nav button:disabled { opacity: .35; cursor: default; }
+.count {
+  min-width: 56px; text-align: center;
+  font-family: var(--num, ui-monospace, monospace);
+  font-size: var(--t-caption, 12px); color: var(--ink-soft, #5a5a66);
+  font-variant-numeric: tabular-nums;
+}
+
+.title { display: flex; align-items: baseline; gap: var(--s-xs, 8px); min-width: 0; }
+.title h1 {
+  margin: 0; font-size: var(--t-body-md, 16px); font-weight: 500;
+  letter-spacing: var(--track-sm, -.01em);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.title .file {
+  font-family: var(--num, monospace);
+  font-size: var(--t-caption, 12px); color: var(--ink-soft, #5a5a66); white-space: nowrap;
+}
+
+.badge, .route {
+  flex: none; padding: 2px var(--s-xs, 8px); border-radius: var(--r-xs, 4px);
+  font-size: var(--t-caption, 12px); font-weight: 500; white-space: nowrap;
+}
+/* This flow's chips are about audience, not build state: who can reach the
+   screen at all. The owner ones need the owner_key their browser kept. */
+.w-owner  { background: var(--primary-soft, #ccd6f7); color: var(--ink, #1e1e2a); }
+.w-anyone { background: var(--paper-hi, #e9eaed); color: var(--ink-soft, #5a5a66); }
+
+.route {
+  background: var(--paper, #fbfcfd); color: var(--ink-soft, #5a5a66);
+  font-weight: 400; font-family: var(--num, monospace);
+}
+.route[hidden] { display: none; }
+
+.spacer { margin-left: auto; }
+
+.widths {
+  display: flex; gap: var(--s-xxs, 4px);
+  padding: 3px; border: 1px solid var(--line, #c9cad0); border-radius: var(--r-pill, 9999px);
+}
+.widths button {
+  padding: 0 var(--s-sm, 12px); height: 26px;
+  border: 0; border-radius: var(--r-pill, 9999px); background: transparent;
+  font-family: inherit; font-size: var(--t-caption, 12px); font-weight: 500;
+  color: var(--ink-soft, #5a5a66); cursor: pointer;
+  transition: color 150ms, background 150ms;
+}
+.widths button:hover { color: var(--ink, #1e1e2a); background: var(--paper-hi, #e9eaed); }
+.widths button[aria-pressed="true"] { background: var(--primary, #5266eb); color: #fff; }
+
+.open {
+  font-size: var(--t-caption, 12px); text-decoration: none;
+  color: var(--link, #33333f); white-space: nowrap;
+}
+.open:hover { color: var(--ink, #1e1e2a); }
+
+/* ---- dot strip -------------------------------------------------------- */
+.dots {
+  flex: none; display: flex; gap: var(--s-xxs, 4px); align-items: center;
+  padding: var(--s-xs, 8px) var(--s-md, 16px); overflow-x: auto;
+  background: var(--canvas-deep, #e4e6ef); border-bottom: 1px solid var(--line-2, #39394a);
+}
+.dots button {
+  flex: none; min-width: 26px; height: 24px; padding: 0 var(--s-xs, 8px);
+  border: 1px solid transparent; border-radius: var(--r-pill, 9999px);
+  background: var(--paper, #fbfcfd); color: var(--ink-soft, #5a5a66);
+  font-family: var(--num, monospace); font-size: var(--t-caption, 12px); cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: color 150ms, background 150ms;
+}
+.dots button:hover { color: var(--ink, #1e1e2a); background: var(--paper-hi, #e9eaed); }
+.dots button[aria-current="true"] { background: var(--primary, #5266eb); color: #fff; }
+
+/* ---- stage ------------------------------------------------------------ */
+.stage {
+  flex: 1; min-height: 0; position: relative;
+  display: grid; place-items: start center;
+  overflow: auto; background: var(--canvas, #eef0f6);
+}
+iframe {
+  width: 100%; height: 100%; border: 0; display: block;
+  background: var(--canvas, #eef0f6);
+}
+.stage[data-w="1280"] iframe, .stage[data-w="480"] iframe {
+  height: 100%;
+  border-left: 1px solid var(--line, #c9cad0);
+  border-right: 1px solid var(--line, #c9cad0);
+}
+.stage[data-w="1280"] iframe { width: 1280px; }
+.stage[data-w="480"]  iframe { width: 480px; }
+
+/* ---- caption ---------------------------------------------------------- */
+.caption {
+  flex: none; padding: var(--s-sm, 12px) var(--s-md, 16px);
+  background: var(--canvas-deep, #e4e6ef); border-top: 1px solid var(--line, #c9cad0);
+  font-size: var(--t-body-sm, 14px); line-height: 1.5; color: var(--ink-soft, #5a5a66);
+}
+.caption[hidden] { display: none; }
+.caption b { font-weight: 500; color: var(--ink, #1e1e2a); }
+.caption p { margin: 0 0 var(--s-xs, 8px); max-width: 90ch; }
+.caption p:last-child { margin-bottom: 0; }
+.caption code {
+  font-family: var(--num, monospace);
+  font-size: .9em; padding: 1px 4px; border-radius: var(--r-xs, 4px);
+  background: var(--paper, #fbfcfd); color: var(--ink, #1e1e2a);
+}
+.next-hint {
+  display: block; margin-top: var(--s-xs, 8px);
+  font-size: var(--t-caption, 12px); font-weight: 500; color: var(--ink-soft, #5a5a66);
+}
+.next-hint::before { content: "↳ next: "; color: var(--primary, #5266eb); }
+
+/* ---- help overlay ----------------------------------------------------- */
+.help {
+  position: fixed; inset: 0; z-index: 10;
+  display: grid; place-items: center;
+  background: rgba(238, 240, 246, .88);
+}
+.help[hidden] { display: none; }
+.help-card {
+  background: var(--paper, #fbfcfd);
+  border: 1px solid var(--line, #c9cad0);
+  border-radius: var(--r-lg, 16px);
+  padding: var(--s-lg, 24px); min-width: 320px;
+}
+.help-card h2 {
+  margin: 0 0 var(--s-sm, 12px);
+  font-size: var(--t-body-lg, 18px); font-weight: 500;
+}
+.help-card dl {
+  display: grid; grid-template-columns: auto 1fr;
+  gap: var(--s-xs, 8px) var(--s-md, 16px); margin: 0; font-size: var(--t-body-sm, 14px);
+}
+.help-card dt { color: var(--ink, #1e1e2a); }
+.help-card dd { margin: 0; color: var(--ink-soft, #5a5a66); }
+kbd {
+  display: inline-block; padding: 1px 6px; border-radius: var(--r-xs, 4px);
+  border: 1px solid var(--line, #c9cad0); background: var(--canvas-deep, #e4e6ef);
+  font-family: var(--num, monospace); font-size: var(--t-caption, 12px);
+}
+
+@media (max-width: 820px) {
+  .title .file, .widths, .home span { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <a class="home" href="index.html" title="Back to the overview (g)">◧ <span>Overview</span></a>
+  <div class="nav">
+    <button id="prev" title="Previous (left arrow)">◀</button>
+    <span class="count" id="count">- / -</span>
+    <button id="next" title="Next (right arrow)">▶</button>
+  </div>
+  <div class="title">
+    <h1 id="title">Loading</h1>
+    <span class="file" id="file"></span>
+  </div>
+  <span class="route" id="route" hidden></span>
+  <span class="badge" id="badge" hidden></span>
+  <div class="spacer"></div>
+  <div class="widths" role="group" aria-label="Viewport width">
+    <button data-w="fit" aria-pressed="true">Fit</button>
+    <button data-w="1280" aria-pressed="false">1280</button>
+    <button data-w="480" aria-pressed="false">480</button>
+  </div>
+  <a class="open" id="open" href="#" target="_blank" title="Open this screen in its own tab">full screen ↗</a>
+  <a class="open" href="#" id="helpBtn" title="Keyboard shortcuts (?)">?</a>
+</div>
+
+<div class="dots" id="dots"></div>
+
+<div class="stage" id="stage" data-w="fit">
+  <iframe id="frame" title="Flow screen"></iframe>
+</div>
+
+<div class="caption" id="caption"></div>
+
+<div class="help" id="help" hidden>
+  <div class="help-card">
+    <h2>Keyboard</h2>
+    <dl>
+      <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>previous / next screen</dd>
+      <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>same, home-row</dd>
+      <dt><kbd>space</kbd></dt><dd>next screen</dd>
+      <dt><kbd>1</kbd> to <kbd>9</kbd>, <kbd>0</kbd></dt><dd>jump to screen (0 = 10th)</dd>
+      <dt><kbd>Home</kbd> <kbd>End</kbd></dt><dd>first / last</dd>
+      <dt><kbd>c</kbd></dt><dd>toggle the caption bar</dd>
+      <dt><kbd>w</kbd></dt><dd>cycle viewport width</dd>
+      <dt><kbd>g</kbd></dt><dd>back to the overview grid</dd>
+      <dt><kbd>?</kbd> <kbd>Esc</kbd></dt><dd>show / close this</dd>
+    </dl>
+  </div>
+</div>
+
+<script>
+// Screens are read from index.html so titles, badges and captions never have to
+// be maintained twice. If that parse fails we still page through the raw files.
+const FALLBACK = [
+  '01-idle', '02-link', '10-loading', '03-preview', '11-zipping', '04-compose',
+  '05-from', '12-invalid', '06-sent', 'email', '07-recipient', '08-send-failed',
+  '09-revoked', '13-not-found',
+].map((f, i) => ({ src: f + '.html', title: f.replace(/^\d+-/, '').replace(/-/g, ' '), num: String(i + 1) }));
+
+const el = {
+  frame: document.getElementById('frame'),
+  stage: document.getElementById('stage'),
+  title: document.getElementById('title'),
+  file: document.getElementById('file'),
+  badge: document.getElementById('badge'),
+  route: document.getElementById('route'),
+  count: document.getElementById('count'),
+  caption: document.getElementById('caption'),
+  dots: document.getElementById('dots'),
+  prev: document.getElementById('prev'),
+  next: document.getElementById('next'),
+  open: document.getElementById('open'),
+  help: document.getElementById('help'),
+};
+
+let screens = [];
+let idx = 0;
+
+async function loadScreens() {
+  try {
+    const html = await (await fetch('index.html', { cache: 'no-cache' })).text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const steps = [...doc.querySelectorAll('.step')];
+    if (!steps.length) throw new Error('no .step sections');
+    return steps.map(step => {
+      const badge = step.querySelector('.who');
+      // The `.arrow` between two steps labels the transition *out* of this one.
+      const arrow = step.nextElementSibling?.classList.contains('arrow')
+        ? step.nextElementSibling.textContent.trim() : '';
+      return {
+        src: step.querySelector('.open')?.getAttribute('href')
+          || step.querySelector('iframe')?.getAttribute('src'),
+        num: step.querySelector('.num')?.textContent.trim() || '',
+        title: step.querySelector('h2')?.textContent.trim() || '',
+        badgeText: badge?.textContent.trim() || '',
+        badgeClass: [...(badge?.classList || [])].find(c => c.startsWith('w-')) || '',
+        route: step.querySelector('.route')?.textContent.trim() || '',
+        caption: step.querySelector('.caption')?.innerHTML || '',
+        arrow,
+      };
+    }).filter(s => s.src);
+  } catch (err) {
+    console.warn('Falling back to a static file list:', err);
+    return FALLBACK;
+  }
+}
+
+const slug = src => src.replace(/\.html$/, '');
+
+function render() {
+  const s = screens[idx];
+  if (!s) return;
+
+  el.frame.src = s.src;
+  el.title.textContent = s.title;
+  el.file.textContent = s.src;
+  el.open.href = s.src;
+  el.count.textContent = `${idx + 1} / ${screens.length}`;
+
+  el.badge.hidden = !s.badgeText;
+  el.badge.textContent = s.badgeText || '';
+  el.badge.className = 'badge ' + (s.badgeClass || '');
+
+  el.route.hidden = !s.route;
+  el.route.textContent = s.route || '';
+
+  el.caption.innerHTML = s.caption || '';
+  if (s.arrow && idx < screens.length - 1) {
+    const hint = document.createElement('span');
+    hint.className = 'next-hint';
+    hint.textContent = s.arrow;
+    el.caption.append(hint);
+  }
+  el.caption.hidden = !el.caption.innerHTML || el.caption.dataset.off === '1';
+
+  el.prev.disabled = idx === 0;
+  el.next.disabled = idx === screens.length - 1;
+
+  [...el.dots.children].forEach((b, i) => b.setAttribute('aria-current', String(i === idx)));
+  el.dots.children[idx]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
+  document.title = `${idx + 1}/${screens.length} · ${s.title}`;
+  const target = '#' + slug(s.src);
+  if (location.hash !== target) history.replaceState(null, '', target);
+}
+
+function go(n) {
+  idx = Math.max(0, Math.min(screens.length - 1, n));
+  render();
+}
+
+function buildDots() {
+  el.dots.replaceChildren(...screens.map((s, i) => {
+    const b = document.createElement('button');
+    b.textContent = s.num || String(i + 1);
+    b.title = s.title;
+    b.onclick = () => go(i);
+    return b;
+  }));
+}
+
+const WIDTHS = ['fit', '1280', '480'];
+function setWidth(w) {
+  el.stage.dataset.w = w;
+  document.querySelectorAll('.widths button')
+    .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.w === w)));
+}
+document.querySelectorAll('.widths button').forEach(b => b.onclick = () => setWidth(b.dataset.w));
+
+el.prev.onclick = () => go(idx - 1);
+el.next.onclick = () => go(idx + 1);
+
+const toggleHelp = show => { el.help.hidden = show === undefined ? !el.help.hidden : !show; };
+document.getElementById('helpBtn').onclick = e => { e.preventDefault(); toggleHelp(); };
+el.help.onclick = () => toggleHelp(false);
+
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+
+  if (k === 'Escape') return toggleHelp(false);
+  if (k === '?') { e.preventDefault(); return toggleHelp(); }
+  if (k === 'ArrowLeft' || k === 'k') { e.preventDefault(); return go(idx - 1); }
+  if (k === 'ArrowRight' || k === 'j' || k === ' ') { e.preventDefault(); return go(idx + 1); }
+  if (k === 'Home') { e.preventDefault(); return go(0); }
+  if (k === 'End') { e.preventDefault(); return go(screens.length - 1); }
+  if (k === 'g') { location.href = 'index.html'; return; }
+  if (k === 'w') { return setWidth(WIDTHS[(WIDTHS.indexOf(el.stage.dataset.w) + 1) % WIDTHS.length]); }
+  if (k === 'c') {
+    el.caption.dataset.off = el.caption.dataset.off === '1' ? '0' : '1';
+    el.caption.hidden = el.caption.dataset.off === '1';
+    return;
+  }
+  if (/^[0-9]$/.test(k)) {
+    e.preventDefault();
+    return go(k === '0' ? 9 : Number(k) - 1);   // 0 is the 10th screen
+  }
+});
+
+// Arrow keys land on the iframe once it has focus, so mirror them back out.
+el.frame.addEventListener('load', () => {
+  try {
+    el.frame.contentDocument.addEventListener('keydown', e => {
+      if (['ArrowLeft', 'ArrowRight', 'j', 'k', ' ', 'g', 'c', 'w'].includes(e.key)) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: e.key }));
+      }
+    });
+  } catch { /* cross-origin: nothing to mirror */ }
+});
+
+window.addEventListener('hashchange', () => {
+  const i = screens.findIndex(s => slug(s.src) === location.hash.slice(1));
+  if (i >= 0 && i !== idx) go(i);
+});
+
+(async () => {
+  screens = await loadScreens();
+  buildDots();
+  const start = screens.findIndex(s => slug(s.src) === location.hash.slice(1));
+  go(start >= 0 ? start : 0);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="color-scheme" content="light"/>
+<title>E, inline refined</title>
+<meta name="description" content="The invoice preview as an expanding row: the document beside every field the parser read off it."/>
+<meta name="theme-color" content="#eef0f6"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%235266eb%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4H8.4A2%202%200%200%200%206.4%206.4v11.2a2%202%200%200%200%202%202h7.2a2%202%200%200%200%202-2V8.4Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4v4h4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"/>
+<!-- Five stylesheets, none of them this file's: the app's own tokens and
+     dashboard, then the Mercury layer the share flow landed. The panel below is
+     styled entirely by reskin.css, which is the point. The screen itself is the
+     flow's 01b-row.html, whose build.py is canonical for this markup; what this
+     file adds is the strip of document states at the bottom, which a single
+     screen has nowhere to put. -->
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<link rel="stylesheet" href="../../../frontend/src/styles/dashboard.css"/>
+<link rel="stylesheet" href="../../flows/share-flow-v3-light/tokens-v3.css"/>
+<link rel="stylesheet" href="../../flows/share-flow-v3-light/reskin.css"/>
+<link rel="stylesheet" href="../../flows/share-flow-v3-light/flow.css"/>
+<style>
+/* Annotation only. Every value is a token from tokens-v3.css; nothing here
+   restyles the product. */
+.cases {
+    margin-top: var(--s-xxl);
+    padding-top: var(--s-lg);
+    border-top: 1px solid var(--line);
+}
+
+.cases h2 {
+    margin: 0 0 var(--s-xs);
+    font-size: var(--t-body-md);
+    font-weight: 500;
+    letter-spacing: var(--track-sm);
+}
+
+.cases > p {
+    margin: 0 0 var(--s-lg);
+    max-width: 65ch;
+    color: var(--ink-soft);
+    text-wrap: pretty;
+}
+
+.case-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s-lg);
+}
+
+.case {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-sm);
+    margin: 0;
+    /* The width the document column actually has in the panel above. */
+    max-width: 240px;
+}
+
+.case figcaption {
+    font-size: var(--t-caption);
+    line-height: 1.5;
+    color: var(--ink-soft);
+    text-wrap: pretty;
+}
+
+.case figcaption b {
+    font-weight: 500;
+    color: var(--ink);
+}
+
+@media (max-width: 940px) {
+    .case-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to the content</a>
+<main id="content"><div class="grid">
+  <section class="card sources" aria-label="Email sources"><h2 class="card-label">Email sources</h2><div class="source"><svg class="source-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 10.2V14h5.3c-.2 1.2-1.6 3.6-5.3 3.6A5.6 5.6 0 1 1 15.7 8l2.7-2.6A9.3 9.3 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6 0-1-.1-1.5H12z"/></svg><span class="source-mail">martin@kirov.dev</span><button class="icon-btn" aria-label="Disconnect this mailbox"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.1 10.7a4.3 4.3 0 0 0-6.1-6.1l-1.3 1.3"/><path d="M5.9 13.3a4.3 4.3 0 0 0 6.1 6.1l1.3-1.3"/><path d="m3.6 3.6 16.8 16.8"/></svg></button></div><div class="source"><svg class="source-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 10.2V14h5.3c-.2 1.2-1.6 3.6-5.3 3.6A5.6 5.6 0 1 1 15.7 8l2.7-2.6A9.3 9.3 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6 0-1-.1-1.5H12z"/></svg><span class="source-mail">billing@kirov.dev</span><button class="icon-btn" aria-label="Disconnect this mailbox"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.1 10.7a4.3 4.3 0 0 0-6.1-6.1l-1.3 1.3"/><path d="M5.9 13.3a4.3 4.3 0 0 0 6.1 6.1l1.3-1.3"/><path d="m3.6 3.6 16.8 16.8"/></svg></button></div><button class="add-source"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.4v13.2"/><path d="M5.4 12h13.2"/></svg>Add source</button><p class="accounts-note">2 accounts connected</p></section>
+  <section class="card" aria-label="Invoices">
+    <div class="table-head">
+      <h1 class="table-title">Invoices <em>37 documents</em></h1>
+      <div class="tools"><span class="last-update">Updated just now</span>
+        <div class="tool-divider"></div>
+        <button class="update-btn" data-busy="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.4 12a8.4 8.4 0 1 1-2.5-6"/><path d="M20.4 4v4.4H16"/></svg><span>Update</span></button>
+        <div class="tool-divider"></div>
+        <span class="pop-anchor">
+          <button class="share-btn"
+            aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V3.6"/><path d="m8.2 7.2 3.8-3.6 3.8 3.6"/><path d="M5 13v4.9A2.1 2.1 0 0 0 7.1 20h9.8a2.1 2.1 0 0 0 2.1-2.1V13"/></svg><span>Share</span></button>
+          
+        </span>
+      </div>
+    </div>
+    <table><thead><tr>
+      <th class="col-check"><input type="checkbox" aria-label="Select all"></th>
+      <th scope="col">Vendor</th>
+      <th class="col-amount sortable" scope="col"><button>Amount</button></th>
+      <th class="col-issued sortable sorted" scope="col"><button>Issued</button></th>
+      <th class="col-actions" scope="col">Actions</th></tr></thead>
+      <tbody><tr class="is-open"><td class="col-check"><input type="checkbox" aria-label="Select Hetzner Online GmbH"></td><td><div class="vendor"><span class="vendor-logo" aria-hidden="true">He</span><span class="vendor-name">Hetzner Online GmbH</span></div></td><td class="col-amount">42.10 €</td><td class="col-issued">03.04.2026</td><td class="col-actions"><div class="row-actions"><button class="icon-btn" aria-expanded="true" aria-label="Hide Hetzner Online GmbH"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 12S6.9 5.9 12 5.9 21.2 12 21.2 12 17.1 18.1 12 18.1 2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="2.9"/></svg></button><button class="icon-btn" aria-label="Download Hetzner Online GmbH"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.6v11.9"/><path d="m8.2 11.9 3.8 3.6 3.8-3.6"/><path d="M5 13v4.9A2.1 2.1 0 0 0 7.1 20h9.8a2.1 2.1 0 0 0 2.1-2.1V13"/></svg></button></div></td></tr><tr class="expansion"><td colspan="5">
+            <div class="exp">
+              <figure class="exp-doc">
+                <div class="doc-alt" aria-hidden="true">
+                  <span class="vendor-logo">He</span></div>
+                <figcaption class="doc-cap">
+                  <span class="file">2026-04-03__hetzner__42.10EUR.pdf</span></figcaption>
+                <p class="doc-origin"><span class="ftype">pdf</span>
+                  84 KB, saved from the attachment.</p>
+              </figure>
+              <div class="meta">
+                <div class="exp-total"><span class="big">42.10 EUR</span>
+                  <dl class="split"><div><dt>Net</dt><dd>35.38</dd></div>
+                    <div><dt>VAT</dt><dd>6.72</dd></div></dl>
+                </div>
+                <div class="pair-group">
+                  <h3>Invoice</h3>
+                  <div class="pairs">
+                    <div class="pair"><div class="k">Invoice number</div><div class="v is-id">R0012345678</div></div>
+                    <div class="pair"><div class="k">Issued</div><div class="v is-id">3 April 2026</div></div>
+                    <div class="pair"><div class="k">Service start</div><div class="v is-id">1 April 2026</div></div>
+                    <div class="pair"><div class="k">VAT number</div><div class="v is-id">DE311046661</div></div>
+                    <div class="pair"><div class="k">Company number</div><div class="v is-id">HRB 226484</div></div>
+                    <div class="pair"><div class="k">Reference</div><div class="v is-id">R0012345678-2026-04</div></div>
+                  </div>
+                </div>
+                <div class="pair-group">
+                  <h3>Email it arrived in</h3>
+                  <div class="pairs">
+                    <div class="pair"><div class="k">Subject</div><div class="v">Your Hetzner invoice R0012345678</div></div>
+                    <div class="pair"><div class="k">From</div><div class="v">Hetzner Online GmbH &lt;accounting@hetzner.com&gt;</div></div>
+                    <div class="pair"><div class="k">Mailbox</div><div class="v">billing@kirov.dev</div></div>
+                    <div class="pair"><div class="k">Received</div><div class="v is-id">3 April 2026, 06:12</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </td></tr><tr><td class="col-check"><input type="checkbox" aria-label="Select Amazon Web Services"></td><td><div class="vendor"><span class="vendor-logo" aria-hidden="true">AW</span><span class="vendor-name">Amazon Web Services</span></div></td><td class="col-amount">873.42 €</td><td class="col-issued">05.04.2026</td><td class="col-actions"><div class="row-actions"><button class="icon-btn" aria-expanded="false" aria-label="Preview Amazon Web Services"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 12S6.9 5.9 12 5.9 21.2 12 21.2 12 17.1 18.1 12 18.1 2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="2.9"/></svg></button><button class="icon-btn" aria-label="Download Amazon Web Services"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.6v11.9"/><path d="m8.2 11.9 3.8 3.6 3.8-3.6"/><path d="M5 13v4.9A2.1 2.1 0 0 0 7.1 20h9.8a2.1 2.1 0 0 0 2.1-2.1V13"/></svg></button></div></td></tr><tr><td class="col-check"><input type="checkbox" aria-label="Select Notion Labs Inc."></td><td><div class="vendor"><span class="vendor-logo" aria-hidden="true">No</span><span class="vendor-name">Notion Labs Inc.</span></div></td><td class="col-amount">21.60 €</td><td class="col-issued">06.04.2026</td><td class="col-actions"><div class="row-actions"><button class="icon-btn" aria-expanded="false" aria-label="Preview Notion Labs Inc."><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 12S6.9 5.9 12 5.9 21.2 12 21.2 12 17.1 18.1 12 18.1 2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="2.9"/></svg></button><button class="icon-btn" aria-label="Download Notion Labs Inc."><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.6v11.9"/><path d="m8.2 11.9 3.8 3.6 3.8-3.6"/><path d="M5 13v4.9A2.1 2.1 0 0 0 7.1 20h9.8a2.1 2.1 0 0 0 2.1-2.1V13"/></svg></button></div></td></tr><tr><td class="col-check"><input type="checkbox" aria-label="Select Figma Inc."></td><td><div class="vendor"><span class="vendor-logo" aria-hidden="true">Fi</span><span class="vendor-name">Figma Inc.</span></div></td><td class="col-amount">41.85 €</td><td class="col-issued">09.04.2026</td><td class="col-actions"><div class="row-actions"><button class="icon-btn" aria-expanded="false" aria-label="Preview Figma Inc."><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 12S6.9 5.9 12 5.9 21.2 12 21.2 12 17.1 18.1 12 18.1 2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="2.9"/></svg></button><button class="icon-btn" aria-label="Download Figma Inc."><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.6v11.9"/><path d="m8.2 11.9 3.8 3.6 3.8-3.6"/><path d="M5 13v4.9A2.1 2.1 0 0 0 7.1 20h9.8a2.1 2.1 0 0 0 2.1-2.1V13"/></svg></button></div></td></tr><tr><td class="col-check"><input type="checkbox" aria-label="Select Vercel Inc."></td><td><div class="vendor"><span class="vendor-logo" aria-hidden="true">Ve</span><span class="vendor-name">Vercel Inc.</span></div></td><td class="col-amount">34.72 €</td><td class="col-issued">12.04.2026</td><td class="col-actions"><div class="row-actions"><button class="icon-btn" aria-expanded="false" aria-label="Preview Vercel Inc."><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 12S6.9 5.9 12 5.9 21.2 12 21.2 12 17.1 18.1 12 18.1 2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="2.9"/></svg></button><button class="icon-btn" aria-label="Download Vercel Inc."><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.6v11.9"/><path d="m8.2 11.9 3.8 3.6 3.8-3.6"/><path d="M5 13v4.9A2.1 2.1 0 0 0 7.1 20h9.8a2.1 2.1 0 0 0 2.1-2.1V13"/></svg></button></div></td></tr></tbody></table>
+    <div class="table-foot"><span class="per-page">5 of 37 shown</span>
+      <span class="pager"><span class="page-num">1</span></span></div>
+  </section>
+</div>
+  <section class="cases" aria-labelledby="cases-title">
+    <h2 id="cases-title">The document panel, three states</h2>
+    <p>The left half of an open row is one box in three states, and only the first of them is
+      drawn above. Three equal cells because comparing them is the point.</p>
+    <div class="case-grid">
+      <figure class="case">
+        <div class="doc-alt" aria-hidden="true"><span class="vendor-logo">He</span></div>
+        <figcaption><b>Before the page render arrives.</b> The vendor&rsquo;s mark on a blank
+          sheet. The product drops the invoice&rsquo;s own PDF into this box and the mark stays
+          behind it, so nothing here is a drawing of a document.</figcaption>
+      </figure>
+      <figure class="case">
+        <div class="doc-none"><b>No document</b>
+          <p>This invoice was read from the email itself. Nothing was attached and no invoice link
+            resolved to a file. The fields beside this are what the parser found in the message
+            body.</p></div>
+        <figcaption><b>A ride receipt, which never had a PDF.</b> A solid edge, not a dashed one:
+          dashed is the add-a-source control on this screen, and there is nothing to drop
+          here.</figcaption>
+      </figure>
+      <figure class="case">
+        <div class="skel skel-thumb"></div>
+        <figcaption><b>While the document is fetching.</b> Shaped like the panel it stands in for,
+          so nothing moves when the render lands. It does not shimmer: a loop that runs for as long
+          as the request does is what the motion rules rule out.</figcaption>
+      </figure>
+    </div>
+  </section>
+</main>
+</body>
+</html>

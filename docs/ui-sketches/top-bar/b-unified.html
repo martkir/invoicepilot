@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>B · Unified</title>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); color: var(--ink); background: var(--page); }
+.page { max-width: 980px; margin: 0 auto; padding: 40px 28px 60px; }
+
+.title { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
+.title h1 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
+.title span { font-size: 12.5px; color: var(--muted); }
+
+/* One surface instead of two. The sidebar is gone; sources become chips in the
+   card's own toolbar, which buys the table the full page width. */
+.card { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.bar { display: flex; align-items: center; gap: 8px; padding: 11px 14px;
+  border-bottom: 1px solid var(--line-2); background: var(--red-025); }
+
+.chip { display: flex; align-items: center; gap: 7px; height: 28px; padding: 0 4px 0 9px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--white); font-size: 12px; color: var(--ink-2); }
+.chip svg.g { width: 13px; height: 13px; flex: none; }
+.chip .x { width: 20px; height: 20px; display: grid; place-items: center; border: 0; border-radius: 50%;
+  background: none; color: var(--muted); cursor: pointer; opacity: 0; }
+.chip:hover .x { opacity: 1; }
+.chip .x:hover { color: var(--red-600); background: var(--red-050); }
+
+.add { display: grid; place-items: center; width: 28px; height: 28px;
+  border: 1px dashed var(--line); border-radius: 50%; background: none; color: var(--red-600); cursor: pointer; }
+.add:hover { background: var(--white); border-color: var(--red-600); }
+
+.spacer { flex: 1; }
+.stamp { font-size: 11.5px; color: var(--muted); }
+.update { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px;
+  border: 0; border-radius: var(--r-sm); background: var(--red-600); color: #fff;
+  font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.update:hover { background: var(--red-700); }
+
+table { width: 100%; border-collapse: collapse; }
+th { padding: 10px 16px; text-align: left; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line-2); }
+td { padding: 14px 16px; border-bottom: 1px solid var(--line-2); font-size: 13.5px; }
+tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: var(--red-025); }
+.num, th.num { text-align: right; }
+.num { font-variant-numeric: tabular-nums; font-weight: 600; }
+.date, th.date { width: 130px; }
+.date { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.vendor { display: flex; align-items: center; gap: 11px; }
+.logo { width: 28px; height: 28px; flex: none; display: grid; place-items: center;
+  border-radius: var(--r-sm); color: #fff; font-size: 11px; font-weight: 700; }
+.name { font-weight: 600; }
+.foot { padding: 11px 16px; font-size: 11.5px; color: var(--muted); background: var(--red-025); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="title"><h1>Invoices</h1><span>5 documents</span></div>
+
+  <section class="card">
+    <div class="bar">
+      <span class="chip">
+        <svg class="g" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 10.2V14h5.3c-.2 1.2-1.6 3.6-5.3 3.6A5.6 5.6 0 1 1 15.7 8l2.7-2.6A9.3 9.3 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6 0-1-.1-1.5H12z"/></svg>
+        kiraesq124@gmail.com
+        <button class="x" aria-label="Disconnect"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </span>
+      <button class="add" aria-label="Add source"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <span class="spacer"></span>
+      <span class="stamp">Updated just now</span>
+      <button class="update"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg>Update</button>
+    </div>
+
+    <table>
+      <thead><tr><th>Vendor</th><th class="num">Amount</th><th class="date">Issued</th></tr></thead>
+      <tbody>
+        <tr><td><div class="vendor"><span class="logo" style="background:#34A853">Bo</span><span class="name">Bolt Operations OÜ</span></div></td><td class="num">2.37 €</td><td class="date">06.08.2026</td></tr>
+        <tr><td><div class="vendor"><span class="logo" style="background:#232F3E">Am</span><span class="name">Amazon</span></div></td><td class="num">64.90 €</td><td class="date">02.08.2026</td></tr>
+        <tr><td><div class="vendor"><span class="logo" style="background:#0D0D0D">Fi</span><span class="name">Figma</span></div></td><td class="num">15.00 €</td><td class="date">01.08.2026</td></tr>
+        <tr><td><div class="vendor"><span class="logo" style="background:#4A154B">Sl</span><span class="name">Slack</span></div></td><td class="num">21.75 €</td><td class="date">28.07.2026</td></tr>
+        <tr><td><div class="vendor"><span class="logo" style="background:#0D0D0D">Ub</span><span class="name">Uber</span></div></td><td class="num">12.40 €</td><td class="date">24.07.2026</td></tr>
+      </tbody>
+    </table>
+    <div class="foot">1 source · 5 invoices</div>
+  </section>
+</div>
+</body>
+</html>

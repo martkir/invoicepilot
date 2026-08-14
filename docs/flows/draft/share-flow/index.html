@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Share flow</title>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 40px 32px 80px; font-family: var(--font); color: var(--ink); background: var(--page); }
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.02em; }
+.lede { margin: 0 0 10px; max-width: 70ch; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
+.note { max-width: 70ch; margin: 0 0 14px; padding: 10px 12px; border-left: 3px solid var(--red-600);
+        border-radius: var(--r-sm); background: var(--red-025); font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
+.note ol { margin: 8px 0 0; padding-left: 18px; }
+.note li { margin-bottom: 3px; }
+.spec { display: block; max-width: 70ch; margin: 0 0 30px; font-size: 12.5px; color: var(--muted); }
+.spec a { color: var(--red-600); }
+.step { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.step-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--line-2); }
+.num { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 50%;
+       background: var(--red-600); color: var(--white); font-size: 11px; font-weight: 700; }
+h2 { margin: 0; font-size: 14.5px; font-weight: 650; }
+.route { padding: 2px 8px; border-radius: 999px; background: var(--line-2); color: var(--ink-2);
+         font-size: 10.5px; font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.who { padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700;
+       text-transform: uppercase; letter-spacing: .03em; }
+.w-owner { color: var(--red-700); background: var(--red-050); }
+.w-anyone { color: #1B7F4B; background: #E6F4EC; }
+.open { margin-left: auto; font-size: 12px; color: var(--muted); text-decoration: none; }
+.open:hover { color: var(--red-600); }
+.caption { margin: 0; padding: 12px 16px 14px; font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
+.caption code { font-size: 11.5px; padding: 1px 4px; border-radius: 4px; background: var(--line-2); }
+.frame { height: 186px; border-top: 1px solid var(--line-2); overflow: hidden; background: var(--page); }
+.frame.tall { height: 330px; }
+.frame.mail { height: 300px; }
+iframe { width: 1400px; height: 465px; border: 0; transform: scale(.4); transform-origin: 0 0; }
+.tall iframe { height: 825px; }
+.mail iframe { height: 750px; }
+.arrow { display: grid; place-items: center; padding: 12px 0; }
+.arrow span { padding: 4px 14px 4px 0; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.arrow span::before { content: "\2193 "; color: var(--red-600); font-weight: 700; }
+.branch { margin: 26px 0 14px; padding-top: 18px; border-top: 1px dashed var(--line);
+          font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+@media (max-width: 760px) { .frame { height: 132px; } .frame.tall { height: 240px; } iframe { transform: scale(.28); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Share flow</h1>
+  <p class="lede">Handing a batch of invoices to someone who has no account &mdash; an accountant, a
+  co-founder, a client. Each frame is a real page using the app&rsquo;s own <code>tokens.css</code> and
+  <code>dashboard.css</code>, so these cannot drift from the product. Everything here is
+  <b>to build</b>; the dashboard chrome around it already exists.</p>
+
+  <div class="note"><b>Two clicks to a live link.</b> Update, then the share icon &mdash; the link is minted
+  and on the clipboard before any dialog asks anything. Five things deliberately do not exist, because
+  each one is a decision the user would otherwise make before getting their link:
+  <ol>
+    <li><b>No share dialog.</b> The click is the share. The popover reports, it does not ask.</li>
+    <li><b>No expiry, password, or permission levels.</b> Live until revoked; revoke is the one switch.</li>
+    <li><b>No separate preview.</b> &ldquo;Open link&rdquo; opens the exact URL the recipient gets.</li>
+    <li><b>No picking.</b> The link <em>is</em> the batch &mdash; no checkboxes, no partial zip.
+      Wrong batch? Tick rows on the dashboard and share again; it is still two clicks.</li>
+    <li><b>No attachments.</b> The mail carries the summary and a button. 12&nbsp;MB does not.</li>
+  </ol></div>
+  <p class="spec">Data model, routes, thumbnail generation and the mail transport:
+  <a href="design.md">design.md</a>. Who sees what:
+  <span class="who w-owner">Owner</span> needs the <code>owner_key</code> its browser kept;
+  <span class="who w-anyone">Anyone with the link</span> does not.</p>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">1</span><h2>The share icon</h2>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="01-idle.html" target="_blank">open full screen ↗</a>
+    </div>
+    <p class="caption">One new control in the toolbar the table already has. It shares the
+    <b>ticked rows, or everything shown when nothing is ticked</b> &mdash; reusing the checkbox column
+    means the selection step costs no new UI at all.</p>
+    <div class="frame"><iframe src="01-idle.html" loading="lazy" title="The share icon"></iframe></div>
+  </section>
+  <div class="arrow"><span>click the share icon</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">2</span><h2>Link created</h2>
+      <span class="route">POST /shares</span>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="02-link.html" target="_blank">open full screen ↗</a>
+    </div>
+    <p class="caption">The link already exists and is <b>already on the clipboard</b> &mdash; nothing to
+    confirm. The response also carries an <code>owner_key</code>, which this browser keeps in
+    <code>localStorage</code> and never shows anyone; it is what gates sending and revoking later.
+    The snapshot of invoice ids is <b>frozen here</b>, so a later scan cannot silently widen a link
+    that has already gone out.</p>
+    <div class="frame"><iframe src="02-link.html" loading="lazy" title="Link created"></iframe></div>
+  </section>
+  <div class="arrow"><span>Open link — or paste it anywhere</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">3</span><h2>The share page</h2>
+      <span class="route">GET /s/{token}</span>
+      <span class="who w-anyone">Anyone with the link</span>
+      <a class="open" href="03-preview.html" target="_blank">open full screen ↗</a>
+    </div>
+    <p class="caption">Summary first: <b>filename, count, size and date range</b> &mdash; one line that
+    catches a wrong export before anyone opens anything.
+    <br/><br/>
+    Below it the page is <b>laid out as the zip&rsquo;s contents</b>: a <code>pdf</code> part on a grey
+    band and a <code>csv</code> part on white, each named and chipped with its file type, under a header
+    already chipped <code>zip</code>. No sentence says &ldquo;you are downloading PDFs and a
+    spreadsheet&rdquo; &mdash; the layout says it. The <b>five</b> thumbnails are rendered server-side at
+    extraction time; page one of an invoice is recognisable at 240px, which is the highest
+    signal-per-pixel the page can offer for free. Five is the whole strip &mdash; it never scrolls, so
+    there is no lazy loading and nothing to virtualize.
+    <br/><br/>
+    The table is a <b>sheet, not a working surface</b> &mdash; and that is the point of contrast with
+    the dashboard, which has checkboxes, vendor logos, per-row actions and 52px rows. Here: hairline
+    grid, 30px rows, tabular figures, the zip&rsquo;s own filenames, and counts on the last line.
+    Eight columns, all of them real output from <code>extract.py</code>: <b>#, Vendor, Invoice&nbsp;#,
+    Document, Issued, Net, VAT, Total</b>. The net/VAT split is on screen because it is the reason the
+    batch was sent. Row&nbsp;6 shows dashes where Bolt&rsquo;s ride receipt carries no invoice number
+    and no split &mdash; that is the real shape of the data, not a placeholder.
+    <br/><br/>
+    The ninth column is <b>not data: it counts what the CSV has and the page does not</b>
+    (<code>+15 in csv</code>, with a <code>…</code> per row). Without it the sheet reads as the whole
+    truth and <code>invoices.csv</code> looks like a copy of it. Narrow screens drop columns into that
+    count &mdash; <code>+15</code>, <code>+18</code>, <code>+19</code> &mdash; so the number stays true
+    at every width.
+    <b>Nothing on this page is clickable except Download</b> &mdash; no row opens, no thumbnail opens,
+    there is no viewer to build and no single-document route to serve. Whoever wants to read one
+    downloads the zip and opens it in the reader they already have. The pink strip is the only
+    owner-only thing on the page, and it is the whole difference between this and screen&nbsp;8.</p>
+    <div class="frame tall"><iframe src="03-preview.html" loading="lazy" title="The share page"></iframe></div>
+  </section>
+
+  <p class="branch">Optional — sending it for them</p>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">4</span><h2>Composer</h2>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="04-compose.html" target="_blank">open full screen ↗</a>
+    </div>
+    <p class="caption">One field the user must fill: the address. Subject and body are already drafted,
+    and the mail goes out <b>from a connected mailbox</b> &mdash; Unipile already holds those
+    credentials, so there is no second OAuth and no Gmail client to write.
+    <br/><br/>
+    <b>From states the answer rather than asking a question</b> &mdash; the address as text, the way it
+    would read on a sent message, with a caret beside it if there is anywhere else to send from.
+    <br/><br/>
+    <b>The draft is right there underneath</b>, in an iframe over the real rendered mail &mdash; the same
+    document the API sends, not a mock-up of it, so what the sender approves and what the recipient
+    opens cannot diverge. It also answers the question a bare To-field leaves hanging: what is this
+    going to say in my name?</p>
+    <div class="frame tall"><iframe src="04-compose.html" loading="lazy" title="Composer"></iframe></div>
+  </section>
+  <div class="arrow"><span>click the caret beside the address</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">5</span><h2>Choosing the mailbox</h2>
+      <span class="route">GET /accounts</span>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="05-from.html" target="_blank">open full screen ↗</a>
+    </div>
+    <p class="caption">The caret exists <b>only because two mailboxes are connected</b>; with one it is
+    not rendered, because a control that leads nowhere is worse than no control. With two &mdash;
+    personal and billing, say &mdash; which one sends is a real question, and it decides where the
+    reply lands. The current mailbox stays in the list and is ticked, so the menu answers
+    <em>which am I on?</em> as well as <em>what else is there?</em> The choice is remembered, so it is
+    asked once rather than every time.</p>
+    <div class="frame tall"><iframe src="05-from.html" loading="lazy" title="Choosing the mailbox"></iframe></div>
+  </section>
+  <div class="arrow"><span>Send</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">6</span><h2>Sent</h2>
+      <span class="route">POST /s/{token}/email</span>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="06-sent.html" target="_blank">open full screen ↗</a>
+    </div>
+    <p class="caption">Confirmation names <b>who it went to and which mailbox it came from</b>, because
+    &ldquo;sent&rdquo; alone leaves the user checking their own Sent folder. Sending again to someone
+    else is one click and reuses the same link.</p>
+    <div class="frame tall"><iframe src="06-sent.html" loading="lazy" title="Sent"></iframe></div>
+  </section>
+  <div class="arrow"><span>what lands in the inbox</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">7</span><h2>The email</h2>
+      <span class="who w-anyone">Recipient</span>
+      <a class="open" href="email.html" target="_blank">open full screen ↗</a>
+    </div>
+    <p class="caption">Shaped like a receipt: a branded band, one heading, <b>the figure that matters</b>,
+    a short label/value block, one action, then quiet link rows. No thumbnails, no vendor list, no
+    marketing &mdash; the page has all of that, and an inbox is not where anyone reviews 37 invoices.
+    Dropping the images also drops the third of clients that block them.
+    <br/><br/>
+    600px, tables, inlined styles, plain-text alternative &mdash; the format that survives Outlook.
+    <b>No attachment:</b> 12&nbsp;MB bounces, lands in spam and goes stale; a link does none of that.</p>
+    <div class="frame mail"><iframe src="email.html" loading="lazy" title="The email"></iframe></div>
+  </section>
+  <div class="arrow"><span>recipient clicks through</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">8</span><h2>Recipient&rsquo;s view</h2>
+      <span class="route">GET /s/{token}</span>
+      <span class="who w-anyone">Anyone with the link</span>
+      <a class="open" href="07-recipient.html" target="_blank">open full screen ↗</a>
+    </div>
+    <p class="caption">The same page as screen 3, minus the owner strip &mdash; no login wall, no
+    &ldquo;request access&rdquo;, nothing to install. Because owner and recipient share one page, there
+    is no what-they-will-see mode to keep in step, and no doubt in the owner&rsquo;s mind about whether
+    the preview was accurate.</p>
+    <div class="frame tall"><iframe src="07-recipient.html" loading="lazy" title="Recipient's view"></iframe></div>
+  </section>
+
+  <p class="branch">When it goes wrong</p>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">9</span><h2>Send failed</h2>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="08-send-failed.html" target="_blank">open full screen ↗</a>
+    </div>
+    <p class="caption">The composer stays open with the address intact and the Unipile detail shown.
+    Worth saying out loud on screen: <b>the link is live either way</b> &mdash; mail is the optional
+    half of this flow, so a failed send is never a failed share.</p>
+    <div class="frame tall"><iframe src="08-send-failed.html" loading="lazy" title="Send failed"></iframe></div>
+  </section>
+  <div class="arrow"><span>owner clicks Revoke</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">10</span><h2>Revoked</h2>
+      <span class="route">DELETE /s/{token}</span>
+      <span class="who w-anyone">Anyone with the link</span>
+      <a class="open" href="09-revoked.html" target="_blank">open full screen ↗</a>
+    </div>
+    <p class="caption">Says so plainly rather than 404ing. The recipient knows the link once worked, so
+    pretending it never existed reads as a bug &mdash; and naming who turned it off tells them who to ask.</p>
+    <div class="frame"><iframe src="09-revoked.html" loading="lazy" title="Revoked"></iframe></div>
+  </section>
+</div>
+</body>
+</html>

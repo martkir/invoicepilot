@@ -1,0 +1,27 @@
+# Build context excludes. Without these, `COPY frontend/ ./` drags the host's
+# node_modules into the image and overwrites the layer npm install just built.
+.git
+.github
+
+# Secrets and extracted financial documents — must never enter an image.
+.env
+.env.backup
+.data/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Docs and local notes
+docs/
+CHANGELOG.md
+CHANGES.md
+IMPLEMENTATION_PLAN.md

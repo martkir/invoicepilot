@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Flow viewer</title>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<style>
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font, system-ui, sans-serif);
+  color: var(--ink, #17171a);
+  background: var(--page, #f6f6f7);
+}
+
+/* ---- top bar ---------------------------------------------------------- */
+.bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  height: 52px;
+  background: var(--white, #fff);
+  border-bottom: 1px solid var(--line, #e4e4e7);
+}
+.home {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; text-decoration: none;
+  color: var(--muted, #74747c); white-space: nowrap;
+}
+.home:hover { color: var(--red-600, #d33); }
+
+.nav { display: flex; align-items: center; gap: 4px; }
+.nav button {
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border: 1px solid var(--line, #e4e4e7); border-radius: var(--r-sm, 6px);
+  background: var(--white, #fff); color: var(--ink-2, #45454d);
+  font-size: 14px; cursor: pointer;
+}
+.nav button:hover:not(:disabled) { border-color: var(--red-600, #d33); color: var(--red-600, #d33); }
+.nav button:disabled { opacity: .35; cursor: default; }
+.count {
+  min-width: 52px; text-align: center;
+  font-size: 12px; font-weight: 600; color: var(--muted, #74747c);
+  font-variant-numeric: tabular-nums;
+}
+
+.title { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+.title h1 {
+  margin: 0; font-size: 14.5px; font-weight: 650; letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.title .file { font-size: 11.5px; color: var(--muted, #74747c); white-space: nowrap; }
+
+.badge {
+  flex: none; padding: 2px 8px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+}
+/* This flow's chips are about audience, not build state: who can reach the
+   screen at all. The owner ones need the owner_key their browser kept. */
+.w-owner  { color: var(--red-700, #a02); background: var(--red-050, #fdeaea); }
+.w-anyone { color: #1B7F4B; background: #E6F4EC; }
+
+.route {
+  flex: none; padding: 2px 8px; border-radius: 999px;
+  background: var(--line-2, #efeff1); color: var(--ink-2, #45454d);
+  font-size: 10.5px; font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap;
+}
+.route[hidden] { display: none; }
+
+.spacer { margin-left: auto; }
+
+.widths { display: flex; border: 1px solid var(--line, #e4e4e7); border-radius: var(--r-sm, 6px); overflow: hidden; }
+.widths button {
+  padding: 0 9px; height: 28px; border: 0; background: var(--white, #fff);
+  font-size: 11px; font-weight: 600; color: var(--muted, #74747c); cursor: pointer;
+}
+.widths button + button { border-left: 1px solid var(--line, #e4e4e7); }
+.widths button[aria-pressed="true"] { background: var(--red-600, #d33); color: #fff; }
+
+.open {
+  font-size: 12px; text-decoration: none; color: var(--muted, #74747c); white-space: nowrap;
+}
+.open:hover { color: var(--red-600, #d33); }
+
+/* ---- dot strip -------------------------------------------------------- */
+.dots {
+  flex: none; display: flex; gap: 4px; align-items: center;
+  padding: 7px 14px; overflow-x: auto;
+  background: var(--white, #fff); border-bottom: 1px solid var(--line-2, #efeff1);
+}
+.dots button {
+  flex: none; min-width: 24px; height: 22px; padding: 0 6px;
+  border: 1px solid transparent; border-radius: 999px;
+  background: var(--line-2, #efeff1); color: var(--muted, #74747c);
+  font-size: 11px; font-weight: 700; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.dots button:hover { border-color: var(--red-600, #d33); color: var(--red-600, #d33); }
+.dots button[aria-current="true"] { background: var(--red-600, #d33); color: #fff; }
+
+/* ---- stage ------------------------------------------------------------ */
+.stage {
+  flex: 1; min-height: 0; position: relative;
+  display: grid; place-items: start center;
+  overflow: auto; background: var(--page, #f6f6f7);
+}
+iframe {
+  width: 100%; height: 100%; border: 0; background: var(--page, #f6f6f7);
+  display: block;
+}
+.stage[data-w="1280"] iframe, .stage[data-w="480"] iframe {
+  height: 100%; border-left: 1px solid var(--line, #e4e4e7); border-right: 1px solid var(--line, #e4e4e7);
+}
+.stage[data-w="1280"] iframe { width: 1280px; }
+.stage[data-w="480"]  iframe { width: 480px; }
+
+/* ---- caption ---------------------------------------------------------- */
+.caption {
+  flex: none; padding: 11px 16px;
+  background: var(--white, #fff); border-top: 1px solid var(--line, #e4e4e7);
+  font-size: 12.5px; line-height: 1.6; color: var(--ink-2, #45454d);
+}
+.caption[hidden] { display: none; }
+.caption code {
+  font-size: 11.5px; padding: 1px 4px; border-radius: 4px;
+  background: var(--line-2, #efeff1);
+}
+.next-hint {
+  display: block; margin-top: 6px;
+  font-size: 11.5px; font-weight: 600; color: var(--muted, #74747c);
+}
+.next-hint::before { content: "↳ next: "; color: var(--red-600, #d33); }
+
+/* ---- help overlay ----------------------------------------------------- */
+.help {
+  position: fixed; inset: 0; z-index: 10;
+  display: grid; place-items: center;
+  background: rgba(20,20,25,.55);
+}
+.help[hidden] { display: none; }
+.help-card {
+  background: var(--white, #fff); border-radius: var(--r-lg, 12px);
+  padding: 20px 24px; min-width: 300px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.25);
+}
+.help-card h2 { margin: 0 0 12px; font-size: 14px; }
+.help-card dl { display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; margin: 0; font-size: 12.5px; }
+.help-card dt { font-weight: 700; color: var(--ink, #17171a); }
+.help-card dd { margin: 0; color: var(--ink-2, #45454d); }
+kbd {
+  display: inline-block; padding: 1px 5px; border-radius: 4px;
+  border: 1px solid var(--line, #e4e4e7); background: var(--line-2, #efeff1);
+  font: inherit; font-size: 11px; font-weight: 700;
+}
+@media (max-width: 820px) {
+  .title .file, .widths, .home span { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <a class="home" href="index.html" title="Back to the overview (g)">◧ <span>Overview</span></a>
+  <div class="nav">
+    <button id="prev" title="Previous (←)">◀</button>
+    <span class="count" id="count">– / –</span>
+    <button id="next" title="Next (→)">▶</button>
+  </div>
+  <div class="title">
+    <h1 id="title">Loading…</h1>
+    <span class="file" id="file"></span>
+  </div>
+  <span class="route" id="route" hidden></span>
+  <span class="badge" id="badge" hidden></span>
+  <div class="spacer"></div>
+  <div class="widths" role="group" aria-label="Viewport width">
+    <button data-w="fit" aria-pressed="true">Fit</button>
+    <button data-w="1280" aria-pressed="false">1280</button>
+    <button data-w="480" aria-pressed="false">480</button>
+  </div>
+  <a class="open" id="open" href="#" target="_blank" title="Open this screen in its own tab">full screen ↗</a>
+  <a class="open" href="#" id="helpBtn" title="Keyboard shortcuts (?)">?</a>
+</div>
+
+<div class="dots" id="dots"></div>
+
+<div class="stage" id="stage" data-w="fit">
+  <iframe id="frame" title="Flow screen"></iframe>
+</div>
+
+<div class="caption" id="caption"></div>
+
+<div class="help" id="help" hidden>
+  <div class="help-card">
+    <h2>Keyboard</h2>
+    <dl>
+      <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>previous / next screen</dd>
+      <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>same, home-row</dd>
+      <dt><kbd>space</kbd></dt><dd>next screen</dd>
+      <dt><kbd>1</kbd>–<kbd>9</kbd>, <kbd>0</kbd></dt><dd>jump to screen (0 = 10th)</dd>
+      <dt><kbd>Home</kbd> <kbd>End</kbd></dt><dd>first / last</dd>
+      <dt><kbd>c</kbd></dt><dd>toggle the caption bar</dd>
+      <dt><kbd>w</kbd></dt><dd>cycle viewport width</dd>
+      <dt><kbd>g</kbd></dt><dd>back to the overview grid</dd>
+      <dt><kbd>?</kbd> <kbd>Esc</kbd></dt><dd>show / close this</dd>
+    </dl>
+  </div>
+</div>
+
+<script>
+// Screens are read from index.html so titles, badges and captions never have to
+// be maintained twice. If that parse fails we still page through the raw files.
+const FALLBACK = [
+  '01-idle', '02-link', '03-preview', '04-compose', '05-from', '06-sent',
+  'email', '07-recipient', '08-send-failed', '09-revoked',
+].map((f, i) => ({ src: f + '.html', title: f.replace(/^\d+-/, '').replace(/-/g, ' '), num: String(i + 1) }));
+
+const el = {
+  frame: document.getElementById('frame'),
+  stage: document.getElementById('stage'),
+  title: document.getElementById('title'),
+  file: document.getElementById('file'),
+  badge: document.getElementById('badge'),
+  route: document.getElementById('route'),
+  count: document.getElementById('count'),
+  caption: document.getElementById('caption'),
+  dots: document.getElementById('dots'),
+  prev: document.getElementById('prev'),
+  next: document.getElementById('next'),
+  open: document.getElementById('open'),
+  help: document.getElementById('help'),
+};
+
+let screens = [];
+let idx = 0;
+
+async function loadScreens() {
+  try {
+    const html = await (await fetch('index.html', { cache: 'no-cache' })).text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const steps = [...doc.querySelectorAll('.step')];
+    if (!steps.length) throw new Error('no .step sections');
+    return steps.map(step => {
+      const badge = step.querySelector('.who');
+      // The `.arrow` between two steps labels the transition *out* of this one.
+      const arrow = step.nextElementSibling?.classList.contains('arrow')
+        ? step.nextElementSibling.textContent.trim() : '';
+      return {
+        src: step.querySelector('.open')?.getAttribute('href')
+          || step.querySelector('iframe')?.getAttribute('src'),
+        num: step.querySelector('.num')?.textContent.trim() || '',
+        title: step.querySelector('h2')?.textContent.trim() || '',
+        badgeText: badge?.textContent.trim() || '',
+        badgeClass: [...(badge?.classList || [])].find(c => c.startsWith('w-')) || '',
+        route: step.querySelector('.route')?.textContent.trim() || '',
+        caption: step.querySelector('.caption')?.innerHTML || '',
+        arrow,
+      };
+    }).filter(s => s.src);
+  } catch (err) {
+    console.warn('Falling back to a static file list:', err);
+    return FALLBACK;
+  }
+}
+
+const slug = src => src.replace(/\.html$/, '');
+
+function render() {
+  const s = screens[idx];
+  if (!s) return;
+
+  el.frame.src = s.src;
+  el.title.textContent = s.title;
+  el.file.textContent = s.src;
+  el.open.href = s.src;
+  el.count.textContent = `${idx + 1} / ${screens.length}`;
+
+  el.badge.hidden = !s.badgeText;
+  el.badge.textContent = s.badgeText || '';
+  el.badge.className = 'badge ' + (s.badgeClass || '');
+
+  el.route.hidden = !s.route;
+  el.route.textContent = s.route || '';
+
+  el.caption.innerHTML = s.caption || '';
+  if (s.arrow && idx < screens.length - 1) {
+    const hint = document.createElement('span');
+    hint.className = 'next-hint';
+    hint.textContent = s.arrow;
+    el.caption.append(hint);
+  }
+  el.caption.hidden = !el.caption.innerHTML || el.caption.dataset.off === '1';
+
+  el.prev.disabled = idx === 0;
+  el.next.disabled = idx === screens.length - 1;
+
+  [...el.dots.children].forEach((b, i) => b.setAttribute('aria-current', String(i === idx)));
+  el.dots.children[idx]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
+  document.title = `${idx + 1}/${screens.length} · ${s.title}`;
+  const target = '#' + slug(s.src);
+  if (location.hash !== target) history.replaceState(null, '', target);
+}
+
+function go(n) {
+  idx = Math.max(0, Math.min(screens.length - 1, n));
+  render();
+}
+
+function buildDots() {
+  el.dots.replaceChildren(...screens.map((s, i) => {
+    const b = document.createElement('button');
+    b.textContent = s.num || String(i + 1);
+    b.title = s.title;
+    b.onclick = () => go(i);
+    return b;
+  }));
+}
+
+const WIDTHS = ['fit', '1280', '480'];
+function setWidth(w) {
+  el.stage.dataset.w = w;
+  document.querySelectorAll('.widths button')
+    .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.w === w)));
+}
+document.querySelectorAll('.widths button').forEach(b => b.onclick = () => setWidth(b.dataset.w));
+
+el.prev.onclick = () => go(idx - 1);
+el.next.onclick = () => go(idx + 1);
+
+const toggleHelp = show => { el.help.hidden = show === undefined ? !el.help.hidden : !show; };
+document.getElementById('helpBtn').onclick = e => { e.preventDefault(); toggleHelp(); };
+el.help.onclick = () => toggleHelp(false);
+
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+
+  if (k === 'Escape') return toggleHelp(false);
+  if (k === '?') { e.preventDefault(); return toggleHelp(); }
+  if (k === 'ArrowLeft' || k === 'k') { e.preventDefault(); return go(idx - 1); }
+  if (k === 'ArrowRight' || k === 'j' || k === ' ') { e.preventDefault(); return go(idx + 1); }
+  if (k === 'Home') { e.preventDefault(); return go(0); }
+  if (k === 'End') { e.preventDefault(); return go(screens.length - 1); }
+  if (k === 'g') { location.href = 'index.html'; return; }
+  if (k === 'w') { return setWidth(WIDTHS[(WIDTHS.indexOf(el.stage.dataset.w) + 1) % WIDTHS.length]); }
+  if (k === 'c') {
+    el.caption.dataset.off = el.caption.dataset.off === '1' ? '0' : '1';
+    el.caption.hidden = el.caption.dataset.off === '1';
+    return;
+  }
+  if (/^[0-9]$/.test(k)) {
+    e.preventDefault();
+    return go(k === '0' ? 9 : Number(k) - 1);   // 0 is the 10th screen
+  }
+});
+
+// Arrow keys land on the iframe once it has focus, so mirror them back out.
+el.frame.addEventListener('load', () => {
+  try {
+    el.frame.contentDocument.addEventListener('keydown', e => {
+      if (['ArrowLeft', 'ArrowRight', 'j', 'k', ' ', 'g', 'c', 'w'].includes(e.key)) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: e.key }));
+      }
+    });
+  } catch { /* cross-origin: nothing to mirror */ }
+});
+
+window.addEventListener('hashchange', () => {
+  const i = screens.findIndex(s => slug(s.src) === location.hash.slice(1));
+  if (i >= 0 && i !== idx) go(i);
+});
+
+(async () => {
+  screens = await loadScreens();
+  buildDots();
+  const start = screens.findIndex(s => slug(s.src) === location.hash.slice(1));
+  go(start >= 0 ? start : 0);
+})();
+</script>
+</body>
+</html>

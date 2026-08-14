@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Share flow v2 · Invoice Pilot</title>
+<meta name="description" content="The share flow, redesigned: the same fourteen screens, audited against
+the redesign skill and rebuilt on a new palette, type scale and set of states."/>
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="Share flow v2 · Invoice Pilot"/>
+<meta property="og:description" content="The share flow, redesigned. Same flow, new palette, type scale and states."/>
+<meta name="theme-color" content="#A8382C"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%23A8382C%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4H8.4A2%202%200%200%200%206.4%206.4v11.2a2%202%200%200%200%202%202h7.2a2%202%200%200%200%202-2V8.4Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4v4h4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"/>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<link rel="stylesheet" href="tokens-v2.css"/>
+<style>
+/* The contact sheet is a document about a product, so it is set like a
+   document: a serif at display sizes, a 65-character measure on every
+   paragraph, and the screens themselves as the only full-width objects.
+   Fraunces is loaded only here — the product screens are Geist throughout. */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap");
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 0 96px;
+  font-family: var(--font);
+  font-size: var(--t-body);
+  line-height: 1.55;
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+  background:
+    radial-gradient(70rem 30rem at 50% -10rem, var(--accent-025), transparent 70%),
+    var(--page);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Grain, so a page that is mostly flat fill does not read as flat fill. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background-image: var(--grain);
+  background-size: 140px 140px;
+  opacity: .035;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+html { scroll-behavior: smooth; }
+
+:focus-visible {
+  outline: 2px solid var(--accent-600);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+  box-shadow: 0 0 0 5px var(--accent-050);
+}
+
+.skip {
+  position: absolute; left: 12px; top: -48px; z-index: var(--z-overlay);
+  padding: 9px 14px; border-radius: var(--r-sm);
+  background: var(--ink); color: var(--white);
+  font-size: var(--t-sm); font-weight: 600; text-decoration: none;
+  transition: top var(--t-mid) var(--ease-spring);
+}
+.skip:focus-visible { top: 12px; }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+/* ---- masthead ---------------------------------------------------------- */
+.top { padding: 56px 0 34px; }
+
+h1 {
+  margin: 0 0 12px;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-size: clamp(2.25rem, 1.4rem + 3vw, 3.4rem);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -.028em;
+  text-wrap: balance;
+}
+
+h1 em {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--accent-600);
+}
+
+.lede {
+  max-width: 65ch;
+  margin: 0 0 24px;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.lede code, .caption code, .note code {
+  font-family: var(--num);
+  font-size: .86em;
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+  background: var(--line-2);
+}
+
+/* ---- the two panels at the top ------------------------------------------ */
+.panels {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+
+.note {
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--paper);
+  box-shadow: var(--sh-1), var(--edge);
+  font-size: var(--t-sm);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.note h2 {
+  margin: 0 0 10px;
+  font-size: var(--t-body);
+  font-weight: 600;
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+}
+
+.note ol, .note ul { margin: 10px 0 0; padding-left: 20px; }
+.note li { margin-bottom: 6px; text-wrap: pretty; }
+.note li::marker { color: var(--muted); }
+.note b { font-weight: 600; color: var(--ink); }
+
+.note.is-audit {
+  border-color: var(--accent-100);
+  background:
+    radial-gradient(26rem 14rem at 100% 0, var(--accent-050), transparent 70%),
+    var(--paper);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  box-shadow: var(--sh-1), var(--edge);
+  font-size: var(--t-sm);
+  font-weight: 500;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out),
+              background var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-spring);
+}
+.chip:hover { color: var(--ink); border-color: var(--accent-100); background: var(--accent-025); }
+.chip:active { transform: translateY(1px) scale(.99); }
+.chip.is-primary {
+  border-color: var(--accent-700); color: var(--white);
+  background: linear-gradient(var(--accent-500), var(--accent-600) 62%);
+  box-shadow: var(--sh-2), inset 0 1px 0 rgba(255,255,255,.22);
+}
+.chip.is-primary:hover { background: var(--accent-500); color: var(--white); }
+
+/* ---- steps -------------------------------------------------------------- */
+.step {
+  margin-bottom: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--paper);
+  box-shadow: var(--sh-1), var(--edge);
+  overflow: hidden;
+}
+
+.step-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.num {
+  width: 24px; height: 24px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 8px;
+  background: linear-gradient(var(--accent-500), var(--accent-700));
+  box-shadow: var(--sh-1), inset 0 1px 0 rgba(255,255,255,.28);
+  color: var(--white);
+  font-family: var(--num); font-size: 11px; font-weight: 600;
+}
+
+.step h2 {
+  margin: 0;
+  font-size: var(--t-h2);
+  font-weight: 600;
+  letter-spacing: var(--track-tight);
+}
+
+.route {
+  padding: 3px 9px; border-radius: var(--r-xs);
+  background: var(--line-2); color: var(--ink-2);
+  font-family: var(--num); font-size: var(--t-2xs); font-weight: 500;
+}
+
+/* Audience, not build state: who can reach the screen at all. Both chips are
+   one hue now — v1 gave "anyone with the link" a green that existed nowhere
+   else in the product. */
+.who {
+  padding: 3px 9px; border-radius: var(--r-xs);
+  font-size: var(--t-2xs); font-weight: 600; letter-spacing: var(--track-label);
+}
+.w-owner  { color: var(--accent-700); background: var(--accent-050); }
+.w-anyone { color: var(--ink-2); background: var(--line-2); box-shadow: inset 0 0 0 1px var(--line); }
+
+/* Marks a screen that does not exist in share-flow/ at all. */
+.new {
+  padding: 3px 9px; border-radius: var(--r-xs);
+  background: var(--ink); color: var(--white);
+  font-size: var(--t-2xs); font-weight: 600; letter-spacing: var(--track-label);
+}
+
+.open {
+  margin-left: auto;
+  font-size: var(--t-xs);
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.open:hover { color: var(--accent-700); }
+
+/* The asymmetry: prose on the left at a readable measure, the screen on the
+   right at its own scale. v1 ran 150-character caption lines the full width
+   of the page and put the frame underneath. */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 560px;
+  align-items: stretch;
+}
+
+.caption {
+  margin: 0;
+  padding: 18px 22px 22px;
+  max-width: 62ch;
+  font-size: var(--t-sm);
+  line-height: 1.65;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.caption b { font-weight: 600; color: var(--ink); }
+.caption p { margin: 0 0 11px; }
+.caption p:last-child { margin-bottom: 0; }
+
+.frame {
+  height: 210px;
+  border-left: 1px solid var(--line-2);
+  overflow: hidden;
+  background: var(--page);
+}
+.frame.tall { height: 372px; }
+.frame.mail { height: 300px; }
+
+iframe { width: 1400px; height: 525px; border: 0; transform: scale(.4); transform-origin: 0 0; }
+.tall iframe { height: 930px; }
+.mail iframe { height: 750px; }
+
+.arrow { display: flex; align-items: center; gap: 10px; padding: 12px 4px 12px 20px; }
+.arrow span {
+  font-size: var(--t-xs); font-weight: 500; color: var(--muted);
+}
+.arrow span::before { content: "↓"; padding-right: 8px; color: var(--accent-600); font-weight: 700; }
+
+.branch {
+  margin: 34px 0 16px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.25rem;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: -.02em;
+  color: var(--ink-2);
+}
+
+footer {
+  max-width: 1180px;
+  margin: 44px auto 0;
+  padding: 24px;
+  border-top: 1px solid var(--line);
+  font-size: var(--t-xs);
+  color: var(--muted);
+}
+footer a { color: var(--muted); }
+footer a:hover { color: var(--accent-700); }
+
+@media (max-width: 1080px) {
+  .panels { grid-template-columns: minmax(0, 1fr); }
+  .body { grid-template-columns: minmax(0, 1fr); }
+  .frame { border-left: 0; border-top: 1px solid var(--line-2); height: 176px; }
+  .frame.tall { height: 300px; }
+  iframe { transform: scale(.3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#flow">Skip to the screens</a>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Share flow, <em>redesigned</em></h1>
+    <p class="lede">Handing a batch of invoices to someone who has no account — an accountant,
+    a co-founder, a client. Same flow as <a href="../share-flow/index.html">share-flow</a>, same
+    data model, same routes; what changed is everything the
+    <a href="../../../.claude/skills/redesign-existing-projects/SKILL.md">redesign skill</a> audit
+    turned up. Each frame is a real page linked against the app&rsquo;s own <code>tokens.css</code>
+    and <code>dashboard.css</code>, so these cannot drift from the product.</p>
+
+    <div class="panels">
+      <section class="note">
+        <h2>Two clicks to a live link</h2>
+        Update, then the share icon — the link is minted and on the clipboard before any dialog asks
+        anything. Five things deliberately do not exist, because each one is a decision the user
+        would otherwise make before getting their link:
+        <ol>
+          <li><b>No share dialog.</b> The click is the share. The popover reports, it does not ask.</li>
+          <li><b>No expiry, password, or permission levels.</b> Live until revoked; revoke is the
+            one switch.</li>
+          <li><b>No separate preview.</b> &ldquo;Open the link&rdquo; opens the exact URL the
+            recipient gets.</li>
+          <li><b>No picking.</b> The link <em>is</em> the batch — no checkboxes, no partial zip.
+            Wrong batch? Tick rows on the dashboard and share again; it is still two clicks.</li>
+          <li><b>No attachments.</b> The mail carries the summary and a button. 12&nbsp;MB does not.</li>
+        </ol>
+      </section>
+
+      <section class="note is-audit">
+        <h2>What the redesign changed</h2>
+        The full diagnosis is in <a href="audit.md">audit.md</a>. In one list:
+        <ul>
+          <li><b>Geist and a mono</b> in place of the Inter/system stack, with every figure set
+            tabular.</li>
+          <li><b>One accent.</b> The signal red drops to oxide; the green that carried
+            &ldquo;success&rdquo; is gone.</li>
+          <li><b>One overlap.</b> The document card lifts into the header band, so the page has a
+            foreground.</li>
+          <li><b>The five thumbnails fan</b> like paper instead of sitting in a row of equal boxes.</li>
+          <li><b>Press, focus and hover</b> on every control; grain and tinted shadows on every
+            surface.</li>
+          <li><b>Four states v1 never drew</b> — loading, downloading, a bad address, and a 404.</li>
+        </ul>
+        <div class="links">
+          <a class="chip is-primary" href="viewer.html">Click through the flow</a>
+          <a class="chip" href="audit.md">audit.md</a>
+          <a class="chip" href="design.md">design.md</a>
+          <a class="chip" href="../share-flow/index.html">Compare with v1</a>
+        </div>
+      </section>
+    </div>
+  </header>
+
+  <main id="flow">
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">1</span><h2>The share icon</h2>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="01-idle.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>One new control in the toolbar the table already has. It shares the <b>ticked rows, or
+        everything shown when nothing is ticked</b> — reusing the checkbox column means the
+        selection step costs no new UI at all.</p>
+        <p>Redressed rather than rebuilt: same markup, new palette and type. The vendor marks are
+        rounded squares instead of avatar circles, amounts and dates are mono and tabular so they
+        line up down the column, and the uppercase labels are back in sentence case.</p>
+      </div>
+      <div class="frame"><iframe src="01-idle.html" loading="lazy" title="The share icon"></iframe></div>
+    </div>
+  </section>
+  <div class="arrow"><span>click the share icon</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">2</span><h2>Link created</h2>
+      <span class="route">POST /shares</span>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="02-link.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>The link already exists and is <b>already on the clipboard</b> — nothing to confirm. The
+        response also carries an <code>owner_key</code>, which this browser keeps in
+        <code>localStorage</code> and never shows anyone; it is what gates sending and revoking
+        later. The snapshot of invoice ids is <b>frozen here</b>, so a later scan cannot silently
+        widen a link that has already gone out.</p>
+        <p>The two actions are no longer a filled button beside an outlined one. A matched pair
+        reads as two equal decisions, and only one of them is the point — so opening the link is
+        the button and sending it by email is a text link.</p>
+      </div>
+      <div class="frame"><iframe src="02-link.html" loading="lazy" title="Link created"></iframe></div>
+    </div>
+  </section>
+  <div class="arrow"><span>open the link — or paste it anywhere</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">3</span><h2>While the manifest loads</h2>
+      <span class="who w-anyone">Anyone with the link</span>
+      <span class="new">new in v2</span>
+      <a class="open" href="10-loading.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>A manifest of 37 rows is a request, and a request has a duration. v1 drew no loading
+        state at all, which in practice means a blank page for its length.</p>
+        <p>The skeleton is <b>shaped like the page it stands in for</b> — band, fan, rows — so
+        nothing jumps when the data lands, and the shimmer is a <code>transform</code>, not an
+        animated <code>left</code>. A centred spinner would say only that something is
+        happening.</p>
+      </div>
+      <div class="frame tall"><iframe src="10-loading.html" loading="lazy" title="Loading"></iframe></div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">4</span><h2>The share page</h2>
+      <span class="route">GET /s/{token}</span>
+      <span class="who w-anyone">Anyone with the link</span>
+      <a class="open" href="03-preview.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p><b>The filename is the biggest thing on the page</b>, because &ldquo;is this the right
+        export?&rdquo; is the only question the page has to settle before anyone clicks. Under it,
+        four labelled facts — invoices, documents, size, period — instead of v1&rsquo;s single
+        15px line with separators.</p>
+        <p>Below that the page is <b>laid out as the zip&rsquo;s contents</b>: a <code>pdf</code>
+        part and a <code>csv</code> part, each named and chipped with its file type, under a header
+        already chipped <code>zip</code>. No sentence says &ldquo;you are downloading PDFs and a
+        spreadsheet&rdquo; — the layout says it. The five thumbnails are rendered server-side at
+        extraction time and <b>fan like a stack of paper</b>; five is the whole strip, so there is
+        no lazy loading and nothing to virtualize.</p>
+        <p>The table is a <b>sheet, not a working surface</b> — hairline grid, 32px rows, tabular
+        mono, the zip&rsquo;s own filenames, counts on the last line, and a sticky header so the
+        column names survive row 30. Row&nbsp;6 shows dashes where Bolt&rsquo;s ride receipt
+        carries no invoice number and no VAT split: that is the real shape of the data.</p>
+        <p>The ninth column is <b>not data — it counts what the CSV has and the page does not</b>
+        (<code>+15 in csv</code>). Narrow screens drop columns into that count, so the number stays
+        true at every width. <b>The document card lifts into the header band</b>; that one overlap
+        is what stops the page reading as six stacked stripes.</p>
+      </div>
+      <div class="frame tall"><iframe src="03-preview.html" loading="lazy" title="The share page"></iframe></div>
+    </div>
+  </section>
+  <div class="arrow"><span>click Download all</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">5</span><h2>Preparing the download</h2>
+      <span class="route">GET /s/{token}/zip</span>
+      <span class="who w-anyone">Anyone with the link</span>
+      <span class="new">new in v2</span>
+      <a class="open" href="11-zipping.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>The zip is streamed and never assembled on disk, so its size is known before the first
+        byte — which means this can be a <b>determinate bar</b> rather than a spinner. v1&rsquo;s
+        download button was an <code>href="#"</code> with no state after the click.</p>
+        <p>The panel replaces the button in place, so nothing moves, and it names what is being
+        built: 36 documents and the CSV.</p>
+      </div>
+      <div class="frame tall"><iframe src="11-zipping.html" loading="lazy" title="Preparing the download"></iframe></div>
+    </div>
+  </section>
+
+  <p class="branch">Optional — sending it for them</p>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">6</span><h2>Composer</h2>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="04-compose.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>One field the user must fill: the address. Subject and body are already drafted, and the
+        mail goes out <b>from a connected mailbox</b> — Unipile already holds those credentials, so
+        there is no second OAuth and no Gmail client to write.</p>
+        <p><b>From states the answer rather than asking a question</b> — the address as text, the
+        way it would read on a sent message, with a caret beside it if there is anywhere else to
+        send from. It is a <code>span</code>, not a <code>select</code>, and its label is a span
+        too: a <code>&lt;label for&gt;</code> pointing at no control promises a screen reader
+        something that is not there.</p>
+        <p><b>The draft is right there underneath</b>, in an iframe over the real rendered mail —
+        the same document the API sends, not a mock-up of it. The composer is now its own raised
+        card sitting in front of the document, because writing a mail is a different task from
+        reading a manifest.</p>
+      </div>
+      <div class="frame tall"><iframe src="04-compose.html" loading="lazy" title="Composer"></iframe></div>
+    </div>
+  </section>
+  <div class="arrow"><span>click the caret beside the address</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">7</span><h2>Choosing the mailbox</h2>
+      <span class="route">GET /accounts</span>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="05-from.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>The caret exists <b>only because two mailboxes are connected</b>; with one it is not
+        rendered, because a control that leads nowhere is worse than no control. With two —
+        personal and billing, say — which one sends is a real question, and it decides where the
+        reply lands.</p>
+        <p>The current mailbox stays in the list and is ticked, so the menu answers <em>which am I
+        on?</em> as well as <em>what else is there?</em> The choice is remembered, so it is asked
+        once rather than every time.</p>
+      </div>
+      <div class="frame tall"><iframe src="05-from.html" loading="lazy" title="Choosing the mailbox"></iframe></div>
+    </div>
+  </section>
+  <div class="arrow"><span>type an address that is not one</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">8</span><h2>The address needs fixing</h2>
+      <span class="who w-owner">Owner</span>
+      <span class="new">new in v2</span>
+      <a class="open" href="12-invalid.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>The one field in this flow was the one field with no validation. Checked on blur, before
+        anything is sent: <code>aria-invalid</code>, <code>aria-describedby</code>, a tinted border,
+        and a sentence that <b>says what is wrong and guesses the fix</b> rather than
+        &ldquo;invalid input&rdquo;.</p>
+        <p>Send is disabled while it is — <code>aria-disabled</code>, not a dead button that fails
+        silently on click.</p>
+      </div>
+      <div class="frame tall"><iframe src="12-invalid.html" loading="lazy" title="Address needs fixing"></iframe></div>
+    </div>
+  </section>
+  <div class="arrow"><span>fix it, then Send</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">9</span><h2>Sent</h2>
+      <span class="route">POST /s/{token}/email</span>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="06-sent.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>Confirmation names <b>who it went to and which mailbox it came from</b>, because
+        &ldquo;sent&rdquo; alone leaves the user checking their own Sent folder. Sending again to
+        someone else is one click and reuses the same link.</p>
+        <p>No green, and no exclamation mark. The tick and the sentence carry it; a success colour
+        that appears nowhere else in the product is a second accent bought for one banner.</p>
+      </div>
+      <div class="frame tall"><iframe src="06-sent.html" loading="lazy" title="Sent"></iframe></div>
+    </div>
+  </section>
+  <div class="arrow"><span>what lands in the inbox</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">10</span><h2>The email</h2>
+      <span class="who w-anyone">Recipient</span>
+      <a class="open" href="email.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>Shaped like a receipt: a branded band, one heading, a short label/value block, one
+        action. No thumbnails, no vendor list, no marketing — the page has all of that, and an inbox
+        is not where anyone reviews 37 invoices. Dropping the images also drops the third of clients
+        that block them.</p>
+        <p>600px, tables, inlined styles, plain-text alternative — the format that survives Outlook.
+        <b>No attachment:</b> 12&nbsp;MB bounces, lands in spam and goes stale; a link does none of
+        that. One line of v1&rsquo;s copy was cut here because it was false: it promised that any
+        invoice &ldquo;can be opened before you download&rdquo;, and nothing on the page opens a
+        single document.</p>
+      </div>
+      <div class="frame mail"><iframe src="email.html" loading="lazy" title="The email"></iframe></div>
+    </div>
+  </section>
+  <div class="arrow"><span>recipient clicks through</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">11</span><h2>Recipient&rsquo;s view</h2>
+      <span class="route">GET /s/{token}</span>
+      <span class="who w-anyone">Anyone with the link</span>
+      <a class="open" href="07-recipient.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>The same page as screen 4, minus the owner strip — no login wall, no &ldquo;request
+        access&rdquo;, nothing to install. Because owner and recipient share one page, there is no
+        what-they-will-see mode to keep in step, and no doubt in the owner&rsquo;s mind about
+        whether the preview was accurate.</p>
+        <p>The masthead names who shared it, and the footer carries the privacy and terms links a
+        public page needs and v1 did not have.</p>
+      </div>
+      <div class="frame tall"><iframe src="07-recipient.html" loading="lazy" title="Recipient's view"></iframe></div>
+    </div>
+  </section>
+
+  <p class="branch">When it goes wrong</p>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">12</span><h2>Send failed</h2>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="08-send-failed.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>The composer stays open with the address intact and the Unipile detail shown verbatim —
+        &ldquo;something went wrong&rdquo; is not something anyone can act on. Worth saying out loud
+        on screen: <b>the link is live either way</b>, so a failed send is never a failed share.</p>
+      </div>
+      <div class="frame tall"><iframe src="08-send-failed.html" loading="lazy" title="Send failed"></iframe></div>
+    </div>
+  </section>
+  <div class="arrow"><span>owner clicks Revoke</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">13</span><h2>Revoked</h2>
+      <span class="route">DELETE /s/{token}</span>
+      <span class="who w-anyone">Anyone with the link</span>
+      <a class="open" href="09-revoked.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>Says so plainly rather than 404ing. The recipient knows the link once worked, so
+        pretending it never existed reads as a bug — and naming who turned it off tells them who to
+        ask. <b>A dead end needs a way out</b>, so it has two: mail the sender, or go back.</p>
+      </div>
+      <div class="frame tall"><iframe src="09-revoked.html" loading="lazy" title="Revoked"></iframe></div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">14</span><h2>Nothing at this link</h2>
+      <span class="who w-anyone">Anyone with the link</span>
+      <span class="new">new in v2</span>
+      <a class="open" href="13-not-found.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>A 22-character token in an email is a token that gets broken across two lines, so the
+        <b>likeliest 404 in this product has a known cause</b> — and the page names it instead of
+        saying &ldquo;page not found&rdquo;. Branded, and it distinguishes itself from the revoked
+        page: revoked means it worked once, this means it never did.</p>
+      </div>
+      <div class="frame tall"><iframe src="13-not-found.html" loading="lazy" title="Nothing at this link"></iframe></div>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    Screens generated by <code>build.py</code>; styles in <code>tokens-v2.css</code> (the palette),
+    <code>redesign.css</code> (a diff against the shipped dashboard) and <code>flow.css</code> (the
+    share UI). Diagnosis in <a href="audit.md">audit.md</a>, specification in
+    <a href="design.md">design.md</a>, the version this replaces in
+    <a href="../share-flow/index.html">share-flow</a>.
+  </div>
+</footer>
+</body>
+</html>

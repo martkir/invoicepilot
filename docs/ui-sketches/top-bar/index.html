@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>UI simplification · 3 directions</title>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 40px 32px 80px; font-family: var(--font); color: var(--ink); background: var(--page); }
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.02em; }
+.lede { margin: 0 0 12px; max-width: 74ch; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
+.note { max-width: 74ch; margin: 0 0 34px; padding: 10px 12px; border-left: 3px solid var(--red-600);
+  border-radius: var(--r-sm); background: var(--red-025); font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
+.opt { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg);
+  overflow: hidden; margin-bottom: 26px; }
+.opt-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line-2); }
+.tag { width: 24px; height: 24px; flex: none; display: grid; place-items: center; border-radius: 50%;
+  background: var(--red-600); color: #fff; font-size: 12px; font-weight: 700; }
+h2 { margin: 0; font-size: 15px; font-weight: 650; }
+.sub { font-size: 12.5px; color: var(--muted); }
+.open { margin-left: auto; font-size: 12px; color: var(--muted); text-decoration: none; }
+.open:hover { color: var(--red-600); }
+.body { display: grid; grid-template-columns: 1fr 300px; gap: 0; }
+.frame { height: 300px; overflow: hidden; background: var(--page); border-right: 1px solid var(--line-2); }
+iframe { width: 1280px; height: 600px; border: 0; transform: scale(.5); transform-origin: 0 0; }
+.notes { padding: 14px 16px; font-size: 12.5px; line-height: 1.6; }
+.notes p { margin: 0 0 10px; color: var(--ink-2); }
+.notes ul { margin: 0; padding-left: 16px; color: var(--ink-2); }
+.notes li { margin-bottom: 4px; }
+.notes b { color: var(--ink); }
+@media (max-width: 900px) { .body { grid-template-columns: 1fr; } .frame { border-right: 0; border-bottom: 1px solid var(--line-2); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>UI simplification &mdash; three directions</h1>
+  <p class="lede">Same data, same three live controls (add source, disconnect, update). They differ in
+  how much structure survives around them.</p>
+  <p class="note"><b>The dead controls.</b> Seven of the eight buttons in the current table do
+  nothing: select-all, per-row checkboxes, both column sorts, preview, download, more,
+  download-selected, expand, and the pager. The top bar is dead outright. <b>A</b> removes only the
+  top bar and leaves the rest exactly as it is; <b>B</b> and <b>C</b> also drop the inert controls,
+  which is a separate decision from the one A makes. Sample vendors are used throughout so the
+  vendor column can actually be judged.</p>
+
+  <section class="opt">
+    <div class="opt-head"><span class="tag">A</span><h2>Stripped</h2>
+      <span class="sub">same skeleton, dead weight removed</span>
+      <a class="open" href="a-stripped.html" target="_blank">open ↗</a></div>
+    <div class="body">
+      <div class="frame"><iframe src="a-stripped.html" loading="lazy"></iframe></div>
+      <div class="notes">
+        <p>The current UI with the top bar deleted, and <b>nothing else changed</b>. Rendered from
+        the app&rsquo;s own <code>dashboard.css</code>, so this is the real thing rather than a
+        redrawing of it.</p>
+        <ul>
+          <li>No top bar: &ldquo;Settings&rdquo; had no page, &ldquo;Dashboard&rdquo; was the only
+          destination, the user menu had no menu</li>
+          <li>Table keeps <b>every</b> column, control and the pager</li>
+          <li>Smallest possible diff &mdash; one component deleted</li>
+          <li>The inert controls stay inert; removing them is a separate decision</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="opt">
+    <div class="opt-head"><span class="tag">B</span><h2>Unified</h2>
+      <span class="sub">one card, sources as chips</span>
+      <a class="open" href="b-unified.html" target="_blank">open ↗</a></div>
+    <div class="body">
+      <div class="frame"><iframe src="b-unified.html" loading="lazy"></iframe></div>
+      <div class="notes">
+        <p>Collapses the sidebar into the table&rsquo;s own toolbar, so the page holds one object
+        instead of two.</p>
+        <ul>
+          <li>Sources become <b>chips</b>, × on hover to disconnect</li>
+          <li>Table gets the full width; page narrows to feel deliberate</li>
+          <li>Update is the one filled button &mdash; the only routine action</li>
+          <li>Chips get cramped past ~4 accounts</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="opt">
+    <div class="opt-head"><span class="tag">C</span><h2>List</h2>
+      <span class="sub">no chrome, grouped by month</span>
+      <a class="open" href="c-list.html" target="_blank">open ↗</a></div>
+    <div class="body">
+      <div class="frame"><iframe src="c-list.html" loading="lazy"></iframe></div>
+      <div class="notes">
+        <p>Stops treating this as a data grid. No cards, no borders, no header row &mdash; the
+        invoices <em>are</em> the page.</p>
+        <ul>
+          <li>Grouped by month, with a <b>monthly total</b></li>
+          <li>Date column dissolves into the group heading plus a day line</li>
+          <li>Sources shrink to one quiet line under the title</li>
+          <li>Furthest from today&rsquo;s markup &mdash; largest rewrite</li>
+          <li>Scales worst to hundreds of rows without paging</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

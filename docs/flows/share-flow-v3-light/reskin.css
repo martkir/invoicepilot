@@ -1,0 +1,663 @@
+/* reskin.css: the diff against chrome that already ships.
+   ==========================================================================
+   Every selector here overrides something in frontend/src/styles/dashboard.css.
+   It is kept apart from flow.css on purpose: flow.css is UI that does not
+   exist yet, this file is a diff against UI that does. When the redesign is
+   accepted these rules fold into dashboard.css and this file disappears;
+   flow.css does not.
+
+   Nothing below invents a component. dashboard.css is written almost entirely
+   against custom properties, so tokens-v3.css does most of the work on its
+   own; what is left is the eight places it hard-codes a colour, the shadows,
+   the radii that predate the scale, the weights above 500, and the uppercase
+   labels. */
+
+/* ---------------------------------------------------------------- page --- */
+/* v2 layered a radial accent wash and a fixed 3.5% grain overlay over the
+   canvas. Both are gone: Section 4.4 rules out texture ornament and ambient
+   gradients outright. A flat surface is the design, not a symptom. */
+body {
+    font-family: var(--font);
+    font-size: var(--t-body-sm);
+    line-height: 1.5;
+    letter-spacing: var(--track-sm);
+    background: var(--canvas);
+    color: var(--ink);
+    /* Every figure in this product is compared against the one above it. */
+    font-variant-numeric: tabular-nums;
+    text-rendering: optimizeLegibility;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* ------------------------------------------------------------- a11y ------ */
+.skip {
+    position: absolute;
+    left: var(--s-sm);
+    top: -48px;
+    z-index: var(--z-overlay);
+    padding: var(--s-sm) var(--s-lg);
+    border-radius: var(--r-pill);
+    background: var(--primary);
+    color: var(--on-primary);
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+    text-decoration: none;
+    transition: top var(--d-base) var(--ease-standard);
+}
+
+.skip:focus-visible {
+    top: var(--s-sm);
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* One focus ring for the whole product. An outline, not the outline-plus-halo
+   pair v2 used: the halo was a box-shadow, and there are no box-shadows here. */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--r-xs);
+}
+
+/* ------------------------------------------------------------ surfaces --- */
+/* A card is a fill on the canvas plus a hairline. That is the entire
+   elevation story now; v2 gave every card two tinted shadows and a 1px inner
+   highlight along its top edge. */
+.card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+}
+
+/* ------------------------------------------------------------- labels ---- */
+/* dashboard.css sets the sources label, the table head and the detail-panel
+   headings in letter-spaced upper case. Section 4.1 bans both the caps and
+   the positive tracking, so all three come back to sentence case at 12px,
+   weight 500, in --ink-soft. Nothing on any screen in this folder is set
+   above 500 (Section 4.1) or below 12px. */
+.card-label,
+thead th,
+.meta h3 {
+    text-transform: none;
+    letter-spacing: var(--track-sm);
+    font-weight: 500;
+    font-size: var(--t-caption);
+    color: var(--ink-soft);
+}
+
+.card-label,
+.table-title,
+.meta h3 {
+    margin: 0;
+}
+
+.accounts-note {
+    margin: var(--s-xs) 0 0;
+    font-size: var(--t-caption);
+    border-top: 1px solid var(--line-2);
+}
+
+.table-title,
+.vendor-name,
+.update-btn,
+.add-source,
+.page-num,
+.toast b,
+.source-confirm button,
+td.col-amount {
+    font-weight: 500;
+}
+
+.table-title em {
+    font-weight: 400;
+    font-size: var(--t-caption);
+}
+
+/* ------------------------------------------------------------- table ----- */
+/* The tinted header band was one of the places the accent leaked onto a
+   surface that is not an action. A heading and a hairline under it are
+   enough. */
+thead th {
+    height: 36px;
+    background: transparent;
+    border-bottom: 1px solid var(--line);
+}
+
+/* The sorted column is a state, not an action, so it is marked with --ink
+   against the --ink-soft of its neighbours rather than with the accent.
+   Section 4.2 rations --primary to the one or two real actions per screen,
+   and on this screen those are Share and Download. */
+th.sorted button {
+    color: var(--ink);
+}
+
+th.sortable button:hover {
+    color: var(--ink);
+}
+
+tbody tr {
+    border-bottom: 1px solid var(--line-2);
+    transition: background var(--d-fast) var(--ease-standard);
+}
+
+tbody tr:hover {
+    background: var(--paper-hi);
+}
+
+/* The accent marks a selection. The open row is dealt with further down, and
+   it deliberately does not take this tint. */
+tbody tr.selected {
+    background: var(--primary-soft);
+}
+
+.source:hover,
+.source.is-removing,
+.source.is-pending {
+    background: var(--paper-hi);
+}
+
+/* Initials in a circle is the avatar default, and an avatar is a person.
+   A rounded square at --r-sm holds a two-letter mark better and stops a
+   vendor from reading as one.
+
+   The ten brand colours v2 carried inline are gone with it: ten saturated
+   fills is ten accents, and the colour consistency lock (Section 4.2) allows
+   one. What identifies the vendor is its name, in the
+   cell immediately to the right. */
+.vendor-logo {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-sm);
+    background: var(--paper-hi);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: var(--t-caption);
+    font-weight: 500;
+    letter-spacing: 0;
+}
+
+td.col-amount,
+td.col-issued,
+.last-update,
+.per-page {
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+
+td.col-amount {
+    color: var(--ink);
+}
+
+td.col-issued {
+    color: var(--ink-soft);
+}
+
+.tool-divider {
+    background: var(--line);
+}
+
+/* --------------------------------------------------------- interaction --- */
+/* Every control gets the same three states. The press is a 1px drop with no
+   shadow to collapse under it, so the movement has to carry it alone. */
+.icon-btn,
+.update-btn,
+.share-btn,
+.add-source,
+.page-num,
+.per-page,
+.toast-close {
+    transition:
+        color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard),
+        border-color var(--d-fast) var(--ease-standard),
+        transform var(--d-fast) var(--ease-standard);
+}
+
+.icon-btn:active,
+.update-btn:active,
+.share-btn:active,
+.add-source:active {
+    transform: translateY(1px);
+}
+
+/* Interactive means pill (Section 4.4). A 26px square control at --r-pill is
+   a circle, which is what an icon button should have been all along. */
+.icon-btn,
+.toast-close {
+    border-radius: var(--r-pill);
+    color: var(--ink-soft);
+}
+
+.icon-btn:hover,
+.toast-close:hover {
+    color: var(--ink);
+    background: var(--paper-hi);
+}
+
+/* The share control is the screen's primary action, so it is the one filled
+   shape in the toolbar and the one place the accent is spent on this screen
+   apart from the focus ring. It carries its label: as a lone glyph, the single
+   thing this screen exists for was its hardest control to find, and it sat
+   beside a download arrow one stroke away from its own. Filled against
+   Update's outline, so the pair reads as a rank rather than two equal
+   choices. */
+.share-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 13px;
+    border: 1px solid transparent;
+    border-radius: var(--r-pill);
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+    color: var(--on-primary);
+    background: var(--primary);
+}
+
+/* Darkens rather than brightens, for the reason .btn-primary gives: white over
+   --primary-bright is 3.4:1 and fails AA for a label (Section 4.2, 4.5). */
+.share-btn:hover {
+    background: var(--primary-deep);
+}
+
+/* While its own popover is open the control stays pressed. */
+.share-btn.is-active {
+    background: var(--primary-deep);
+}
+
+.update-btn {
+    height: 32px;
+    border-radius: var(--r-pill);
+    border-color: var(--line);
+    background: var(--canvas-deep);
+    color: var(--ink-soft);
+}
+
+.update-btn:hover {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--paper-hi);
+}
+
+.update-btn[data-busy="true"] {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--paper-hi);
+}
+
+.add-source {
+    border-radius: var(--r-pill);
+    border: 1px dashed var(--hairline-strong);
+    color: var(--ink-soft);
+}
+
+.add-source:hover {
+    color: var(--ink);
+    border-color: var(--hairline-strong);
+    background: var(--paper-hi);
+}
+
+/* The current page is a state, so it reads as one: a filled pill in the
+   neutral family rather than a tinted accent chip. */
+.page-num {
+    border-radius: var(--r-pill);
+    background: var(--paper-hi);
+    color: var(--ink);
+    font-family: var(--num);
+}
+
+.per-page {
+    border-radius: var(--r-pill);
+}
+
+.per-page:hover {
+    background: var(--paper-hi);
+}
+
+/* The checkbox decides what gets shared, so it is the one control on the
+   dashboard that carries the accent when it is on.
+
+   It keeps --r-xs rather than the pill the radius rule gives interactive
+   elements: a pill checkbox is a circle, a circle is a radio button, and a
+   multi-select control that looks single-select is worse than an
+   inconsistent radius. */
+input[type=checkbox] {
+    border: 1.5px solid var(--hairline-strong);
+    border-radius: var(--r-xs);
+    /* --paper, not --canvas-deep: a grey-filled box on a light card reads as
+       disabled, where an empty one with a strong edge reads as unticked. The
+       dark twin needs the opposite for the same reason. */
+    background: var(--paper);
+    transition:
+        border-color var(--d-fast) var(--ease-standard),
+        background var(--d-fast) var(--ease-standard);
+}
+
+input[type=checkbox]:hover {
+    border-color: var(--ink-soft);
+}
+
+input[type=checkbox]:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+input[type=checkbox]:checked::after {
+    border-color: var(--on-primary);
+}
+
+/* ------------------------------------------------------ expanded row ----- */
+/* Clicking a row opens the vendor's own document beside every field the parser
+   read off it, inside the table rather than over it. The direction is the one
+   picked in docs/ui-sketches/invoice-preview/; what follows is that panel in
+   Mercury, and it changes three things about the shipped rules.
+
+   1. The open row drops the accent. A ticked row is --primary-soft and an open
+      row was drawing the same tint, so two unrelated states were one colour.
+      Disclosure is neither an action nor a selection (Section 4.2), so the row
+      and its panel take --canvas: the page colour, cut into the card as a
+      well, which also makes the two read as one block instead of a row with a
+      stranger underneath. Ticking an open row still shows the accent, because
+      that part is still a selection.
+   2. The panel is a document column plus what is left, not two equal halves,
+      and the document in it is a thumbnail rather than a viewer. Nobody reads
+      an A4 page at any width this panel can afford, so the box is sized to be
+      recognised rather than read, at the 3:4 proportion the share page's
+      thumbnails already use. Reading the document is what opening it full size
+      is for. What is left over is around 640px at the table's real width,
+      which is what a payment reference and a subject line need to sit on one
+      line.
+   3. The fields sit on the hairline rhythm the rail's facts already use. One
+      label/value pattern in the product, not two. */
+tbody tr.is-open td,
+.expansion td {
+    background: var(--canvas-deep);
+}
+
+/* No hairline between the row and its own panel: the well is one shape. */
+tbody tr.is-open {
+    border-bottom: 0;
+}
+
+/* A selection is still a selection while the row is open. */
+tbody tr.is-open.selected td {
+    background: var(--primary-soft);
+}
+
+/* Open is a state, so the control that toggles it is marked in --ink, the same
+   way the sorted column and the current page are. */
+tbody tr.is-open .icon-btn[aria-expanded="true"] {
+    color: var(--ink);
+    background: transparent;
+}
+
+/* The row is clickable; the panel it opens is not. Without this the pointer
+   cursor tbody tr:hover sets carries on across the whole panel and promises a
+   click that does nothing (Section 4.5). */
+.expansion td,
+.expansion:hover td {
+    cursor: default;
+    border-bottom: 1px solid var(--line);
+}
+
+.exp {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: var(--s-lg);
+    padding: var(--s-lg);
+    /* The panel arrives from the row that opened it. Height is what actually
+       changes, and height is not animatable on a table row, so the movement is
+       carried by the contents: transform and opacity, over 300ms, once. */
+    animation: open-in var(--d-base) var(--ease-emphasized) both;
+}
+
+@keyframes open-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+}
+
+.exp-doc {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-xs);
+    margin: 0;
+}
+
+/* One page proportion for documents across the product. --r-sm because this
+   sits inside a panel that is itself inside a card (Section 4.4). */
+.doc-frame,
+.doc-alt,
+.doc-none {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 4;
+    border-radius: var(--r-sm);
+}
+
+.doc-frame {
+    border-color: var(--line);
+    /* The rendered page stays light because it is a photograph of a document
+       rather than a piece of chrome. Only the frame is re-dressed. */
+    background: var(--cloud);
+}
+
+/* The panel in the state where the page-1 render has not arrived: the vendor's
+   mark on a blank sheet, which is the same alt case the share page's
+   thumbnails draw. Production puts the <iframe class="doc-frame"> in this box
+   and this stays behind it. It is not a mock-up of a document, which is the
+   thing Section 4.9 rules out. */
+.doc-alt {
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    background: var(--cloud);
+}
+
+.doc-alt .vendor-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--r-md);
+    font-size: var(--t-body-lg);
+}
+
+/* An invoice that never had a document. Solid, not dashed: a dashed edge is
+   the add-a-source affordance on this screen, and there is nothing to drop
+   here. */
+.doc-none {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--s-xs);
+    padding: var(--s-lg);
+    border: 1px solid var(--line);
+    /* The same surface as .doc-alt, because this is the same box in another
+       state. --canvas-deep, which the shipped rule used, is now the colour of
+       the well it sits in, so the fill would have done nothing. */
+    background: var(--cloud);
+}
+
+.doc-none b {
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+    color: var(--ink);
+}
+
+.doc-none p {
+    margin: 0;
+    font-size: var(--t-caption);
+    line-height: 1.5;
+    color: var(--ink-soft);
+    text-wrap: pretty;
+}
+
+.doc-cap {
+    min-width: 0;
+}
+
+.doc-cap .file {
+    font-family: var(--num);
+    font-size: var(--t-caption);
+    letter-spacing: 0;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
+.doc-origin {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-xs);
+    margin: 0;
+    font-size: var(--t-caption);
+    color: var(--ink-soft);
+}
+
+/* v2 inset this column by the document's own text padding so the fields lined
+   up with the words on the page. The document is its own panel now, so the
+   inset lined up with nothing. */
+.meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-lg);
+    padding: 0;
+}
+
+/* The amount is what the row was opened to check, so it leads, and the split
+   it is made of sits beside it rather than three rows down a list. */
+.exp-total {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-md);
+    margin: 0;
+    padding-bottom: var(--s-sm);
+    border-bottom: 1px solid var(--line);
+}
+
+.exp-total .big {
+    font-family: var(--num);
+    font-size: var(--t-body-xl);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    color: var(--ink);
+}
+
+.exp-total .split {
+    display: flex;
+    gap: var(--s-md);
+    margin: 0;
+    font-size: var(--t-caption);
+}
+
+.exp-total .split div {
+    display: flex;
+    gap: var(--s-xs);
+}
+
+.exp-total .split dt {
+    color: var(--ink-soft);
+}
+
+.exp-total .split dd {
+    margin: 0;
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    color: var(--ink);
+}
+
+.meta h3 {
+    margin: 0 0 var(--s-xs);
+    font-size: var(--t-body-sm);
+    font-weight: 500;
+    letter-spacing: var(--track-sm);
+    color: var(--ink);
+}
+
+/* The gap between one group and the next is --s-md, set once on .meta. The
+   shipped rule added 18px under each group's last pair on top of it. */
+.meta h3 + .pairs {
+    margin-bottom: 0;
+}
+
+.pairs {
+    /* 132px is what "Company number" measures at this size. The value column
+       takes the rest, so a reference that runs long wraps under itself rather
+       than pushing the labels. */
+    grid-template-columns: 132px minmax(0, 1fr);
+    /* No column gap: the rule under a pair has to cross both cells as one
+       line, and a gap breaks it into two segments with a nick between them.
+       The value column carries the separation as padding instead. */
+    gap: 0;
+    font-size: var(--t-body-sm);
+}
+
+.pairs .k,
+.pairs .v {
+    padding: var(--s-xs) 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.pairs .k {
+    color: var(--ink-soft);
+}
+
+.pairs .v {
+    padding-left: var(--s-md);
+    color: var(--ink);
+}
+
+/* Identifiers are read character by character, so they are set the way the
+   manifest sets them: mono, tabular, no tracking. Prose values are not. */
+.pairs .v.is-id {
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+
+/* Below this the document and the fields stop being side by side, so the
+   document stops being a column and becomes a page-sized panel at the top.
+   The breakpoint is the one dashboard.css already uses for this panel. */
+@media (max-width: 940px) {
+    .exp {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .exp-doc {
+        max-width: 240px;
+    }
+}
+
+.toast {
+    border-radius: var(--r-md);
+    border-color: var(--line);
+    background: var(--paper);
+}
+
+/* -------------------------------------------------------------- motion --- */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}

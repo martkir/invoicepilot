@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>D · Inline</title>
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<link rel="stylesheet" href="../../../frontend/src/styles/dashboard.css"/>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); color: var(--ink); background: var(--page); }
+main { max-width: 1280px; margin: 0 auto; padding: 26px 24px 48px; }
+
+/* The row opens in place; nothing else about the table changes. */
+.row:hover td { background: var(--red-025); cursor: pointer; }
+.row.is-open td { background: var(--red-025); }
+.row.is-open .icon-btn[aria-label="Preview"] { color: var(--red-600); background: var(--red-050); }
+
+.expansion td { padding: 0; background: var(--red-025); border-bottom: 1px solid var(--line); }
+.exp { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 18px 16px 20px; }
+.exp-doc { min-width: 0; }
+/* The document's own 22px padding + 1px border insets its text. Matching that
+   here lines the fields up with the text on the page rather than with the card
+   edge — which is what reads as "aligned" once the two stack. */
+.meta { padding-left: 23px; padding-right: 23px; }
+.page { height: 340px; overflow: hidden; background: #fff; padding: 22px;
+  border: 1px solid var(--line); border-radius: 3px; box-shadow: 0 2px 10px rgba(0,0,0,.09); }
+.p-brand { font-size: 13px; font-weight: 700; }
+.p-meta { margin-top: 3px; font-size: 10.5px; color: var(--muted); }
+.p-rule { height: 1px; margin: 13px 0; background: var(--line); }
+.p-line { height: 7px; margin-bottom: 7px; border-radius: 2px; background: #F0ECED; }
+.w70 { width: 70%; } .w45 { width: 45%; } .w60 { width: 60%; } .w80 { width: 80%; } .w35 { width: 35%; }
+.p-gap { height: 14px; }
+.p-total { display: flex; justify-content: space-between; padding-top: 9px;
+  border-top: 1px solid var(--line); font-size: 11.5px; }
+.exp-actions { display: flex; gap: 8px; margin-top: 11px; }
+.ghost { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--white);
+  font-family: inherit; font-size: 12px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.ghost:hover { border-color: var(--red-600); color: var(--red-600); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; }
+@media (max-width: 940px) { .exp { grid-template-columns: 1fr; } }
+
+.meta h3 { margin: 0 0 8px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted); }
+.meta h3 + .pairs { margin-bottom: 18px; }
+.pairs { display: grid; grid-template-columns: 112px 1fr; gap: 7px 14px; font-size: 12px; }
+.k { color: var(--muted); }
+.v { color: var(--ink-2); min-width: 0; overflow-wrap: anywhere; }
+.v b { color: var(--ink); }
+</style>
+</head>
+<body>
+<main>
+  <div class="grid">
+
+    <section class="card sources">
+      <div class="card-label">Email sources</div>
+      <div class="source"><svg class="source-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 10.2V14h5.3c-.2 1.2-1.6 3.6-5.3 3.6A5.6 5.6 0 1 1 15.7 8l2.7-2.6A9.3 9.3 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6 0-1-.1-1.5H12z"/></svg><span class="source-mail">kiraesq124@gmail.com</span>
+        <button class="icon-btn" aria-label="Disconnect"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18.4 10.6a4.5 4.5 0 0 0-6.4-6.3l-1.4 1.4M5.6 13.4a4.5 4.5 0 0 0 6.4 6.3l1.4-1.4M2 2l20 20"/></svg></button></div>
+      <button class="add-source"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add source</button>
+      <div class="accounts-note"><span class="dot"></span>1 account connected</div>
+    </section>
+
+    <section class="card">
+      <div class="table-head">
+        <div class="table-title">Invoices <em>3 documents</em></div>
+        <div class="tools">
+          <span class="last-update">Updated just now</span>
+          <div class="tool-divider"></div>
+          <button class="update-btn" data-busy="false"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg><span>Update</span></button>
+          <div class="tool-divider"></div>
+          <button class="icon-btn" aria-label="Download selected"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
+          <button class="icon-btn" aria-label="Expand table"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check"><input type="checkbox" aria-label="Select all invoices"></th>
+            <th>Vendor</th>
+            <th class="col-amount sortable"><button>Amount <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 9l4-4 4 4M16 15l-4 4-4-4"/></svg></button></th>
+            <th class="col-issued sortable sorted"><button>Issued <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button></th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="row">
+            <td class="col-check"><input type="checkbox" aria-label="Select invoice"></td>
+            <td><div class="vendor"><span class="vendor-logo" style="background:#5B1D52">Bo</span>
+              <span><span class="vendor-name">Bolt Operations OÜ</span></span></div></td>
+            <td class="col-amount">2.37 €</td>
+            <td class="col-issued">06.08.2026</td>
+            <td class="col-actions"><div class="row-actions"><button class="icon-btn" aria-label="Preview"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="icon-btn" aria-label="Download"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button><button class="icon-btn" aria-label="More options"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button></div></td>
+          </tr>
+          <tr class="row is-open">
+            <td class="col-check"><input type="checkbox" aria-label="Select invoice"></td>
+            <td><div class="vendor"><span class="vendor-logo" style="background:#5B1D52">Bo</span>
+              <span><span class="vendor-name">Bolt Operations OÜ</span></span></div></td>
+            <td class="col-amount">1.20 €</td>
+            <td class="col-issued">05.08.2026</td>
+            <td class="col-actions"><div class="row-actions"><button class="icon-btn" aria-label="Preview"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="icon-btn" aria-label="Download"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button><button class="icon-btn" aria-label="More options"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button></div></td>
+          </tr>
+          <tr class="expansion"><td colspan="5">
+            <div class="exp">
+              <div class="exp-doc">
+                <div class="page">
+                  <div class="p-brand">Bolt Operations OÜ</div>
+                  <div class="p-meta">Invoice 1000380275 · 5 August 2026</div>
+                  <div class="p-rule"></div>
+                  <div class="p-line w70"></div><div class="p-line w45"></div><div class="p-line w60"></div>
+                  <div class="p-gap"></div>
+                  <div class="p-line w80"></div><div class="p-line w35"></div>
+                  <div class="p-gap"></div>
+                  <div class="p-total"><span>Total</span><b>1.20 EUR</b></div>
+                </div>
+                <div class="exp-actions"><button class="ghost"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Download</button></div>
+              </div>
+              <div class="meta">
+                <h3>Invoice</h3>
+                <div class="pairs">
+                  <div class="k">Invoice number</div><div class="v">1000380275</div>
+                  <div class="k">Issued</div><div class="v">5 August 2026</div>
+                  <div class="k">Amount</div><div class="v"><b>1.20 EUR</b></div>
+                  <div class="k">Net / VAT</div><div class="v">1.00 / 0.20</div>
+                  <div class="k">VAT number</div><div class="v">BG3170069438</div>
+                  <div class="k">Company number</div><div class="v">14532901</div>
+                  <div class="k">Reference</div><div class="v"><span class="mono">BG3170069438-1BG-1000380275</span></div>
+                  <div class="k">Service start</div><div class="v">5 August 2026, 10:57</div>
+                </div>
+
+                <h3>Email it arrived in</h3>
+                <div class="pairs">
+                  <div class="k">Subject</div><div class="v">Fwd: Your Bolt Scooter ride on Wednesday</div>
+                  <div class="k">From</div><div class="v">Martin &lt;martinvkirov@gmail.com&gt;</div>
+                  <div class="k">Received</div><div class="v">8 August 2026, 07:22</div>
+                </div>
+              </div>
+            </div>
+          </td></tr>
+          <tr class="row">
+            <td class="col-check"><input type="checkbox" aria-label="Select invoice"></td>
+            <td><div class="vendor"><span class="vendor-logo" style="background:#5B1D52">Bo</span>
+              <span><span class="vendor-name">Bolt Operations OÜ</span></span></div></td>
+            <td class="col-amount">1.63 €</td>
+            <td class="col-issued">03.08.2026</td>
+            <td class="col-actions"><div class="row-actions"><button class="icon-btn" aria-label="Preview"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="icon-btn" aria-label="Download"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button><button class="icon-btn" aria-label="More options"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button></div></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="table-foot">
+        <span class="per-page">3 of 3 shown</span>
+        <span class="pager"><span class="page-num">1</span></span>
+      </div>
+    </section>
+
+  </div>
+</main>
+</body>
+</html>

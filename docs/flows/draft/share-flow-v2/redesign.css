@@ -1,0 +1,295 @@
+/* redesign.css — targeted upgrades to chrome that already ships.
+   ==========================================================================
+   Everything here overrides something in frontend/src/styles/dashboard.css.
+   It is kept apart from flow.css on purpose: flow.css is UI that does not
+   exist yet, this file is a diff against UI that does. When the redesign is
+   accepted, the rules below get folded into dashboard.css and this file
+   disappears; flow.css does not.
+
+   The skill's rule is "improve what's there, do not rewrite" — so no selector
+   below invents a component. They re-dress the ones the app already has. */
+
+/* ---------------------------------------------------------------- page --- */
+/* The grain. A fixed overlay rather than a background-image so it does not
+   scroll with the content and does not tile visibly on a long page. 3.5%
+   over a warm off-white is below the threshold where anyone notices it and
+   above the one where the page stops looking like flat vector fill. */
+body {
+    font-size: var(--t-body);
+    line-height: 1.5;
+    letter-spacing: var(--track-tight);
+    /* Ambient light from the top, in the accent's hue. Breaks the even fill
+       the audit flagged without introducing a gradient anyone can point at. */
+    background:
+        radial-gradient(80rem 34rem at 50% -12rem, var(--accent-025), transparent 70%),
+        var(--page);
+    background-attachment: fixed;
+    text-rendering: optimizeLegibility;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-overlay);
+    background-image: var(--grain);
+    background-size: 140px 140px;
+    opacity: .035;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
+/* Anchor jumps on the contact sheet and the in-page links on the share page.
+   Honoured per-user: the reduced-motion block at the end of this file turns
+   it back to auto. */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Every figure in this product is compared against the one above it. */
+body {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------- a11y ------ */
+/* The skip link v1 did not have. Visible only on focus, and it lands on
+   <main id="content">, which every screen in this folder now carries. */
+.skip {
+    position: absolute;
+    left: 12px;
+    top: -48px;
+    z-index: var(--z-overlay);
+    padding: 9px 14px;
+    border-radius: var(--r-sm);
+    background: var(--ink);
+    color: var(--white);
+    font-size: var(--t-sm);
+    font-weight: 600;
+    text-decoration: none;
+    transition: top var(--t-mid) var(--ease-spring);
+}
+
+.skip:focus-visible {
+    top: 12px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* One focus ring for the whole product, on the accent, offset far enough to
+   clear a filled button's own edge. dashboard.css already had a ring; this
+   one is thicker, warmer, and paired with a halo so it survives on top of an
+   accent fill — where a 2px accent-on-accent ring was invisible. */
+:focus-visible {
+    outline: 2px solid var(--accent-600);
+    outline-offset: 2px;
+    border-radius: var(--r-xs);
+    box-shadow: 0 0 0 5px var(--accent-050);
+}
+
+/* ------------------------------------------------------------ surfaces --- */
+.card {
+    background: var(--paper);
+    border-color: var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--sh-1), var(--edge);
+}
+
+/* ------------------------------------------------------------- labels ---- */
+/* v1 set every small heading in letter-spaced upper case — the sources
+   label, the table head, the preview strip, the doc panel headings. Upper
+   case is a shout, and four of them on one screen is four shouts. Sentence
+   case at the same weight keeps the hierarchy and drops the volume; the only
+   upper case left in the redesign is on the file-type chips, where it is
+   doing the work of a code token. */
+.card-label,
+thead th,
+.meta h3 {
+    text-transform: none;
+    letter-spacing: var(--track-label);
+    font-weight: 600;
+}
+
+.card-label,
+.meta h3 {
+    font-size: var(--t-xs);
+    color: var(--muted);
+}
+
+/* The table title and the sources label are a real <h1> and <h2> now, and the
+   accounts line is a <p>: all three arrive with UA margins that dashboard.css
+   never had to cancel when they were <div>s. */
+.table-title,
+.card-label {
+    margin: 0;
+}
+
+.accounts-note {
+    margin: 10px 0 0;
+}
+
+/* ------------------------------------------------------------- table ----- */
+thead th {
+    height: 36px;
+    /* A tinted header band on every table was one of the places the old red
+       leaked. The header is a heading; a hairline under it is enough. */
+    background: transparent;
+    border-bottom: 1px solid var(--line);
+    font-size: var(--t-xs);
+    color: var(--muted);
+}
+
+tbody tr {
+    transition: background var(--t-fast) var(--ease-out);
+}
+
+tbody tr:hover {
+    background: var(--accent-025);
+}
+
+tbody tr.selected {
+    background: var(--accent-050);
+}
+
+/* Brand initials in a circle is the avatar-circle default. A rounded square
+   holds a two-letter mark better anyway — the letters get the corners
+   instead of fighting them — and it stops a vendor from looking like a
+   person. */
+.vendor-logo {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    font-family: var(--font);
+    font-size: 10.5px;
+    letter-spacing: .01em;
+    box-shadow: var(--edge), 0 1px 2px rgba(40, 24, 16, .18);
+}
+
+td.col-amount,
+td.col-issued,
+.last-update,
+.per-page {
+    font-family: var(--num);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+
+td.col-amount {
+    font-size: var(--t-sm);
+    font-weight: 500;
+    color: var(--ink);
+}
+
+td.col-issued {
+    font-size: var(--t-sm);
+    color: var(--muted);
+}
+
+/* --------------------------------------------------------- interaction --- */
+/* Nothing in v1 responded to being pressed. A 1px drop plus a hair of scale
+   is the whole difference between a picture of a button and a button. */
+.icon-btn,
+.update-btn,
+.add-source,
+.page-num {
+    transition:
+        color var(--t-fast) var(--ease-out),
+        background var(--t-fast) var(--ease-out),
+        border-color var(--t-fast) var(--ease-out),
+        transform var(--t-fast) var(--ease-spring);
+}
+
+.icon-btn:active,
+.update-btn:active,
+.add-source:active {
+    transform: translateY(1px) scale(.985);
+}
+
+.icon-btn {
+    border-radius: var(--r-sm);
+}
+
+.update-btn {
+    border-radius: var(--r-sm);
+    font-weight: 500;
+    background: var(--paper);
+    box-shadow: var(--sh-1);
+}
+
+.update-btn:hover {
+    border-color: var(--accent-100);
+    background: var(--accent-025);
+}
+
+.add-source {
+    border-radius: var(--r-sm);
+    border-color: var(--accent-100);
+    font-weight: 500;
+}
+
+.page-num {
+    border-radius: var(--r-sm);
+    font-family: var(--num);
+}
+
+/* The checkbox is the one control on the dashboard that decides what gets
+   shared, so it gets the accent and a real press state. */
+input[type=checkbox] {
+    border-radius: 5px;
+    border-color: #DCCFC9;
+    transition:
+        border-color var(--t-fast) var(--ease-out),
+        background var(--t-fast) var(--ease-out),
+        transform var(--t-fast) var(--ease-spring);
+}
+
+input[type=checkbox]:active {
+    transform: scale(.9);
+}
+
+input[type=checkbox]:checked {
+    background: var(--accent-600);
+    border-color: var(--accent-600);
+    box-shadow: var(--sh-1);
+}
+
+/* The document frame in the expanded row carried the one pure-black shadow
+   left in the app, and a 3px radius that belongs to no scale. */
+.doc-frame {
+    border-radius: var(--r-sm);
+    box-shadow: var(--sh-2);
+}
+
+.doc-none {
+    border-radius: var(--r-sm);
+}
+
+.toast {
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-3);
+}
+
+/* -------------------------------------------------------------- motion --- */
+/* dashboard.css already ships this block; repeated because the properties
+   this file adds — transform on press, the skeleton shimmer in flow.css —
+   have to be covered by it too. */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}
