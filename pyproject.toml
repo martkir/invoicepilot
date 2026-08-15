@@ -15,6 +15,10 @@ dependencies = [
     # invoice2data's PDF text backend. Not pulled in by invoice2data itself,
     # and without it every PDF fails to read rather than parsing.
     "pypdfium2>=5.0",
+    # Encodes the share page's thumbnails. pypdfium2 rasterises page one
+    # already; `bitmap.to_pil()` is what needs this, and there is no WebP
+    # encoder in the standard library.
+    "pillow>=10.0",
 ]
 
 [project.optional-dependencies]
@@ -44,6 +48,9 @@ select = ["E", "F", "I", "UP"]
 # The mockup generators are mostly HTML string literals. Wrapping a <div> at
 # column 100 makes the markup harder to read, not easier.
 "docs/flows/*/build.py" = ["E501"]
+# Same reason, and one harder one: a mail is inline styles and a webfont URL,
+# neither of which can be broken across lines without changing what is sent.
+"backend/share_mail.py" = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

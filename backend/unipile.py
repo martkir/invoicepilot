@@ -235,6 +235,36 @@ def wait_for_emails(
         time.sleep(interval)
 
 
+def send_email(
+    base: str,
+    api_key: str,
+    account_id: str,
+    *,
+    to: str,
+    subject: str,
+    body: str,
+) -> None:
+    """Send one mail as a connected mailbox.
+
+    Unipile already holds the credentials and already does the transport, so
+    there is no second OAuth and no provider client here. It goes out as the
+    mailbox itself rather than as a no-reply address, which is what lets a
+    recipient reply and reach a person.
+    """
+    request(
+        "POST",
+        base,
+        "/emails",
+        api_key,
+        payload={
+            "account_id": account_id,
+            "to": [{"identifier": to}],
+            "subject": subject,
+            "body": body,
+        },
+    )
+
+
 def download_attachment(
     base: str,
     api_key: str,

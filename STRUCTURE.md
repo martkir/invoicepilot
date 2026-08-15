@@ -30,6 +30,9 @@ invoicepilot/
 │   ├── unipile.py        # domain: hosted-auth provider + mail transport
 │   ├── invoice_store.py  # domain: extracted invoices on disk
 │   ├── invoices.py       # domain: extracted invoices in Postgres
+│   ├── shares.py         # domain: share links and what a token resolves to
+│   ├── share_zip.py      # domain: the download - invoices.csv + the documents
+│   ├── share_mail.py     # domain: the mail a share is sent with
 │   ├── process.py        # domain: scan orchestration
 │   ├── scan_jobs.py      # domain: in-flight scans
 │   │
@@ -111,9 +114,15 @@ reintroduce the CORS config the proxy exists to avoid.
 
 ## Database
 
-One table. Everything the parser found is stored in `data` as JSONB — the same
+Two tables. Everything the parser found is stored in `data` as JSONB — the same
 payload `invoice_store` writes to disk — with only `id` and `issued_on` lifted
 out as columns, because those are what Postgres has to key and sort on.
+
+`shares` is the second, and the only thing in the product that Postgres is the
+source of truth for besides the invoices themselves: a link has to outlive the
+process that made it, and no other system knows it exists. It keeps the same
+shape — the ids it covers are a JSONB snapshot rather than a join table, so
+there is no query in the share flow that is not a primary-key lookup.
 
 11. **Do not add a table per concept.** Connected mailboxes live in Unipile,
     which is their source of truth; copying them into Postgres would only give

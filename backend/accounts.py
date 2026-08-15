@@ -65,6 +65,36 @@ def describe(account: dict) -> dict:
     }
 
 
+def owner(base: str, api_key: str, account_id: str | None = None) -> tuple[str, str] | None:
+    """(name, address) of a mailbox: who a share is made as, and sent as.
+
+    `account_id` arrives from a browser on both routes that use this, so it is
+    checked against the tenant here rather than trusted — None back means it is
+    not one of this user's mailboxes. Without an id the first connected mailbox
+    answers, which is what the dashboard's Share button sends.
+
+    Raises UnipileError when no mailbox is connected at all: a share names the
+    person who made it, and there is nobody to name.
+    """
+    connected = list_connected(base, api_key)
+    if not connected:
+        raise UnipileError("No mailboxes are connected — connect one before sharing.")
+
+    if account_id is None:
+        account = connected[0]
+    else:
+        account = next((a for a in connected if a["id"] == account_id), None)
+        if account is None:
+            return None
+
+    address = describe(account)["email"]
+    # Unipile records a mail account's own address in `name`, so in practice
+    # the fallback is what runs: the local part, verbatim. A tenant that does
+    # carry a display name is used as it stands.
+    label = (account.get("name") or "").strip()
+    return (label if label and "@" not in label else address.split("@")[0], address)
+
+
 def disconnect(base: str, api_key: str, account_id: str) -> None:
     """Disconnect the mailbox an account belongs to.
 
