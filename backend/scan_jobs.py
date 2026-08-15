@@ -36,6 +36,18 @@ class Job:
     progress: str = ""
 
 
+class ScanInProgress(RuntimeError):
+    """Raised by start() when a scan is already running.
+
+    Two scans would download the same attachments twice and write the same
+    invoice folders from two threads, so only one runs at a time.
+    """
+
+    def __init__(self, job: Job) -> None:
+        super().__init__(f"A scan is already running ({job.id}).")
+        self.job = job
+
+
 def _put(job: Job) -> None:
     with _LOCK:
         _JOBS[job.id] = job
@@ -47,9 +59,18 @@ def get(job_id: str) -> Job | None:
 
 
 def start(*, limit: int, follow_links: bool) -> Job:
-    """Kick off a scan in the background and return its handle immediately."""
+    """Kick off a scan in the background and return its handle immediately.
+
+    Raises ScanInProgress if one is already running.
+    """
     job = Job(id=uuid.uuid4().hex)
-    _put(job)
+    # Claimed under the lock rather than checked and then claimed, so two
+    # requests arriving together cannot both find the field clear.
+    with _LOCK:
+        current = next((j for j in _JOBS.values() if j.status == "running"), None)
+        if current is not None:
+            raise ScanInProgress(current)
+        _JOBS[job.id] = job
 
     def run() -> None:
         def on_progress(progress) -> None:

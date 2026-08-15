@@ -15,6 +15,9 @@ from backend.invoice_store import folder_name
 from backend.models import Invoice
 
 DEFAULT_PAGE = 50
+# The largest page a caller may ask for. The dashboard renders one screenful at
+# a time; without a ceiling, `?limit=1000000` is a whole-table dump.
+MAX_PAGE = 200
 
 
 def row_id(fields: dict, token: str) -> str:

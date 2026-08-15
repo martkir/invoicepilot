@@ -92,48 +92,51 @@ def scan_account(
     errors: list[ScanError] = []
     found = new = 0
 
-    with session_scope() as session:
-        for index, message in enumerate(messages, start=1):
-            subject = message.get("subject") or "(no subject)"
+    for index, message in enumerate(messages, start=1):
+        subject = message.get("subject") or "(no subject)"
 
-            def fetch(attachment_id: str, message: dict = message) -> bytes:
-                return download_attachment(
-                    base, api_key, account_id, message["provider_id"], attachment_id
-                )
+        def fetch(attachment_id: str, message: dict = message) -> bytes:
+            return download_attachment(
+                base, api_key, account_id, message["provider_id"], attachment_id
+            )
 
-            for candidate in extract.candidates(message, fetch):
-                invoice, error = extract.extract(
-                    candidate, message, fetch, follow_links=follow_links
-                )
-                if error:
-                    errors.append(ScanError(mailbox, subject, error))
-                    continue
-                if invoice is None:
-                    continue
+        for candidate in extract.candidates(message, fetch):
+            invoice, error = extract.extract(candidate, message, fetch, follow_links=follow_links)
+            if error:
+                errors.append(ScanError(mailbox, subject, error))
+                continue
+            if invoice is None:
+                continue
 
-                errors.extend(ScanError(mailbox, subject, e) for e in invoice.errors)
-                _, payload = save_invoice(
-                    mailbox,
-                    message,
-                    invoice.fields,
-                    source_name=candidate.source_name,
-                    source_blob=candidate.source_blob,
-                    source_kind=invoice.kind,
-                    document=invoice.document,
-                    tool=tool,
-                    parsed_from=list(invoice.parsed_from),
-                    templates=list(invoice.templates),
-                )
-                invoice_id = row_id(
-                    invoice.fields,
-                    mail_token(message.get("message_id"), message.get("id") or ""),
-                )
+            errors.extend(ScanError(mailbox, subject, e) for e in invoice.errors)
+            _, payload = save_invoice(
+                mailbox,
+                message,
+                invoice.fields,
+                source_name=candidate.source_name,
+                source_blob=candidate.source_blob,
+                source_kind=invoice.kind,
+                document=invoice.document,
+                tool=tool,
+                parsed_from=list(invoice.parsed_from),
+                templates=list(invoice.templates),
+            )
+            invoice_id = row_id(
+                invoice.fields,
+                mail_token(message.get("message_id"), message.get("id") or ""),
+            )
+            # One transaction per invoice, rather than one around the whole
+            # scan. A scan spends minutes downloading attachments and fetching
+            # vendor PDFs; holding a write transaction open across that would
+            # mean an interruption discarded every row while leaving every
+            # folder on disk — the two sinks would drift apart.
+            with session_scope() as session:
                 if save(session, invoice_id, payload):
                     new += 1
-                found += 1
+            found += 1
 
-            if on_progress:
-                on_progress(Progress(mailbox, subject, index, len(messages), found))
+        if on_progress:
+            on_progress(Progress(mailbox, subject, index, len(messages), found))
 
     return ScanResult(
         mailboxes=(mailbox,),
