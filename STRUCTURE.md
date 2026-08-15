@@ -39,15 +39,16 @@ invoicepilot/
 │   └── services/         # run-forever entrypoints
 │       └── api.py        # FastAPI app
 │
-├── frontend/             # the dashboard (Vite + React + TS)
+├── frontend/             # the app (Vite + React + TS)
 │   ├── index.html        # shell; the app mounts into #root
 │   ├── vite.config.ts    # /api → 127.0.0.1:8000 proxy
 │   └── src/
-│       ├── main.tsx  App.tsx  useScan.ts
+│       ├── main.tsx      # picks the page off the URL: /s/<token> or the dashboard
+│       ├── routes/       # Dashboard.tsx, SharePage.tsx
 │       ├── api/          # client.ts (the only fetch), types.ts
 │       ├── components/
-│       ├── lib/          # formatting
-│       └── styles/       # tokens.css, dashboard.css
+│       ├── lib/          # formatting, owner-key storage
+│       └── styles/       # tokens.css, dashboard.css, flow.css (the share UI)
 │
 ├── scripts/              # run-and-exit ops tooling, never imported by backend/
 ├── templates/            # invoice2data extraction templates (data, not code)
@@ -96,8 +97,17 @@ invoicepilot/
 
 ## Frontend
 
-Only one page exists, so there is no router. Components are flat under
-`components/`; add `routes/` when a second real page arrives.
+Two pages, and still no router. `main.tsx` reads the path once: `/s/<token>`
+mounts `SharePage`, everything else mounts `Dashboard`. Neither page navigates
+within itself — the share download is a real file and the composer is state —
+so a router would be a dependency and a bundle for one `startsWith`. Add one
+when a page appears that has to change the URL without a reload. Components stay
+flat under `components/`; the two top-level pages live in `routes/`.
+
+`/s/<token>` is served by the same `index.html` as the dashboard: nginx's
+SPA catch-all (`try_files $uri $uri/ /index.html`) already sends every non-`/api`
+path there, so the token is read off `window.location` in the browser rather
+than resolved by a server route. No nginx rule was added.
 
 9. **All network access goes through `api/client.ts`.** Components never call
    `fetch` directly, so base URL, error shape and JSON decoding have one home.
