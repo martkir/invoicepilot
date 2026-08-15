@@ -1,11 +1,13 @@
 import { Fragment, useCallback, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { documentUrl } from '../api/client'
-import type { Invoice } from '../api/types'
+import { createShare, documentUrl } from '../api/client'
+import type { Invoice, ShareCreated } from '../api/types'
 import { InvoiceDetail } from './InvoiceDetail'
+import { SharePop } from './SharePop'
 import { Toast } from './Toast'
 import { amount, initials, issued } from '../lib/format'
+import { ownerName, rememberOwnerKey } from '../lib/owner'
 import { Download, Eye, Refresh, Share } from './Icons'
 
 interface Props {
@@ -42,6 +44,49 @@ export function InvoiceTable({
   const [notice, setNotice] = useState<ReactNode>(null)
   const dismiss = useCallback(() => setNotice(null), [])
 
+  // The link this click made, and whether the clipboard took it. One click,
+  // one row, one link on the clipboard: there is no dialog in between, so the
+  // popover reports rather than asks.
+  const [share, setShare] = useState<ShareCreated | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [sharing, setSharing] = useState(false)
+
+  const copy = useCallback(async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+    } catch {
+      // Outside https the clipboard is not available at all. The link is on
+      // screen either way, so the popover says "created" instead of "copied"
+      // rather than claiming something that did not happen.
+      setCopied(false)
+    }
+  }, [])
+
+  const startShare = async () => {
+    if (share) {
+      setShare(null)
+      return
+    }
+    setSharing(true)
+    try {
+      // Ticked rows if any are ticked, otherwise the whole view — which is
+      // what the table's own download does.
+      const made = await createShare([...selected], ownerName() ?? undefined)
+      rememberOwnerKey(made.token, made.owner_key)
+      await copy(made.url)
+      setShare(made)
+    } catch (exc) {
+      setNotice(
+        <>
+          <b>Could not create the link.</b> {exc instanceof Error ? exc.message : String(exc)}
+        </>,
+      )
+    } finally {
+      setSharing(false)
+    }
+  }
+
   const allChecked = invoices.length > 0 && selected.size === invoices.length
   const someChecked = selected.size > 0 && selected.size < invoices.length
 
@@ -63,16 +108,26 @@ export function InvoiceTable({
               row's own arrow already covers, drawn one stroke away from the
               share glyph beside it. Share is labelled and filled because it is
               this screen's primary action, and a bare glyph made the one thing
-              the screen exists for its least visible control.
-
-              The popover it opens needs POST /shares, which does not exist
-              yet. Until it does the control is inert on purpose rather than
-              wired to a placeholder. */}
+              the screen exists for its least visible control. */}
           <span className="pop-anchor">
-            <button className="share-btn" aria-expanded="false">
+            <button
+              className={`share-btn${share ? ' is-active' : ''}`}
+              aria-expanded={share !== null}
+              disabled={sharing || invoices.length === 0}
+              onClick={() => void startShare()}
+            >
               <Share />
               <span>Share</span>
             </button>
+            {share && (
+              <SharePop
+                share={share}
+                all={selected.size === 0}
+                copied={copied}
+                onCopy={() => void copy(share.url)}
+                onClose={() => setShare(null)}
+              />
+            )}
           </span>
         </div>
       </div>

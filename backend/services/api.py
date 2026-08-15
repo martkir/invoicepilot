@@ -175,12 +175,15 @@ def create_share(payload: ShareCreate, creds: CredentialsDep) -> ShareCreated:
             invoice_ids=ids,
             owner=((payload.owner_name or name).strip(), address),
         )
+        summary = shares.snapshot(session, share).summary
         return ShareCreated(
             token=share.token,
             url=shares.url(share.token),
             owner_key=owner_key,
             owner_name=share.owner_name,
             expires_at=share.expires_at,
+            invoices=summary.invoices,
+            period=summary.period,
         )
 
 
@@ -205,6 +208,7 @@ def share_manifest(token: str) -> ShareManifest:
             invoices=summary.invoices,
             documents=summary.documents,
             bytes=summary.bytes,
+            subject=share_mail.subject(summary),
             items=shares.manifest(snapshot.items, snapshot.entries),
         )
 

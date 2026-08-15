@@ -4,7 +4,23 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Dashboard</title>
+    <meta name="color-scheme" content="light" />
+    <title>Invoice Pilot</title>
+
+    <!-- A share link gets pasted into Slack and WhatsApp, so the og: block is
+         not decoration: it is what the recipient sees before they decide to
+         click. These are the product's own, not one share's — the page is
+         rendered in the browser, so a crawler never sees a batch's figures.
+         Per-share unfurls would need the server to render this head. -->
+    <meta name="description" content="Invoices in one download. No account needed." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Invoice Pilot" />
+    <meta property="og:description" content="Invoices in one download. No account needed." />
+    <meta name="theme-color" content="#eef0f6" />
+
+    <!-- The wordmark on the accent, inlined so it costs no request. -->
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%235266eb%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4H8.4A2%202%200%200%200%206.4%206.4v11.2a2%202%200%200%200%202%202h7.2a2%202%200%200%200%202-2V8.4Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4v4h4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E" />
 </head>
 
 <body>

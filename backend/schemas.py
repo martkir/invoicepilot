@@ -103,6 +103,12 @@ class ShareCreated(BaseModel):
     owner_key: str
     owner_name: str
     expires_at: datetime
+    # The two facts the popover quotes back — "All 37 invoices, Apr 1 - Jun 30,
+    # 2026" — so the click that mints a link can also report what is in it
+    # without a second request, and without the browser deriving a period of
+    # its own that could disagree with the page.
+    invoices: int
+    period: str
 
 
 class ShareItem(BaseModel):
@@ -142,6 +148,9 @@ class ShareManifest(BaseModel):
     invoices: int
     documents: int
     bytes: int
+    # The subject the send will use, so the composer quotes the real one rather
+    # than assembling a second version of that sentence in the browser.
+    subject: str
     items: list[ShareItem]
 
 

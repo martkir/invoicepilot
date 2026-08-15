@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 
-import { InvoiceTable } from './components/InvoiceTable'
-import { SourcesCard } from './components/SourcesCard'
-import { relative } from './lib/format'
-import { useAccounts } from './useAccounts'
-import { useScan } from './useScan'
+import { InvoiceTable } from '../components/InvoiceTable'
+import { SourcesCard } from '../components/SourcesCard'
+import { relative } from '../lib/format'
+import { useAccounts } from '../useAccounts'
+import { useScan } from '../useScan'
 
-export default function App() {
+export default function Dashboard() {
   const { invoices, loading, error, scanning, scanLabel, lastUpdate, update } = useScan()
   const {
     accounts,

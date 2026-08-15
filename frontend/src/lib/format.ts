@@ -16,6 +16,14 @@ export function amount(value?: number, currency?: string): string {
   return `${value.toFixed(2)} ${SYMBOLS[currency.toUpperCase()] ?? currency}`
 }
 
+/** "42.10 €" from the strings a share manifest carries. The parser filed these
+ *  as text, so they are shown as filed rather than re-rounded here. */
+export function money(value: string | null, currency?: string | null): string {
+  if (!value) return '-'
+  const symbol = currency ? (SYMBOLS[currency.toUpperCase()] ?? currency) : ''
+  return symbol ? `${value} ${symbol}` : value
+}
+
 /** "05.08.2026" from an ISO date. */
 export function issued(value: string | null): string {
   if (!value) return '-'

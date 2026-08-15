@@ -38,6 +38,18 @@ class Draft:
     html: str
 
 
+def subject(summary: Summary) -> str:
+    """What the mail's subject line says this batch is.
+
+    Its own function because the composer quotes it before anything is sent —
+    the share page asks for it, rather than assembling a second version of this
+    sentence in the browser.
+    """
+    if summary.months:
+        return f"Invoices, {summary.months} ({summary.invoices} invoices)"
+    return f"Invoices ({summary.invoices})"
+
+
 def draft(snapshot: Snapshot, url: str) -> Draft:
     """The mail for one share: who sent it, what is in it, and where to get it.
 
@@ -46,16 +58,12 @@ def draft(snapshot: Snapshot, url: str) -> Draft:
     mail's whole job is who sent this, what is it, where do I get it.
     """
     share, summary = snapshot.share, snapshot.summary
-    subject = (
-        f"Invoices, {summary.months} ({summary.invoices} invoices)"
-        if summary.months
-        else f"Invoices ({summary.invoices})"
-    )
+    line = subject(summary)
     return Draft(
-        subject=subject,
+        subject=line,
         html=_document(
             summary,
-            subject=subject,
+            subject=line,
             # The heading is on first-name terms because the recipient knows
             # the sender; the footer says the full name once.
             first=escape((share.owner_name.split() or [share.owner_name])[0]),

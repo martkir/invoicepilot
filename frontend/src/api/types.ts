@@ -71,3 +71,59 @@ export interface InvoicePage {
   items: Invoice[]
   total: number
 }
+
+/** What POST /shares hands back. `owner_key` is returned exactly once and is
+ *  what marks this browser as the link's owner; it is kept in localStorage and
+ *  never sent anywhere but back to this API. */
+export interface ShareCreated {
+  token: string
+  url: string
+  owner_key: string
+  owner_name: string
+  expires_at: string
+  invoices: number
+  period: string
+}
+
+/** One line of the manifest. Everything is optional because half of it is
+ *  empty on a real batch: a receipt read out of an email body carries no
+ *  invoice number, no VAT split and no document. */
+export interface ShareItem {
+  id: string
+  vendor: string | null
+  invoice_number: string | null
+  /** The name this document has inside the zip, or null when there is none. */
+  file: string | null
+  issued_on: string | null
+  currency: string | null
+  amount_net: string | null
+  amount_vat: string | null
+  amount_total: string | null
+}
+
+export interface ShareManifest {
+  token: string
+  owner_name: string
+  owner_email: string
+  created_at: string
+  expires_at: string
+  filename: string
+  period: string
+  invoices: number
+  documents: number
+  bytes: number
+  /** The subject the send will use, quoted by the composer rather than
+   *  assembled a second time here. */
+  subject: string
+  items: ShareItem[]
+}
+
+/** The body of the 410. A link that has lapsed is not a link that never
+ *  existed, so it can still say who shared it and when it stopped. */
+export interface ExpiredShare {
+  message: string
+  owner_name: string
+  owner_email: string
+  created_at: string
+  expires_at: string
+}
