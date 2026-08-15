@@ -12,6 +12,7 @@ the caller polls list_connected() until it shows up.
 
 from backend.core.logging import get_logger
 from backend.unipile import (
+    UnipileError,
     account_status,
     create_hosted_auth_link,
     delete_account,

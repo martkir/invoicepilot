@@ -44,3 +44,46 @@ class Invoice(Base):
 
     def __repr__(self) -> str:  # pragma: no cover — debugging aid
         return f"<Invoice {self.id!r}>"
+
+
+class Share(Base):
+    """One share link: a snapshot of invoice ids, and who sent them.
+
+    Written once and never widened. A scan that finds more invoices tomorrow
+    must not change what a link already sent covers, and disconnecting the
+    mailbox must not change who it says shared them — which is why the ids and
+    both owner fields are frozen here rather than resolved at read time.
+    """
+
+    __tablename__ = "shares"
+
+    # 22 urlsafe characters, and the whole access-control model: possession of
+    # the URL is permission to read.
+    token: Mapped[str] = mapped_column(String, primary_key=True)
+
+    # sha256 of the owner key, which is returned once at creation and kept in
+    # the creating browser. It gates the rename and the send, so a recipient
+    # cannot rewrite the name they were greeted by or mail as the owner. Never
+    # part of a lookup: which invoices a link covers is `invoice_ids` alone.
+    owner_key_hash: Mapped[str] = mapped_column(String, nullable=False)
+
+    invoice_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+
+    # Resolved from the connected mailbox at creation. The recipient has no
+    # account, so everything they are told about who shared with them has to
+    # have travelled inside the link. The name is correctable (PATCH), the
+    # address is not — it is the mailbox that will actually send.
+    owner_name: Mapped[str] = mapped_column(String, nullable=False)
+    owner_email: Mapped[str] = mapped_column(String, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    # created_at + 7 days. There is no revoke and nothing to clean up: the link
+    # stops working because the date has passed, not because a row changed.
+    # No index — every read is a primary-key lookup, and nothing scans for
+    # expired shares.
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    def __repr__(self) -> str:  # pragma: no cover — debugging aid
+        return f"<Share {self.token!r}>"

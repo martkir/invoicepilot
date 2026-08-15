@@ -76,20 +76,48 @@ def recent(session: Session, *, limit: int = DEFAULT_PAGE, offset: int = 0) -> l
     date is no reason to lead the dashboard with it.
     """
     rows = session.execute(
-        select(Invoice.id, Invoice.issued_on, Invoice.data)
-        .order_by(Invoice.issued_on.desc().nullslast(), Invoice.id)
-        .limit(limit)
-        .offset(offset)
+        _newest_first().limit(limit).offset(offset),
     ).all()
-    return [
-        {
-            "id": row.id,
-            "issued_on": row.issued_on.isoformat() if row.issued_on else None,
-            **row.data,
-        }
-        for row in rows
-    ]
+    return [_as_item(row) for row in rows]
+
+
+def by_ids(session: Session, invoice_ids: list[str]) -> list[dict]:
+    """The stored invoices for a set of ids, in the same order as a page of them.
+
+    Ids that no longer exist are simply absent: a share freezes the ids it
+    covers, so a row deleted afterwards drops out of the manifest rather than
+    breaking it.
+    """
+    if not invoice_ids:
+        return []
+    rows = session.execute(_newest_first().where(Invoice.id.in_(invoice_ids))).all()
+    return [_as_item(row) for row in rows]
+
+
+def all_ids(session: Session) -> list[str]:
+    """Every invoice id, in the dashboard's own order — what a share of nothing snapshots."""
+    return list(
+        session.scalars(
+            select(Invoice.id).order_by(Invoice.issued_on.desc().nullslast(), Invoice.id)
+        )
+    )
 
 
 def count(session: Session) -> int:
     return session.scalar(select(func.count()).select_from(Invoice)) or 0
+
+
+def _newest_first():
+    """The one row shape and the one order every reader of this table uses."""
+    return select(Invoice.id, Invoice.issued_on, Invoice.data).order_by(
+        Invoice.issued_on.desc().nullslast(), Invoice.id
+    )
+
+
+def _as_item(row) -> dict:
+    """The stored payload, with the two promoted columns put back on top of it."""
+    return {
+        "id": row.id,
+        "issued_on": row.issued_on.isoformat() if row.issued_on else None,
+        **row.data,
+    }

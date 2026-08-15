@@ -18,11 +18,15 @@ refreshes a folder in place instead of accumulating copies of it.
 
 import hashlib
 import json
+import os
 import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+
+import pypdfium2 as pdfium
+from PIL import Image
 
 DATA_ROOT = Path(__file__).resolve().parents[1] / ".data"
 
@@ -30,6 +34,11 @@ SLUG_STRIP_RE = re.compile(r"[^a-z0-9]+")
 # Enough of the mail token to separate two invoices that agree on every other
 # part of the name; the full ids live in invoice.json.
 ID_PREFIX = 6
+
+THUMB_NAME = "thumb.webp"
+# Page one of an invoice is recognisable at this width — logo, layout, big
+# total — which is the highest signal per pixel a preview can offer.
+THUMB_WIDTH = 240
 
 
 @dataclass
@@ -120,6 +129,47 @@ def document_path(payload: dict, root: Path = DATA_ROOT) -> Path | None:
     if not candidate.is_relative_to(root) or not candidate.is_file():
         return None
     return candidate
+
+
+def thumbnail(payload: dict, root: Path = DATA_ROOT) -> Path | None:
+    """The invoice's first page as a small WebP, rendered on first request.
+
+    None when the invoice has no document: some were read out of an email body
+    and there is nothing to render.
+
+    Rendered on demand rather than during extraction, so invoices filed before
+    this shipped need no backfill and a scan does not pay for images nobody may
+    ever look at. The file is kept beside the document, so it is rendered once.
+    """
+    document = document_path(payload, root)
+    if document is None:
+        return None
+
+    thumb = document.parent / THUMB_NAME
+    if not thumb.is_file():
+        _render_thumbnail(document, thumb)
+    return thumb
+
+
+def _render_thumbnail(document: Path, destination: Path) -> None:
+    """Page one of a PDF — or the document itself, when it is already an image.
+
+    Written to a temporary name and moved into place, because two people
+    opening the same share at once would otherwise both write this file and the
+    reader in between would be served half of it.
+    """
+    if document.suffix.lower() == ".pdf":
+        page = pdfium.PdfDocument(document)[0]
+        image = page.render(scale=THUMB_WIDTH / page.get_width()).to_pil()
+    else:
+        image = Image.open(document)
+        if image.width > THUMB_WIDTH:
+            height = round(image.height * THUMB_WIDTH / image.width)
+            image = image.resize((THUMB_WIDTH, height))
+
+    staged = destination.with_suffix(f".{os.getpid()}.tmp")
+    image.convert("RGB").save(staged, "WEBP", quality=80)
+    os.replace(staged, destination)
 
 
 def _attendee(attendee: dict | None) -> dict | None:

@@ -43,6 +43,13 @@ class Settings(BaseSettings):
     api_host: str = "127.0.0.1"
     api_port: int = 8000
 
+    # Origin a share link is handed out under. It is what the recipient's
+    # browser resolves and what the mail's button points at, so it must be the
+    # public address of the *frontend* — not api_host/api_port, which is where
+    # this process happens to bind. The default is the Vite dev server, so a
+    # local run produces a link that opens.
+    public_base_url: str = "http://localhost:5173"
+
     debug_logs_enabled: bool = False
 
 
