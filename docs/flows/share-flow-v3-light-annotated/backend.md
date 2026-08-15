@@ -12,9 +12,10 @@ to, is in [`revisions.md`](revisions.md).
 
 1. A user ticks some invoices and clicks **Share**.
 2. We write **one row** to a new `shares` table: a random token, the list of
-   invoice ids, and an expiry date 7 days out.
-3. The token is the URL. Anyone who has it can read those invoices and download
-   them as a zip. After 7 days it stops working on its own.
+   invoice ids, who is sharing them, and an expiry date 7 days out.
+3. The token is the URL. Anyone who has it can see who shared with them, read
+   those invoices and download them as a zip. After 7 days it stops working on
+   its own.
 
 That is the whole feature. Everything below is detail.
 
@@ -31,24 +32,54 @@ CREATE TABLE shares (
     token           text        PRIMARY KEY,
     owner_key_hash  text        NOT NULL,
     invoice_ids     jsonb       NOT NULL,
+    owner_name      text        NOT NULL,
+    owner_email     text        NOT NULL,
     created_at      timestamptz NOT NULL DEFAULT now(),
     expires_at      timestamptz NOT NULL
 );
 ```
 
-Five columns, one line each:
+Seven columns, one line each:
 
 | Column | What it is |
 | --- | --- |
 | `token` | 22 random characters. It is the URL **and** the password — having the link is what grants access. |
-| `owner_key_hash` | A second secret, returned once when the link is made and kept in the creator's browser. It is what lets *them* send the email and stops a recipient doing it. We store only its sha256, never the key itself. It is **not** part of any lookup: which invoices a link covers is `invoice_ids` and nothing else. A new owner key is minted per share, so it identifies a row, not a person. |
+| `owner_key_hash` | A second secret, returned once when the link is made and kept in the creator's browser. It is what lets *them* send the email and rename the link, and stops a recipient doing either. We store only its sha256, never the key itself. It is **not** part of any lookup: which invoices a link covers is `invoice_ids` and nothing else. A new owner key is minted per share, so it identifies a row, not a person. |
 | `invoice_ids` | The list of invoice ids this link covers, frozen at creation. |
+| `owner_name` | Who the recipient is told shared this. Taken from the connected mailbox when the link is made, and the only column that can be changed afterwards. |
+| `owner_email` | The mailbox it was made from. Shown to the recipient so a reply has somewhere to go, and never editable. |
 | `created_at` | When it was made. |
 | `expires_at` | `created_at + 7 days`. After this the link stops working. |
 
 **Why the id list is frozen.** If you share 37 invoices today and a scan finds 5
 more tomorrow, the link you already sent must still show 37. Storing the ids at
 creation is what guarantees that.
+
+### Where the owner's name comes from
+
+The recipient has no account. Everything they are told about who shared with
+them has to have travelled inside the link, which is why these two columns
+exist rather than a join to something.
+
+Both are resolved once, when the link is made, from the connected mailbox:
+
+1. **The address** is the mailbox's own — `martinvkirov@gmail.com`.
+2. **The name** is that mailbox's display name if Unipile carries one.
+3. **If it does not**, the local part of the address, verbatim:
+   `martinvkirov`. Recognisable, and clearly not what anyone wants to be
+   introduced as, which is the point — it is shown to the owner rather than
+   hidden, with one control beside it.
+4. **The owner can correct the name** (endpoint 3 below). The browser keeps the
+   correction and sends it with the next `POST /api/shares`, so it is made once
+   rather than once per link.
+
+**Why they are frozen too.** Disconnecting a mailbox, or connecting a second
+one, must not change what a link already sent says about who sent it. The row
+is the record of a share that happened.
+
+**Why the address is not editable.** It is the mailbox that will actually send,
+and the send checks it against `/api/accounts`. A typed address would make that
+line a claim the send would then have to refuse.
 
 **Why there is no `title` column.** The filename on the share page
 (`invoices-2026-Q2.zip`) is worked out from the dates of the invoices in the
@@ -89,8 +120,8 @@ the script, done.
 
 ## The endpoints
 
-Ten routes touch these screens. **Four already exist** — they are listed first
-so it is clear what is not new work.
+Eleven routes touch these screens. **Four already exist** — they are listed
+first so it is clear what is not new work.
 
 ### Already built
 
@@ -106,24 +137,35 @@ so it is clear what is not new work.
 #### 1. Make a link
 
 ```
-POST /api/shares      {invoice_ids?}
-   -> {token, url, owner_key, expires_at}
+POST /api/shares      {invoice_ids?, owner_name?, account_id?}
+   -> {token, url, owner_key, owner_name, expires_at}
 ```
 
-The only place anything is written. If the caller sends no ids, we snapshot
-everything.
+The only place a row is created. If the caller sends no ids, we snapshot
+everything. Before the insert, one call to Unipile settles who this goes out
+as.
 
 ```sql
 -- only when no ids were sent
 SELECT id FROM invoices ORDER BY issued_on DESC NULLS LAST, id;
 
+-- who it goes out as, before the insert:
+-- GET {unipile_dsn}/api/v1/accounts  -> the mailbox and its name
+-- name = owner_name from the caller, else account.name,
+--        else the part of the address before the @
+
 INSERT INTO shares
-  (token, owner_key_hash, invoice_ids, created_at, expires_at)
-VALUES ($1, $2, $3::jsonb, now(), now() + interval '7 days');
+  (token, owner_key_hash, invoice_ids,
+   owner_name, owner_email, created_at, expires_at)
+VALUES ($1, $2, $3::jsonb, $4, $5, now(), now() + interval '7 days');
 ```
 
 `owner_key` comes back in this response and **never again** — the browser keeps
 it in `localStorage`.
+
+`account_id` picks the mailbox when more than one is connected; without it, the
+first. No screen offers that choice at creation, and it is not obvious that one
+should — the link is not a message.
 
 #### 2. Read the link
 
@@ -134,7 +176,8 @@ GET /api/s/{token}    -> the manifest: summary + one row per invoice
 Two queries.
 
 ```sql
-SELECT token, invoice_ids, created_at, expires_at
+SELECT token, invoice_ids, owner_name, owner_email,
+       created_at, expires_at
 FROM shares WHERE token = $1;
 
 SELECT id, issued_on, data FROM invoices
@@ -143,13 +186,36 @@ ORDER BY issued_on DESC NULLS LAST, id;
 ```
 
 Everything on the share page — the filename, the four facts, the whole manifest
-table — comes from these two queries. Nothing is stored pre-computed.
+table, the line naming who shared it — comes from these two queries. Nothing is
+stored pre-computed.
 
 **One thing to get right:** the first query does *not* say
 `WHERE expires_at > now()`. It looks the row up, then checks the date in code.
-That is deliberate — see [Expired vs missing](#expired-vs-missing) below.
+That is deliberate — see [Expired vs missing](#expired-vs-missing) below. The
+410 it answers with when the date has passed carries the two owner fields and
+the two dates, so the expired page can name a person and a day; the second
+query never runs.
 
-#### 3. Thumbnails
+#### 3. Rename the link
+
+```
+PATCH /api/s/{token}   {owner_name, owner_key}   -> 204
+```
+
+```sql
+SELECT owner_key_hash FROM shares WHERE token = $1;
+-- compare_digest(sha256(owner_key), owner_key_hash)
+
+UPDATE shares SET owner_name = $2 WHERE token = $1;
+```
+
+The only `UPDATE` in the feature, and the only column it may touch. Gated by
+the owner key, so a recipient cannot rewrite the name they were greeted by.
+
+This is the reason the owner key survived the removal of revoke: without it
+anyone holding the link could rename the person who sent it.
+
+#### 4. Thumbnails
 
 ```
 GET /api/s/{token}/thumb/{invoice_id}    -> a small WebP image
@@ -169,7 +235,7 @@ The image is not in Postgres. It is a `thumb.webp` file sitting next to the PDF,
 made when the invoice was extracted. If it is missing we render it on the first
 request, so nothing has to be backfilled.
 
-#### 4. The zip
+#### 5. The zip
 
 ```
 GET /api/s/{token}/zip    -> a streamed zip file
@@ -181,24 +247,29 @@ never hold the whole batch in memory.
 
 No parameters — the link *is* the batch. There is nothing to choose.
 
-#### 5. Preview the email
+#### 6. Preview the email
 
 ```
 GET /api/s/{token}/email/preview    -> the email, as HTML
 ```
 
-Same queries again, for the summary the email quotes. This exists so the preview
-in the composer is the *actual* email that will be sent, rather than a
-look-alike that could drift from it.
+Same queries again, for the summary the email quotes, the name it signs off
+with and the expiry date in its footer. The composer's `<iframe>` points
+straight at this URL.
 
-#### 6. Send the email
+It exists so the preview in the composer is the *actual* email that will be
+sent, rather than a look-alike that could drift from it: **one renderer**,
+called here and called again on the send, with the same output going to
+Unipile.
+
+#### 7. Send the email
 
 ```
 POST /api/s/{token}/email    {to, from_account_id, owner_key}   -> 204
 ```
 
 ```sql
-SELECT owner_key_hash, invoice_ids, expires_at
+SELECT owner_key_hash, invoice_ids, owner_name, expires_at
 FROM shares WHERE token = $1;
 ```
 
@@ -215,10 +286,11 @@ Then three things, in order:
 
 ## Every query in the feature
 
-There are only three shapes, and none of them can get slow:
+There are only four shapes, and none of them can get slow:
 
 ```sql
 SELECT ... FROM shares   WHERE token = $1;        -- primary key
+UPDATE shares SET owner_name = $2 WHERE token = $1;
 SELECT ... FROM invoices WHERE id = ANY($1);      -- primary key, many
 SELECT ... FROM invoices ORDER BY issued_on ...;  -- already indexed
 ```
@@ -243,10 +315,14 @@ row and compare the date ourselves.
 
 ### There is no revoke
 
-The screens still draw a **Revoke** button, but
 [`../share-flow-v3-light/notes.md`](../share-flow-v3-light/notes.md) replaced it
-with the 7-day expiry on 2026-08-14. So: no `DELETE /s/{token}`, and the column
-is `expires_at`, not `revoked_at`.
+with the 7-day expiry on 2026-08-14, and the screens caught up on 2026-08-15. So:
+no `DELETE /s/{token}`, the column is `expires_at` rather than `revoked_at`, and
+the owner block on the share page states a date where a button used to be.
+
+Nothing ever has to be cleaned up. The link stops working because the date has
+passed, not because a row changed, so there is no job to run and nothing to
+schedule.
 
 If revoke is ever wanted back, it is cheap: `UPDATE shares SET expires_at =
 now()`. No new column, no new state.
@@ -282,20 +358,24 @@ needs a rule for `/s/`, otherwise the dashboard's catch-all swallows it.
 
 ---
 
-## Two questions nothing answers yet
+## The two questions this file used to end on
 
-Found by mapping each screen element to a route. Both need deciding before the
-screens can be built as drawn.
+Both were found by mapping each screen element to a route, and both are
+answered. They are kept here because the answers are the two least obvious
+things above.
 
 **Who shared this?** The recipient's page says *"Shared with you by Martin Kirov
-· martin@kirov.dev"*. The `shares` table has no owner — no name, no address. So
-either the manifest works it out from the mailbox on the invoices, or `shares`
-needs another column.
+· martin@kirov.dev"* and the `shares` table had nowhere to keep either half.
+*Answered:* two columns, filled from the connected mailbox at creation and
+frozen — see [Where the owner's name comes from](#where-the-owners-name-comes-from).
+The alternative was deriving it at read time from the mailbox that received the
+invoices, which is a different person as soon as anyone forwards an invoice to
+their accountant.
 
-**The email preview.** Endpoint 5 above is not in any spec. It is listed here
-because the composer has a real iframe in it and the design insists the preview
-be the real email. Either that route exists, or the preview becomes a second
-template that can silently drift from the one that actually sends.
+**The email preview.** The composer has a real iframe and the design insists the
+preview be the real mail. *Answered:* endpoint 6 exists, and the send calls the
+same renderer. The alternative was a second template that could silently drift
+from the one that actually sends.
 
 ---
 
@@ -305,8 +385,13 @@ template that can silently drift from the one that actually sends.
 2. Share button and popover on the dashboard.
 3. Share page + zip download. **Usable by real people from here.**
 4. Thumbnails.
-5. Composer + send.
-6. Virtualize the manifest past 50 rows.
+5. Composer + preview + send.
+6. `PATCH /s/{token}`, and virtualize the manifest past 50 rows.
+
+Step 5 is where the owner's name first has to be right, because the mail is
+signed with it — but it is written in step 1, and it is worth getting the
+fallback right there rather than discovering in step 5 that every link says
+`martinvkirov`.
 
 ---
 
