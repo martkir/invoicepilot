@@ -12,7 +12,8 @@ git checkout main        # back
 
 Each revision is tagged as well as listed, because a tag survives a rebase and
 a hash in a document does not. **The tag points at the last commit of the
-revision**, so checking it out gives you that revision complete.
+revision**, so checking it out gives you that revision complete — including the
+entry below describing it, which is why no entry names its own commit.
 
 Nothing here is running code. Going back a revision costs nothing but the
 checkout, which is the reason this file exists: it should be cheap to say *no,
@@ -22,7 +23,7 @@ the previous one was better.*
 
 ## r1 — the flow, and the wiring map over it
 
-**`flow-r1` · [`739e1d1`](#) · 2026-08-14 to 2026-08-15**
+**tag `flow-r1`, at `739e1d1` · 2026-08-14 to 2026-08-15**
 
 Fourteen screens in [`../share-flow-v3-light`](../share-flow-v3-light/index.html),
 and this folder over the top of them: every element that a request fills marked
@@ -50,7 +51,7 @@ open questions still open.
 
 ## r2 — the five open questions, answered
 
-**`flow-r2` · [`c05de29`](#) · 2026-08-15**
+**tag `flow-r2`, at the commit that added this entry · 2026-08-15**
 
 Every question r1 raised, decided and drawn. The three decisions:
 
@@ -100,6 +101,7 @@ the bytes Unipile will get rather than a look-alike that can drift.
 | `1254ce6` | Revoke → expiry, `03b-name.html`, both generators, both viewers, the map. |
 | `ca416b8` | [`backend.md`](backend.md): the two owner columns, the rename route, the seven endpoints. |
 | `c05de29` | The hand-written documents — `design.md`, `audit.md`, `notes.md`, the contact sheet. |
+| *(tagged)* | This file. `git log 739e1d1..flow-r2` is the whole revision. |
 
 **Still open after this revision**, both in
 [`notes.md`](../share-flow-v3-light/notes.md):
