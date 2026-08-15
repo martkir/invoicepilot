@@ -5,20 +5,33 @@ overridden and the accounts module is patched, so what is under test is the
 route contract rather than either backend.
 """
 
+import threading
+import time
+from collections.abc import Iterator
+
 import pytest
 from fastapi.testclient import TestClient
 
-from backend import __version__, accounts, invoices
+from backend import __version__, accounts, invoices, scan_jobs
+from backend.process import Progress, ScanResult
 from backend.services.api import api
 from backend.unipile import UnipileError, credentials
 
 
 @pytest.fixture
-def connected(client: TestClient) -> TestClient:
+def connected(client: TestClient) -> Iterator[TestClient]:
     """A client whose Unipile credentials resolve, without reading the environment."""
     api.dependency_overrides[credentials] = lambda: ("https://api.example.com", "key")
     yield client
     api.dependency_overrides.clear()
+
+
+@pytest.fixture
+def no_jobs() -> Iterator[None]:
+    """Scan state is process-global; keep one test's jobs out of the next one's."""
+    scan_jobs._JOBS.clear()
+    yield
+    scan_jobs._JOBS.clear()
 
 
 def test_health(client: TestClient) -> None:
@@ -87,3 +100,62 @@ def test_paging_out_of_range_is_rejected_before_the_database(
 
 def test_scan_rejects_a_limit_below_one(client: TestClient) -> None:
     assert client.post("/scan", json={"limit": 0}).status_code == 422
+
+
+def test_a_scan_reports_progress_and_refuses_a_second_one(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, no_jobs: None
+) -> None:
+    """Two scans would parse the same mail twice and race on the same folders."""
+    reported = threading.Event()
+    release = threading.Event()
+
+    def blocking_scan(*, limit: int, follow_links: bool, on_progress=None) -> ScanResult:
+        on_progress(Progress("me@example.com", "March invoice", 1, 1, 0))
+        reported.set()
+        release.wait(timeout=5)
+        return ScanResult(mailboxes=("me@example.com",), messages_scanned=1)
+
+    monkeypatch.setattr(scan_jobs, "scan_all", blocking_scan)
+
+    started = client.post("/scan")
+    assert started.status_code == 202
+    job_id = started.json()["id"]
+
+    refused = client.post("/scan")
+    assert refused.status_code == 409
+    assert job_id in refused.json()["detail"]
+
+    assert reported.wait(timeout=5)
+    assert client.get(f"/scan/{job_id}").json()["progress"] == "me@example.com: March invoice"
+
+    release.set()
+    for _ in range(500):
+        if scan_jobs.get(job_id).status != "running":
+            break
+        time.sleep(0.01)
+    assert client.get(f"/scan/{job_id}").json() == {
+        "id": job_id,
+        "status": "done",
+        "detail": None,
+        "progress": "",
+        "mailboxes": ["me@example.com"],
+        "messages_scanned": 1,
+        "invoices_found": 0,
+        "invoices_new": 0,
+        "errors": [],
+    }
+
+
+def test_a_finished_scan_does_not_block_the_next_one(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, no_jobs: None
+) -> None:
+    monkeypatch.setattr(
+        scan_jobs, "scan_all", lambda **kwargs: ScanResult(mailboxes=("me@example.com",))
+    )
+    first = client.post("/scan")
+    assert first.status_code == 202
+    for _ in range(500):
+        if scan_jobs.get(first.json()["id"]).status != "running":
+            break
+        time.sleep(0.01)
+    assert client.post("/scan").status_code == 202
