@@ -50,8 +50,9 @@ to keep.
 
 Two fields, `owner_name` and `owner_email`, written when the link is made and
 frozen with the snapshot. They come off the connected mailbox: its own display
-name if Unipile carries one, otherwise the local part of the address
-(`martinvkirov` from `martinvkirov@gmail.com`). The owner can correct the name
+name if Unipile carries one, otherwise the local part of the address (`martin`
+from `martin@kirov.dev`; `martinvkirov` from a Gmail address, which is the case
+that makes the point). The owner can correct the name
 on [`03b-name.html`](03b-name.html), and the correction is kept for the next
 link. The address is not editable.
 

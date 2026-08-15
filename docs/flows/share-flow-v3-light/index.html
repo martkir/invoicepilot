@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="color-scheme" content="light"/>
 <title>Share flow v3 light · Invoice Pilot</title>
-<meta name="description" content="The share flow rebuilt on Mercury light: the same fourteen screens,
+<meta name="description" content="The share flow rebuilt on Mercury light: fifteen screens,
 strictly flat, one electric-blue accent, and a two-column page that needs no overlap to have a
 foreground."/>
 <meta property="og:type" content="website"/>
@@ -298,11 +298,13 @@ footer {
     <h1>Share flow, on <em>Mercury</em> light</h1>
     <p class="lede">Handing a batch of invoices to someone who has no account: an accountant, a
     co-founder, a client. The light twin of
-    <a href="../share-flow-v3/index.html">share-flow-v3</a>: same fourteen screens, same markup,
-    same copy, on the light palette from
+    <a href="../share-flow-v3/index.html">share-flow-v3</a>: the same markup and the same copy on
+    the light palette from
     <a href="../../../.claude/skills/mercury-ui-light/SKILL.md">mercury-ui-light</a>. Everything
-    that differs between the two folders lives in <code>tokens-v3.css</code>, which is the whole
-    point of landing the tokens once. Each frame is a real page linked against the app&rsquo;s own
+    that differed between the two folders lived in <code>tokens-v3.css</code>, which is the whole
+    point of landing the tokens once — until revision 2 drew two decisions the dark twin predates:
+    <b>expiry replaced revoke</b> and <b>a share now says who made it</b>, so there are fifteen
+    screens here and fourteen there. Each frame is a real page linked against the app&rsquo;s own
     <code>tokens.css</code> and <code>dashboard.css</code>, so these cannot drift from the
     product.</p>
 
@@ -500,9 +502,10 @@ footer {
         <p>A branch off step 4, and usually skipped. The name a recipient is greeted by comes from
         the <b>connected mailbox</b>, which is the only thing this product knows about its user:
         the mailbox&rsquo;s own display name if it carries one, and otherwise the local part of the
-        address — <code>martinvkirov</code> from <code>martinvkirov@gmail.com</code>. That is
-        recognisable enough to send under and wrong enough to want fixing, so it is
-        <b>shown, not hidden</b>, with one control beside it.</p>
+        address — <code>martin</code> from <code>martin@kirov.dev</code>, and
+        <code>martinvkirov</code> from a Gmail address, which is the case that makes the
+        point. It is recognisable enough to send under and wrong often enough to want fixing,
+        so it is <b>shown, not hidden</b>, with one control beside it.</p>
         <p>The edit happens <b>in the rail, in place</b>, with the page it changes still on screen
         behind it. Only the name is editable: the address underneath it is the mailbox that will
         actually send, and letting anyone type that would make the line a claim rather than a fact.

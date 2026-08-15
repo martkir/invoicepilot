@@ -26,7 +26,11 @@ existing dashboard, plus a transactional email, plus the two review shells
 
 **Mode.** Re-skin, in the Section 8.A sense: existing content and information
 architecture, new visual language. Routes, filenames, copy voice, data model
-and the fourteen screens are preserved exactly. What changes is everything the
+and the fourteen screens are preserved exactly. (This is the audit of the
+re-skin, and it describes what v3 changed against v2. Revision 2 later added a
+screen and renamed another; that is logged in
+[`../share-flow-v3-light-annotated/revisions.md`](../share-flow-v3-light-annotated/revisions.md),
+not here.) What changes is everything the
 tokens touch, plus four structural decisions that only made sense in the system
 v2 was built on.
 

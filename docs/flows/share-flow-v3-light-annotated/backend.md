@@ -63,12 +63,13 @@ exist rather than a join to something.
 
 Both are resolved once, when the link is made, from the connected mailbox:
 
-1. **The address** is the mailbox's own — `martinvkirov@gmail.com`.
+1. **The address** is the mailbox's own — `martin@kirov.dev`.
 2. **The name** is that mailbox's display name if Unipile carries one.
-3. **If it does not**, the local part of the address, verbatim:
-   `martinvkirov`. Recognisable, and clearly not what anyone wants to be
-   introduced as, which is the point — it is shown to the owner rather than
-   hidden, with one control beside it.
+3. **If it does not**, the local part of the address, verbatim: `martin`, or
+   `martinvkirov` for `martinvkirov@gmail.com`, which is the case that makes
+   the point. Recognisable, and often not what anyone wants to be introduced
+   as — so it is shown to the owner rather than hidden, with one control
+   beside it.
 4. **The owner can correct the name** (endpoint 3 below). The browser keeps the
    correction and sends it with the next `POST /api/shares`, so it is made once
    rather than once per link.
@@ -390,8 +391,8 @@ from the one that actually sends.
 
 Step 5 is where the owner's name first has to be right, because the mail is
 signed with it — but it is written in step 1, and it is worth getting the
-fallback right there rather than discovering in step 5 that every link says
-`martinvkirov`.
+fallback right there rather than discovering in step 5 that every link has gone
+out under half an email address.
 
 ---
 

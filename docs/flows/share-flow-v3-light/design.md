@@ -26,9 +26,17 @@ brightness and changing everything else. Section numbers throughout this folder
 refer to that skill.
 
 This is the light twin of [`../share-flow-v3`](../share-flow-v3/design.md).
-The two folders hold the same fourteen screens, the same markup and the same
+The two folders held the same fourteen screens, the same markup and the same
 copy; the theme lives entirely in `tokens-v3.css`, plus four comments and one
 accent step elsewhere that name a direction.
+
+**The twins have diverged, deliberately.** Revision 2 (2026-08-15) drew two
+decisions the dark twin predates: `09-revoked.html` became `09-expired.html`,
+and `03b-name.html` is new, so this folder has fifteen screens to the dark
+twin's fourteen. The dark twin is a historical snapshot from here on unless it
+is regenerated;
+[`../share-flow-v3-light-annotated/revisions.md`](../share-flow-v3-light-annotated/revisions.md)
+records what would have to move.
 
 Dials: `DESIGN_VARIANCE` 6, `MOTION_INTENSITY` 3, `VISUAL_DENSITY` 6.
 
@@ -205,9 +213,10 @@ the mail.
 about who shared with them has to be carried by the link itself, because they
 have no account. Both fields come off the connected mailbox when the link is
 made: its display name if it has one, and otherwise the local part of the
-address — `martinvkirov` from `martinvkirov@gmail.com`. That is recognisable
-enough to send under and wrong enough to want fixing, so the block states it
-rather than hiding it, with one quiet control beside it.
+address — `martin` from `martin@kirov.dev`, or `martinvkirov` from a Gmail
+address, which is the case that makes the point. It is recognisable enough to
+send under and wrong often enough to want fixing, so the block states it rather
+than hiding it, with one quiet control beside it.
 
 ### Correcting the name, [`03b-name.html`](03b-name.html)
 

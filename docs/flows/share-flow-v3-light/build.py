@@ -119,8 +119,9 @@ ACCOUNTS = ["martin@kirov.dev", "billing@kirov.dev"]
 
 # Who the recipient is told this came from. The address is the connected
 # mailbox and is not the owner's to type; the name is a display name taken from
-# that mailbox and correctable, because the mailbox often has no name on it at
-# all and "martinvkirov" is not what anyone wants to be introduced as.
+# that mailbox and correctable, because a mailbox often carries no name at all
+# and half an email address ("martinvkirov") is not what anyone wants to be
+# introduced as.
 OWNER_MAIL = ACCOUNTS[0]
 OWNER_NAME = "Martin Kirov"
 # What the name falls back to before anyone corrects it: the local part of the
