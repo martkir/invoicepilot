@@ -5,6 +5,10 @@ with every element that a request fills marked, and a panel beside each screen
 naming the endpoint, the table and the query behind it. Open
 [`index.html`](index.html) for the map, or any screen for the screen.
 
+For the backend on its own, without the screens around it, read
+[`backend.md`](backend.md): the table, the ten routes and every query, in plain
+terms. This file is about how the annotation is made and what it turned up.
+
 This folder owns **no design**. It owns one stylesheet, one generator and this
 file. The screens are read out of the design folder, the three stylesheets are
 linked back at it untouched, and the only edit made to the markup is a

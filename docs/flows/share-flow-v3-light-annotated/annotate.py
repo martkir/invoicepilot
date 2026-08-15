@@ -1087,7 +1087,8 @@ def index() -> str:
     <h2>The endpoints</h2>
     <p class="map-note">Four of these ship today. The six new ones are the
       plan; <code>shares</code> is the one new table, and every route that
-      reads it looks the row up by primary key.</p>
+      reads it looks the row up by primary key. <a href="backend.md">backend.md</a>
+      explains all ten and their queries in plain terms.</p>
     <table class="map-table">
       <thead><tr><th>Method</th><th>Path</th><th>Tables</th><th>Screens</th></tr></thead>
       <tbody>{"".join(rows)}</tbody>
