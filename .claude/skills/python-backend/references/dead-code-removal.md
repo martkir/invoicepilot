@@ -80,7 +80,7 @@ For anything in this table, verification means checking the *registration* mecha
 Not every reduction is a removal. Also worth doing on every pass:
 
 - Replace a hand-rolled helper with the stdlib or framework equivalent that already exists
-- Collapse a pass-through layer (see the readability principle in [../SKILL.md](../SKILL.md))
+- Collapse a pass-through layer — pure indirection, bought nothing (see [../SKILL.md](../SKILL.md))
 - Let Pydantic validate instead of hand-written `if not data.get(...)` chains
 - Let the database filter, sort, and count instead of Python loops over full result sets
 - Replace a parallel implementation with a parameter on the existing one — see [deduplication-patterns.md](deduplication-patterns.md)

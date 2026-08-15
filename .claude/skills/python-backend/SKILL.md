@@ -1,6 +1,6 @@
 ---
 name: python-backend
-description: Building and refining Python backends for readability above all — survey existing code and delete dead code before adding new, keep call chains shallow and folders flat, thin routes over one meaningful layer. Covers FastAPI project structure, Pydantic v2 schemas, dependency injection, async handlers, auth, transactional service layers, and testing with httpx/pytest, plus reduction passes that remove dead and duplicate code, collapse pass-through layers, and apply Pythonic idioms. Use when writing, reviewing, or refactoring FastAPI/Django/Flask code, Pydantic schemas, dependencies, service layers, or backend tests.
+description: Building and refining Python backends on one principle — complexity is the enemy, and every source of it must justify itself. Survey existing code and delete dead code before adding new, keep call chains shallow and folders flat, thin routes over one meaningful layer. Covers FastAPI project structure, Pydantic v2 schemas, dependency injection, async handlers, auth, transactional service layers, and testing with httpx/pytest, plus reduction passes that remove dead and duplicate code, collapse pass-through layers, and apply Pythonic idioms. Use when writing, reviewing, or refactoring FastAPI/Django/Flask code, Pydantic schemas, dependencies, service layers, or backend tests.
 metadata:
   origin: merged
   sources:
@@ -13,7 +13,7 @@ metadata:
 
 # Python Backend
 
-Production-grade Python backend work in two modes. Both share the same principles; pick by what the task asks for.
+Production-grade Python backend work in two modes. Both serve the same goal — the least complexity that does the job; pick by what the task asks for.
 
 - **Building** — new app, new endpoint, new schema, new test. Survey the existing code first, then follow the structural patterns and copy from the references.
 - **Refining** — reviewing or refactoring code that already works. Delete what is dead, remove duplication, apply idioms — preserving behavior exactly.
@@ -24,11 +24,52 @@ Refining never changes *what* the code does, only *how*. If a refactor would alt
 
 ---
 
+## The Main Principle: Complexity Is the Enemy
+
+Every rule below is a special case of this one. The goal is not elegance, coverage, or future-proofing — it is that whoever reads this code next can hold the whole thing in their head. Complexity is what stops them, and it is paid for on every read, forever, by everyone.
+
+So complexity is never free and never neutral. **Question each source of it, every time:**
+
+1. **Is it really needed?** — What actually breaks without it? "We might need it later" means it isn't needed now.
+2. **Can it be done simpler?** — What is the smallest thing that solves the real problem in front of you?
+3. **What does it buy?** — If you can't say in one sentence, that is the answer.
+
+The known sources, and what each one costs:
+
+| Source | Example | What gets harder |
+| -------------------------- | ----------------------------------------------- | ----------------------------------------------------- |
+| **Size / cardinality**     | More tables, columns, classes, endpoints, files | More things to know |
+| **Coupling**               | Function A → B → C → D                          | Understanding one thing requires understanding others |
+| **Indirection**            | Controller → service → repository → adapter     | Harder to trace what actually happens |
+| **Nesting / hierarchy**    | `src/domain/users/services/auth/...`            | Navigation and mental model |
+| **State**                  | Mutable objects, DB state, caches, queues       | Behavior depends on history |
+| **Branching**              | Lots of `if`, feature flags, modes              | Number of possible execution paths explodes |
+| **Data-model complexity**  | More columns, relations, nullable fields        | More possible valid/invalid states |
+| **Dependencies**           | Libraries, internal modules, services           | More external assumptions |
+| **Distributed boundaries** | DB + Redis + API + queue + worker               | Failure modes and coordination |
+| **Configuration**          | Env vars, YAML, deployment flags                | Behavior isn't visible from code |
+| **Duplication**            | Same concept implemented 4 ways                 | Changes require finding all copies |
+| **Special cases**          | "Except for enterprise users..."                | General rules stop being general |
+
+None of these are forbidden. A transaction boundary is state, a database is a distributed boundary, auth is branching — real backends need real complexity. The rule is that each one is *argued for* rather than defaulted into, and that the version you ship is the smallest one that works. Adding a table, a library, an env var, a nullable column, a queue, or an `if` is a decision to be defended in a sentence, not a step to take on the way to something else.
+
+Two of these dominate Python backends specifically — **indirection** and **nesting** — which is why they lead the principles below. Several others have a principle of their own: 2 attacks size, 3 indirection again, 4 duplication, 5 branching and coupling, 8 configuration.
+
+The remaining five get one default each, applied unless the task gives a reason otherwise:
+
+- **State** — one owner per piece of state, and prefer a value passed in to a field mutated later. The database is the state of record; module globals, caches, and long-lived objects are copies that go stale and make behavior depend on history.
+- **Data model** — fewer tables, fewer columns, `NOT NULL` wherever the domain allows it. Every nullable column doubles the states the code has to handle, and a column added "for later" is read by nobody and maintained by everybody.
+- **Dependencies** — standard library first; add a package when writing it yourself would be genuinely worse, not when it saves a few lines.
+- **Distributed boundaries** — one process, one datastore, until something concrete forces a second. A cache, queue, or worker turns a bug into a coordination problem.
+- **Special cases** — prefer a rule that covers everyone to a rule plus an exception. When one is genuinely required, put it where the reader will meet it, not in a branch three files away.
+
+---
+
 ## Core Principles
 
-### 1. Readability is the goal — everything below serves it
+### 1. Shallow call chains, flat folders
 
-Code is read far more often than it is written. The two things that most damage readability in Python backends are **deep call chains** and **deep folder trees**, because both force the reader to hold a stack in their head while hunting across files. Keep both shallow.
+Code is read far more often than it is written. The two complexity sources that most damage a Python backend are **indirection** and **nesting**, because both force the reader to hold a stack in their head while hunting across files. Keep both shallow.
 
 **Shallow call chains.** A reader should get from HTTP request to the SQL it runs in one or two hops:
 
@@ -204,6 +245,9 @@ def append_to(element, target=None):
 12. **Don't leave the old path behind** when a new one replaces it — two ways to do one thing is worse than either
 13. **Don't keep code "in case we need it later"** — that is what version control is for
 14. **Don't delete what you only suspect is unused** — prove it or say you couldn't
+15. **Don't take a dependency to save a few lines** — every package is an assumption about a thing you don't control
+16. **Don't add a nullable column or a config flag because it's the path of least resistance** — each one multiplies the states the code must handle, and config hides behavior from the code entirely
+17. **Don't introduce a second datastore, a cache, or a queue speculatively** — coordination failures are the hardest class of bug to reproduce
 
 ---
 
@@ -218,12 +262,13 @@ def append_to(element, target=None):
 5. Write the test alongside, not after
 6. **Sweep before finishing** — delete what the change orphaned, and any dead code you passed through on the way
 7. Trace one request end to end and count the frames; if it's more than two meaningful hops, collapse before moving on
+8. **Account for what you added** — list every new source of complexity (table, column, dependency, env var, layer, branch, service) and what each buys. Anything you can't defend in a sentence comes back out before you call it done
 
 **Refining:**
 
 1. **Read** the code and understand it before proposing anything
 2. **Delete first** — dead code costs nothing to remove and shrinks everything downstream; simplifying code that should not exist is wasted effort
-3. **Identify** violations against the principles above — trace the deepest call chain and the deepest folder path, since those cost the most to read
+3. **Identify** violations against the principles above — walk the complexity table and name which sources are present, then trace the deepest call chain and the deepest folder path, since those cost the most to read
 4. **Change minimally** — no scope creep
 5. **Verify syntax** — `python -m py_compile <file>`
 6. **Run tests** — `pytest`
@@ -259,6 +304,10 @@ Keep deletions in their own commit, separate from behavior changes — it makes 
 
 | Mistake | Fix |
 |---------|-----|
+| New complexity with no stated payoff | Defend it in one sentence or take it back out |
+| Nullable column added "for later" | `NOT NULL` now; migrate when the need is real |
+| A package for a few lines of code | Standard library |
+| A general rule plus an exception | One rule that covers everyone |
 | Refactoring everything at once | DRY first, then idioms |
 | Adding abstractions for 1–2 uses | Wait for 3+ occurrences |
 | Changing behavior while simplifying | Only change *how*, never *what* |

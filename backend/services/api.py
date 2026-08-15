@@ -84,7 +84,14 @@ def disconnect_account(account_id: str, creds: CredentialsDep) -> None:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@api.post("/scan", response_model=ScanJob, status_code=202)
+@api.post(
+    "/scan",
+    response_model=ScanJob,
+    status_code=202,
+    # Raised, not returned, so FastAPI cannot infer it — and a client that
+    # cannot see it has no reason to handle it.
+    responses={409: {"description": "A scan is already running."}},
+)
 def start_scan(request: ScanRequest | None = None) -> ScanJob:
     """Start scanning every connected mailbox. Returns immediately with a job id."""
     options = request or ScanRequest()
