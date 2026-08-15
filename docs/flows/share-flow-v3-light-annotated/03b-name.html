@@ -4,10 +4,10 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="color-scheme" content="light"/>
-<title>Address needs fixing · wiring · Invoice Pilot</title>
+<title>Correcting the name · wiring · Invoice Pilot</title>
 <meta name="description" content="37 invoices from April to June 2026, in one download. No account needed."/>
 <meta property="og:type" content="website"/>
-<meta property="og:title" content="Address needs fixing · Invoice Pilot"/>
+<meta property="og:title" content="Correcting the name · Invoice Pilot"/>
 <meta property="og:description" content="37 invoices from April to June 2026, in one download. No account needed."/>
 <meta name="theme-color" content="#eef0f6"/>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%235266eb%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4H8.4A2%202%200%200%200%206.4%206.4v11.2a2%202%200%200%200%202%202h7.2a2%202%200%200%200%202-2V8.4Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M13.4%204.4v4h4%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"/>
@@ -37,37 +37,21 @@
       <div class="owner-block">
         <p class="live"><b>This link is live.</b> Anyone with it can download these invoices.
           It stops working on <b>12 July 2026</b>.</p>
-        <p class="sent-as">Recipients see it from <b>Martin Kirov</b>
-          <a class="btn-quiet" href="03b-name.html"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.8 5.4 18.6 9.2"/><path d="M16.4 3.8a2.1 2.1 0 0 1 3 3L8.6 17.6l-4 1.2 1.2-4Z"/></svg>Change</a></p>
-        <div class="rail-actions">
-          <a class="btn btn-secondary" href="04-compose.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.2" y="5.2" width="17.6" height="13.6" rx="2.4"/><path d="m3.9 7.4 7 4.7a2.1 2.1 0 0 0 2.2 0l7-4.7"/></svg>Send by email</a>
+        <div class="name-edit">
+          <div class="field"><label for="sent-as">Recipients see it from</label>
+            <input id="sent-as" name="sent-as" type="text" autocomplete="name"
+              value="martin" aria-describedby="sent-as-note" data-pin="1"/></div>
+          <p class="field-note" id="sent-as-note" data-pin="2">Taken from martin@kirov.dev, which carries no name.
+            Shown on this page and in the email.</p>
+          <div class="rail-actions">
+            <a class="btn btn-secondary" href="03-preview.html" data-pin="3">Save</a>
+            <a class="btn-quiet" href="03-preview.html">Cancel</a>
+          </div>
         </div>
       </div>
     </section>
     <div class="stack">
-      <div class="composer">
-      <h2>Send this link by email</h2>
-      <p class="composer-lede">The subject and the body are already written. The only thing
-        missing is who it goes to.</p>
-      <div class="field"><span class="field-label">From</span><span class="from-anchor"><span class="from-current"><svg class="source-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 10.2V14h5.3c-.2 1.2-1.6 3.6-5.3 3.6A5.6 5.6 0 1 1 15.7 8l2.7-2.6A9.3 9.3 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6 0-1-.1-1.5H12z"/></svg>martin@kirov.dev</span><a class="icon-btn" href="05-from.html" aria-label="Send from a different mailbox" aria-expanded="false"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6.6 9.4 5.4 5.2 5.4-5.2"/></svg></a></span>
-        <span class="field-note">Replies come back here</span></div>
-      <div class="field"><label for="to">To</label>
-        <input id="to" name="to" type="email" required autocomplete="email"
-          placeholder="accountant@firm.com" value="anna@ledger" aria-invalid="true" aria-describedby="to-error" data-pin="1"/></div>
-      <p class="field-error" id="to-error" data-pin="2">That address is missing its domain.
-        Did you mean <b>anna@ledger.co</b>?</p>
-      <div class="composer-foot">
-        <span class="btn btn-primary" aria-disabled="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.2" y="5.2" width="17.6" height="13.6" rx="2.4"/><path d="m3.9 7.4 7 4.7a2.1 2.1 0 0 0 2.2 0l7-4.7"/></svg>Send</span>
-        <a class="btn-quiet" href="03-preview.html">Cancel</a>
-        <span class="hint">Subject: <b>Invoices, Apr to Jun 2026 (37 invoices)</b>.
-          The link is sent, not the files.</span>
-      </div>
-      <div class="mail-preview">
-        <div class="mail-preview-head">Preview: what anna@ledger.co opens
-          <a href="email.html" target="_blank" rel="noopener">Full size <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.4 3.6h6v6"/><path d="M10.2 13.8 20.4 3.6"/><path d="M18.6 13.2v5.2a2.1 2.1 0 0 1-2.1 2.1H5.7a2.1 2.1 0 0 1-2.1-2.1V7.6a2.1 2.1 0 0 1 2.1-2.1h5.2"/></svg></a></div>
-        <iframe src="email.html" title="Preview of the email that will be sent" loading="lazy"></iframe>
-      </div>
-    </div>
+      
       <div class="doc-card">
         <section class="part part-docs">
       <div>
@@ -120,11 +104,30 @@
 <aside class="wiring" aria-label="Backend wiring">
   <div class="wiring-head">
     <p class="wiring-kicker">wiring</p>
-    <h2 class="wiring-title">Address needs fixing</h2>
-    <p class="wiring-lede">The one screen in the flow that costs the backend nothing at all.</p>
+    <h2 class="wiring-title">Correcting the name</h2>
+    <p class="wiring-lede">One field, one write, and the only column of a live share that can change.</p>
   </div>
   <ol class="wiring-list">
-    <li class="wiring-item"><p class="wiring-el"><span class="wiring-n">1</span><span>To, invalid</span></p><p class="wiring-none">no request</p><p class="wiring-note">No request. Checked in the browser on blur, before POST /api/s/{token}/email is called - `aria-invalid` and `aria-describedby` on the input, Send `aria-disabled` while it stands.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">2</span><span>The message</span></p><p class="wiring-none">no request</p><p class="wiring-note">No request. This is the cheap half that saves a round trip, not a substitute for the transport&#x27;s own rejection, which is 08-send-failed.html.</p></li>
+    <li class="wiring-item"><p class="wiring-el"><span class="wiring-n">1</span><span>The name, as taken from the mailbox</span></p><p class="wiring-call"><b>GET</b> /api/s/{token}</p><p class="wiring-tables"><span class="wiring-table is-new">shares · new</span><span class="wiring-table">invoices</span></p><pre class="wiring-sql">SELECT token, invoice_ids, owner_name, owner_email,
+       created_at, expires_at
+FROM shares WHERE token = $1;     -- primary key, no index needed
+
+SELECT id, issued_on, data FROM invoices
+WHERE id = ANY($1::text[])
+ORDER BY issued_on DESC NULLS LAST, id;</pre><p class="wiring-note">Two queries, and the first one deliberately does not filter on expires_at. `WHERE expires_at &gt; now()` would fold an expired share into a missing one and cost the page the difference between 410 and 404 - which is the difference between the two dead-end screens. The row is fetched, then the expiry is compared.
+
+It also carries `owner_name` and `owner_email`, which is what lets the recipient&#x27;s page name a person: they have no account and can be shown nothing this response does not hold.</p><p class="wiring-note">Filled with `owner_name` as it stands - here the fallback value, the local part of the address, which is what a mailbox carrying no display name of its own produces. The field is seeded from the response, not from the browser.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">2</span><span>Taken from martin@kirov.dev</span></p><p class="wiring-call"><b>GET</b> /api/s/{token}</p><p class="wiring-tables"><span class="wiring-table is-new">shares · new</span><span class="wiring-table">invoices</span></p><pre class="wiring-sql">SELECT token, invoice_ids, owner_name, owner_email,
+       created_at, expires_at
+FROM shares WHERE token = $1;     -- primary key, no index needed
+
+SELECT id, issued_on, data FROM invoices
+WHERE id = ANY($1::text[])
+ORDER BY issued_on DESC NULLS LAST, id;</pre><p class="wiring-note">Two queries, and the first one deliberately does not filter on expires_at. `WHERE expires_at &gt; now()` would fold an expired share into a missing one and cost the page the difference between 410 and 404 - which is the difference between the two dead-end screens. The row is fetched, then the expiry is compared.
+
+It also carries `owner_name` and `owner_email`, which is what lets the recipient&#x27;s page name a person: they have no account and can be shown nothing this response does not hold.</p><p class="wiring-note">`owner_email`, which is not editable. It is the mailbox that will actually send, checked against /api/accounts when it is used, so a typed address here would be a claim the send would then have to refuse.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">3</span><span>Save</span></p><p class="wiring-call"><b>PATCH</b> /api/s/{token}  {owner_name, owner_key}</p><p class="wiring-tables"><span class="wiring-table is-new">shares · new</span></p><pre class="wiring-sql">SELECT owner_key_hash FROM shares WHERE token = $1;
+-- compare_digest(sha256(owner_key), owner_key_hash)
+
+UPDATE shares SET owner_name = $2 WHERE token = $1;</pre><p class="wiring-note">The one column of a live share that can change, and the only write in the flow that is not the insert. Gated by the same owner key that gates the send, so a recipient cannot rewrite the name they were greeted by. `owner_email` is not writable: it is the mailbox that will actually send, and a typed address would make that line a claim rather than a fact. The browser keeps the corrected name in localStorage and passes it to the next POST /api/shares, so the correction is made once rather than once per link.</p><p class="wiring-note">One UPDATE of one column, gated by the owner key. The browser also keeps the new name in localStorage and sends it with the next POST /api/shares, so a correction made here does not have to be made again on the next link.</p></li>
   </ol>
   <p class="wiring-foot">Generated by annotate.py from the screens in
     <a href="../share-flow-v3-light/index.html">share-flow-v3-light</a>.

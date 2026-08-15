@@ -26,11 +26,17 @@ Three things follow from that, and they are the whole design of this file:
     map that is silently 80% complete is worse than one that refuses to build.
 
 What the wiring describes is the design in ../share-flow-v3-light/design.md
-and the data model in ../draft/share-flow/design.md, amended by the decision in
-../share-flow-v3-light/notes.md: revoke is replaced by a 7-day TTL, so the
-table carries `expires_at` and there is no DELETE route. The screens still draw
-revoke, because they were drawn before that decision; pin 8 on 03-preview.html
-and the whole of 09-revoked.html say so rather than pretending otherwise.
+and the data model in ../draft/share-flow/design.md, amended twice by
+../share-flow-v3-light/notes.md: revoke is replaced by a 7-day TTL, so the table
+carries `expires_at` and there is no DELETE route, and a share carries the name
+and address of the mailbox it was made from, so the recipient can be told who
+shared with them.
+
+Both amendments started here, as pins this file could not answer. A pin that
+raised a question and had it settled keeps its entry and says so - `decided`
+rather than `gap` - because where the question was is as much a part of the map
+as the answer, and a map that quietly closed its own open questions would be
+harder to trust than one that shows them being closed.
 
 Queries are written as the SQL the SQLAlchemy in backend/ emits, not as ORM
 calls, because the question this folder answers is what the database is asked
@@ -123,24 +129,33 @@ ENDPOINTS: dict[str, Endpoint] = {
     # ---- the share flow ----------------------------------------------------
     "share_create": Endpoint(
         "POST",
-        "/api/shares  {invoice_ids?}",
+        "/api/shares  {invoice_ids?, owner_name?, account_id?}",
         (("shares", True), ("invoices", False)),
         "-- only when the caller sent no ids: snapshot the whole view\n"
         "SELECT id FROM invoices ORDER BY issued_on DESC NULLS LAST, id;\n"
         "\n"
+        "-- who this goes out as, resolved before the insert:\n"
+        "-- GET {unipile_dsn}/api/v1/accounts -> the mailbox and its name\n"
+        "-- name = account.name or the local part of the address\n"
+        "\n"
         "INSERT INTO shares\n"
-        "  (token, owner_key_hash, invoice_ids, created_at, expires_at)\n"
-        "VALUES ($1, $2, $3::jsonb, now(), now() + interval '7 days');",
-        "The only write the flow makes. `invoice_ids` is a JSONB snapshot and "
-        "is never updated: a later scan must not widen a link that has already "
-        "been sent. Returns {token, url, owner_key, expires_at}, and the owner "
+        "  (token, owner_key_hash, invoice_ids,\n"
+        "   owner_name, owner_email, created_at, expires_at)\n"
+        "VALUES ($1, $2, $3::jsonb, $4, $5, now(), now() + interval '7 days');",
+        "The only write the flow makes, and the only place the owner's identity "
+        "is decided. `invoice_ids` is a JSONB snapshot and is never updated: a "
+        "later scan must not widen a link that has already been sent. The two "
+        "owner fields are frozen for the same reason - disconnecting a mailbox "
+        "must not change what an already-sent link says about who sent it. "
+        "Returns {token, url, owner_key, owner_name, expires_at}, and the owner "
         "key is returned exactly once - only its sha256 is stored.",
     ),
     "manifest": Endpoint(
         "GET",
         "/api/s/{token}",
         (("shares", True), ("invoices", False)),
-        "SELECT token, invoice_ids, created_at, expires_at\n"
+        "SELECT token, invoice_ids, owner_name, owner_email,\n"
+        "       created_at, expires_at\n"
         "FROM shares WHERE token = $1;     -- primary key, no index needed\n"
         "\n"
         "SELECT id, issued_on, data FROM invoices\n"
@@ -150,7 +165,27 @@ ENDPOINTS: dict[str, Endpoint] = {
         "expires_at. `WHERE expires_at > now()` would fold an expired share "
         "into a missing one and cost the page the difference between 410 and "
         "404 - which is the difference between the two dead-end screens. The "
-        "row is fetched, then the expiry is compared.",
+        "row is fetched, then the expiry is compared.\n\n"
+        "It also carries `owner_name` and `owner_email`, which is what lets the "
+        "recipient's page name a person: they have no account and can be shown "
+        "nothing this response does not hold.",
+    ),
+    "share_rename": Endpoint(
+        "PATCH",
+        "/api/s/{token}  {owner_name, owner_key}",
+        (("shares", True),),
+        "SELECT owner_key_hash FROM shares WHERE token = $1;\n"
+        "-- compare_digest(sha256(owner_key), owner_key_hash)\n"
+        "\n"
+        "UPDATE shares SET owner_name = $2 WHERE token = $1;",
+        "The one column of a live share that can change, and the only write in "
+        "the flow that is not the insert. Gated by the same owner key that gates "
+        "the send, so a recipient cannot rewrite the name they were greeted by. "
+        "`owner_email` is not writable: it is the mailbox that will actually "
+        "send, and a typed address would make that line a claim rather than a "
+        "fact. The browser keeps the corrected name in localStorage and passes "
+        "it to the next POST /api/shares, so the correction is made once rather "
+        "than once per link.",
     ),
     "thumb": Endpoint(
         "GET",
@@ -184,20 +219,25 @@ ENDPOINTS: dict[str, Endpoint] = {
         "/api/s/{token}/email/preview",
         (("shares", True), ("invoices", False)),
         "-- the manifest queries again, for the summary the mail quotes\n"
-        "SELECT token, invoice_ids, expires_at FROM shares WHERE token = $1;\n"
+        "SELECT token, invoice_ids, owner_name, expires_at\n"
+        "FROM shares WHERE token = $1;\n"
         "\n"
         "SELECT id, issued_on, data FROM invoices\n"
         "WHERE id = ANY($1::text[])\n"
         "ORDER BY issued_on DESC NULLS LAST, id;",
         "Serves the rendered mail as a document, for the composer's iframe to "
         "load. It exists so the preview is the bytes the send will use rather "
-        "than a second template that can drift from it.",
+        "than a second template that can drift from it: one renderer, called "
+        "here with the response written to the iframe and called on the send "
+        "with the same output handed to Unipile. The mail names the owner twice "
+        "and its footer names the expiry date, so both come out of this row "
+        "rather than out of the template.",
     ),
     "email_send": Endpoint(
         "POST",
         "/api/s/{token}/email  {to, from_account_id, owner_key}",
         (("shares", True),),
-        "SELECT owner_key_hash, invoice_ids, expires_at\n"
+        "SELECT owner_key_hash, invoice_ids, owner_name, expires_at\n"
         "FROM shares WHERE token = $1;\n"
         "-- compare_digest(sha256(owner_key), owner_key_hash)\n"
         "-- then Unipile: POST {unipile_dsn}/api/v1/emails\n"
@@ -227,6 +267,11 @@ class Pin(NamedTuple):
     note: str = ""
     # An open question about the backend rather than a description of it.
     gap: str = ""
+    # A question this pin raised and that has since been answered. Kept rather
+    # than deleted: the elements that turned out to need a decision are worth
+    # knowing about, and quietly closing them would leave a map that had never
+    # been wrong about anything.
+    decided: str = ""
     # Which occurrence of `anchor` to mark, when the markup repeats it.
     nth: int = 1
 
@@ -354,7 +399,9 @@ SCREENS: dict[str, tuple[str, str, tuple[Pin, ...]]] = {
                 "All 37 invoices, Apr 1 - Jun 30, 2026",
                 "share_create",
                 "The count is the length of `invoice_ids`; the period is the "
-                "min and max issued date across the snapshot. " + DERIVED,
+                "min and max issued date across the snapshot; the date the "
+                "link stops working is `expires_at`, straight off the "
+                "response. " + DERIVED,
             ),
             Pin(
                 '<div class="link-row">',
@@ -392,13 +439,19 @@ SCREENS: dict[str, tuple[str, str, tuple[Pin, ...]]] = {
                 '<p class="shared-by">',
                 "Your link / martin@kirov.dev",
                 "manifest",
-                "",
-                gap="Nothing answers this. `shares` as specified carries no "
-                "owner: not a name, not an address. The recipient's copy of "
-                "this line (07-recipient.html) reads 'Shared with you by "
-                "Martin Kirov', which needs an identity the table does not "
-                "hold. Either the manifest derives it from the mailbox on the "
-                "snapshot's invoices, or `shares` gains a column.",
+                "`owner_email`, which is the mailbox the link was made from. "
+                "The owner's copy of this line needs only the address; the "
+                "recipient's copy on 07-recipient.html is what the name is "
+                "for.",
+                decided="`shares` as first specified carried no owner at all, "
+                "so neither this line nor its recipient-facing twin could be "
+                "filled. Settled 2026-08-15: two columns, `owner_name` and "
+                "`owner_email`, written at creation from the connected mailbox "
+                "and frozen with the snapshot. Deriving them at read time from "
+                "the invoices was the alternative and is worse - the mailbox "
+                "that received an invoice is not necessarily the person "
+                "sharing it, and disconnecting an account would rewrite what a "
+                "link already sent says about who sent it.",
             ),
             Pin(
                 '<h1 class="batch-name"',
@@ -449,15 +502,70 @@ SCREENS: dict[str, tuple[str, str, tuple[Pin, ...]]] = {
                 "who is looking.",
             ),
             Pin(
-                '<a class="btn-quiet" href="09-revoked.html"',
-                "Revoke",
-                None,
-                "",
-                gap="This control is going. notes.md replaces revoke with a "
-                "7-day TTL set at creation, so there is no DELETE /s/{token} "
-                "in the plan and `shares` carries `expires_at` rather than "
-                "`revoked_at`. The screens still draw it because they predate "
-                "that decision.",
+                '<p class="live">',
+                "It stops working on 12 July 2026",
+                "manifest",
+                "`expires_at`, formatted. Nothing computes a countdown and "
+                "nothing polls: the date is in the response the page already "
+                "made, and it cannot change afterwards.",
+                decided="This line used to be a Revoke button. Settled "
+                "2026-08-14 in notes.md and drawn 2026-08-15: no DELETE "
+                "/s/{token}, no `revoked_at`, and a fixed seven days set at "
+                "creation instead. What replaced the control is not another "
+                "control but the fact it would have been used to establish.",
+            ),
+            Pin(
+                '<p class="sent-as">',
+                "Recipients see it from Martin Kirov",
+                "manifest",
+                "`owner_name` off the same response. It is stated on the "
+                "owner's own page because it is the one thing here that is "
+                "shown to people the owner cannot see - and because the "
+                "fallback, the local part of the address, is exactly the value "
+                "somebody will want to fix.",
+            ),
+            Pin(
+                '<a class="btn-quiet" href="03b-name.html"',
+                "Change",
+                "share_rename",
+                "The only owner-side write left in the flow, and the reason "
+                "the owner key survived the removal of revoke: without it "
+                "anyone holding the link could rewrite the name they were "
+                "greeted by. The editing state is 03b-name.html.",
+            ),
+        ),
+    ),
+    "03b-name.html": (
+        "Correcting the name",
+        "One field, one write, and the only column of a live share that can "
+        "change.",
+        (
+            Pin(
+                '<input id="sent-as"',
+                "The name, as taken from the mailbox",
+                "manifest",
+                "Filled with `owner_name` as it stands - here the fallback "
+                "value, the local part of the address, which is what a mailbox "
+                "carrying no display name of its own produces. The field is "
+                "seeded from the response, not from the browser.",
+            ),
+            Pin(
+                '<p class="field-note"',
+                "Taken from martin@kirov.dev",
+                "manifest",
+                "`owner_email`, which is not editable. It is the mailbox that "
+                "will actually send, checked against /api/accounts when it is "
+                "used, so a typed address here would be a claim the send would "
+                "then have to refuse.",
+            ),
+            Pin(
+                '<a class="btn btn-secondary" href="03-preview.html"',
+                "Save",
+                "share_rename",
+                "One UPDATE of one column, gated by the owner key. The browser "
+                "also keeps the new name in localStorage and sends it with the "
+                "next POST /api/shares, so a correction made here does not "
+                "have to be made again on the next link.",
             ),
         ),
     ),
@@ -491,13 +599,16 @@ SCREENS: dict[str, tuple[str, str, tuple[Pin, ...]]] = {
                 "<iframe src=",
                 "The preview",
                 "email_preview",
-                "",
-                gap="No route in any spec serves this. The design is explicit "
-                "that the iframe must show the bytes the API is about to send "
-                "rather than a mock-up - which means the mail has to be "
-                "rendered server-side and fetched. Either a preview route "
-                "exists, or the preview is a second template that can drift "
-                "from the one that gets sent.",
+                "The iframe's `src` is the route: the composer fetches the "
+                "rendered mail rather than drawing one. Loading is what makes "
+                "it the real thing - the same renderer, the same row, the same "
+                "bytes the send will hand to Unipile.",
+                decided="No route in any spec served this, and the design "
+                "rules out the alternative by name: the iframe must show what "
+                "is about to be sent, not a look-alike. Settled 2026-08-15 - "
+                "the route exists, GET /api/s/{token}/email/preview, and it is "
+                "the tenth endpoint in the map. A second template that could "
+                "drift from the sending one was the only other answer.",
             ),
             Pin(
                 '<a class="btn btn-primary" href="06-sent.html"',
@@ -561,11 +672,17 @@ SCREENS: dict[str, tuple[str, str, tuple[Pin, ...]]] = {
                 '<p class="shared-by">',
                 "Shared with you by Martin Kirov",
                 "manifest",
-                "",
-                gap="The same gap as 03-preview.html, and this is the screen "
-                "that makes it a real one: a name and an address, for a "
-                "recipient who has no account and cannot be shown anything the "
-                "manifest does not carry.",
+                "`owner_name` and `owner_email`, both off the manifest. This "
+                "is the screen the two columns exist for: the reader has no "
+                "account, so every word about who shared with them has to have "
+                "travelled inside the link. The name is whatever the owner "
+                "last corrected it to; the address is the mailbox, and it is "
+                "here so a reply has somewhere to go.",
+                decided="The same question as 03-preview.html and the reason "
+                "it had to be answered rather than dropped. Settled "
+                "2026-08-15: resolved from the connected mailbox at creation "
+                "and stored on the row - the mailbox's own display name, or "
+                "the local part of its address when it has none.",
             ),
             Pin(
                 '<table class="sheet">',
@@ -608,29 +725,36 @@ SCREENS: dict[str, tuple[str, str, tuple[Pin, ...]]] = {
             ),
         ),
     ),
-    "09-revoked.html": (
-        "Revoked",
-        "The screen the TTL decision rewrites.",
+    "09-expired.html": (
+        "Expired",
+        "A 410, and the reason the manifest query is written the way it is.",
         (
             Pin(
                 '<section class="dead"',
-                "This link was turned off",
+                "This link has expired",
                 "manifest",
-                "",
-                gap="As drawn this is the response to a revoked share. Under "
-                "the TTL decision there is no revoke: the same screen becomes "
-                "*expired*, served as 410 when `expires_at` has passed. That "
-                "is why the manifest query does not filter on expiry - a "
-                "filtered query could only answer 404 here, and 404 is the "
-                "other screen.",
+                "The row came back and `expires_at` had passed: 410 Gone. This "
+                "is why the first query does not say `WHERE expires_at > "
+                "now()` - a filtered query returns no row for an expired share "
+                "and could only ever answer 404, which is the other screen and "
+                "the other instruction to the reader. The 410 body carries the "
+                "two owner fields and the two dates and nothing else: no "
+                "invoice ids, no manifest, because the second query is never "
+                "run once the expiry has failed.",
+                decided="Drawn as a revoked share until 2026-08-15, when the "
+                "screens caught up with the TTL: nobody turns a link off, its "
+                "seven days run out. Same page, same status code, different "
+                "cause - and no DELETE route to serve it.",
             ),
             Pin(
                 '<div class="dead-actions"',
                 "Ask for a new link",
-                None,
-                "No request. There is nothing to retry: the state is settled "
-                "and the page says so rather than offering a button that "
-                "cannot work.",
+                "manifest",
+                "The address it mails is `owner_email` and the name on the "
+                "button is `owner_name`, both off the row that just answered "
+                "410. Nothing else is retried: the state is settled, so the "
+                "one action left is asking the person who shared for another "
+                "link.",
             ),
         ),
     ),
@@ -722,7 +846,9 @@ SCREENS: dict[str, tuple[str, str, tuple[Pin, ...]]] = {
                 "Telling it apart from an expired one is the difference "
                 "between 'check what you pasted' and 'ask for a new link', "
                 "which is why the expiry is compared in the route rather than "
-                "filtered in the query.",
+                "filtered in the query. It is also the one dead end that can "
+                "name nobody: with no row there is no owner to mail, which is "
+                "the visible difference between this page and 09-expired.html.",
             ),
             Pin(
                 '<div class="dead-actions"',
@@ -805,6 +931,11 @@ def legend(title: str, lede: str, pins: tuple[Pin, ...]) -> str:
                 f'<p class="wiring-gap"><b>Open question.</b> '
                 f"{html.escape(pin.gap)}</p>"
             )
+        if pin.decided:
+            parts.append(
+                f'<p class="wiring-decided"><b>Answered.</b> '
+                f"{html.escape(pin.decided)}</p>"
+            )
         items.append(f'<li class="wiring-item">{"".join(parts)}</li>')
 
     return f"""<aside class="wiring" aria-label="Backend wiring">
@@ -860,6 +991,7 @@ VIEWER_ORDER = (
     "02-link.html",
     "10-loading.html",
     "03-preview.html",
+    "03b-name.html",
     "11-zipping.html",
     "04-compose.html",
     "05-from.html",
@@ -868,7 +1000,7 @@ VIEWER_ORDER = (
     "email.html",
     "07-recipient.html",
     "08-send-failed.html",
-    "09-revoked.html",
+    "09-expired.html",
     "13-not-found.html",
 )
 
@@ -963,12 +1095,19 @@ def viewer() -> str:
             for key in routes
         )
         gaps = sum(1 for pin in pins if pin.gap)
+        decided = sum(1 for pin in pins if pin.decided)
         caption = f"<p>{html.escape(lede)}</p>"
         caption += f"<p>{calls}</p>" if calls else "<p>No request at all.</p>"
         if gaps:
             caption += (
                 f"<p><b>{gaps} open question{'s' if gaps > 1 else ''}</b> on this "
                 f"screen - see the panel.</p>"
+            )
+        if decided:
+            caption += (
+                f"<p><b>{decided} answered question{'s' if decided > 1 else ''}</b> "
+                f"on this screen - the panel says what was decided and what it "
+                f"replaced.</p>"
             )
         entries.append(
             {
@@ -1012,8 +1151,17 @@ const SCREENS = [
     )
 
 
+WORDS = {2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six", 7: "Seven",
+         8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve"}
+
+
 def index() -> str:
     """The contact sheet: every screen, then every endpoint, from one table."""
+    total = len(ENDPOINTS)
+    shipped = sum(1 for route in ENDPOINTS.values() if not route.is_new)
+    planned = total - shipped
+    shipped = WORDS.get(shipped, str(shipped))
+    planned, total = (WORDS.get(n, str(n)).lower() for n in (planned, total))
     cards = "".join(
         f'<li class="map-card"><a href="{name}">'
         f'<span class="map-file">{name}</span>'
@@ -1048,6 +1196,33 @@ def index() -> str:
         for name, (_, _, pins) in SCREENS.items()
         for pin in pins
         if pin.gap
+    )
+    open_part = (
+        f"""
+  <section class="map-part">
+    <h2>What nothing answers yet</h2>
+    <p class="map-note">Elements that render data no specified endpoint can
+      return.</p>
+    <ol class="map-gaps">{gaps}</ol>
+  </section>
+"""
+        if gaps
+        else """
+  <section class="map-part">
+    <h2>What nothing answers yet</h2>
+    <p class="map-note">Nothing, at the moment. Every element on these screens
+      has a route behind it and every route has a query. The five questions this
+      map raised are below, with what was decided.</p>
+  </section>
+"""
+    )
+
+    settled = "".join(
+        f"<li><b>{html.escape(pin.element)}</b> "
+        f'<a href="{name}">{name}</a><p>{html.escape(pin.decided)}</p></li>'
+        for name, (_, _, pins) in SCREENS.items()
+        for pin in pins
+        if pin.decided
     )
 
     return f"""<!doctype html>
@@ -1085,21 +1260,25 @@ def index() -> str:
 
   <section class="map-part">
     <h2>The endpoints</h2>
-    <p class="map-note">Four of these ship today. The six new ones are the
-      plan; <code>shares</code> is the one new table, and every route that
-      reads it looks the row up by primary key. <a href="backend.md">backend.md</a>
-      explains all ten and their queries in plain terms.</p>
+    <p class="map-note">{shipped} of these ship today. The {planned} new ones
+      are the plan; <code>shares</code> is the one new table, and every route
+      that reads it looks the row up by primary key.
+      <a href="backend.md">backend.md</a> explains all {total} and their queries
+      in plain terms.</p>
     <table class="map-table">
       <thead><tr><th>Method</th><th>Path</th><th>Tables</th><th>Screens</th></tr></thead>
       <tbody>{"".join(rows)}</tbody>
     </table>
   </section>
 
+{open_part}
   <section class="map-part">
-    <h2>What nothing answers yet</h2>
-    <p class="map-note">Found while mapping the screens to routes: elements
-      that render data no specified endpoint can return.</p>
-    <ol class="map-gaps">{gaps}</ol>
+    <h2>What the map asked, and what was decided</h2>
+    <p class="map-note">Found while mapping the screens to routes, and settled
+      afterwards. Each one is pinned on the screen that raised it;
+      <a href="revisions.md">revisions.md</a> names the commit each answer landed
+      in.</p>
+    <ol class="map-gaps is-settled">{settled}</ol>
   </section>
 </main>
 </body>

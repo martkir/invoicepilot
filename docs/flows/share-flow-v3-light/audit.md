@@ -129,12 +129,12 @@ only because three layered shadows say which card is in front. Flat, a
 negative margin is just a misaligned element.
 
 *Replaced by* a two-column page. A 320px rail carries the identity (chip,
-filename, four facts), the one action, and for the owner the live state and the
-revoke; the right column carries the composer and the manifest. The rail is
-sticky, so the answer and the action stay on screen through 37 rows. That also
-retires v2's **sticky owner bar** and the `--sticky-top` variable the sheet's
-own sticky header had to read off the page, because the two controls now live
-in something that is already sticky.
+filename, four facts), the one action, and for the owner the live state, the
+name the link goes out under and the send; the right column carries the
+composer and the manifest. The rail is sticky, so the answer and the action
+stay on screen through 37 rows. That also retires v2's **sticky owner bar** and
+the `--sticky-top` variable the sheet's own sticky header had to read off the
+page, because what it held now lives in something that is already sticky.
 
 **The fan.** v2 drew the five thumbnails as overlapped sheets of paper, each
 rotated about a degree off square. Take the shadows away and it is six rotated
@@ -257,7 +257,7 @@ contain zero of either character.
 - **Two flex containers with inline `<b>` children** opened stray gaps around
   the emphasised words. Both are blocks now.
 - **Dead-end footers** carried the batch's two footnotes on pages that have no
-  batch. Revoked and not-found now get the legal links and nothing else.
+  batch. Expired and not-found now get the legal links and nothing else.
 
 ---
 

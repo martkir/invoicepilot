@@ -6,61 +6,62 @@ file.
 
 ---
 
-## Replace revoke with a 7-day TTL
+## Replace revoke with a 7-day TTL — *drawn 2026-08-15*
 
-**Decided 2026-08-14.** Remove revoke from the flow. Shareable links get a
-default TTL of 7 days at creation; after that they expire on their own.
+**Decided 2026-08-14, drawn 2026-08-15.** Removed from the flow. Links get a
+fixed 7 days at creation and expire on their own.
 
-### Why
+It is out of this file now, in the sense that matters: the screens no longer
+draw a control that was going. What it left behind is in
+[`design.md`](design.md#the-owner-block-03-previewhtml) and in
+[`../share-flow-v3-light-annotated/revisions.md`](../share-flow-v3-light-annotated/revisions.md),
+which names the commit to go back to if any of this is wrong.
 
-Revoke is the only owner-side action the recipient-facing link carries, and it
-pays for itself badly. It drags along a whole screen
-([`09-revoked.html`](09-revoked.html)), a step in the flow map, and most of the
-reason the owner key exists at all — [`index.html`](index.html) currently
-explains the key as the thing that "gates sending and revoking". It also asks
-the owner to remember a link exists and come back to kill it, which is work the
-link should be doing itself.
+What it touched, for anyone reading the diff: `09-revoked.html` became
+`09-expired.html` with a clock in place of the crossed circle; the owner block
+lost the button and gained the date; the popover, the mail footer and
+`13-not-found.html` all stopped promising that someone can turn the link off;
+step 13 of [`index.html`](index.html) is reached by *seven days pass* rather
+than by a click.
 
-A TTL answers the same question — how does a link stop working? — without an
-action. Today the answer is "live until revoked", which means in practice most
-links live forever, because nobody goes back.
+Two of the four questions this note left open are answered, and one of the two
+that are not has moved:
 
-### What it touches
+- **Is 7 days configurable at creation, or fixed?** *Fixed.* Same reason the
+  flow refuses expiry, password and permission dials: it is a decision the user
+  would have to make before getting their link.
+- **Does the owner get a way to kill a link early?** *No.* If it turns out to be
+  needed it comes back as `UPDATE shares SET expires_at = now()`, additive
+  rather than a replacement — no new column, no new state.
+- **Does the recipient see the expiry?** *Still open, and now half-decided by
+  accident:* the mail footer names the date, so anyone who arrives from the mail
+  has been told. [`07-recipient.html`](07-recipient.html) itself still does not
+  say it. Deciding it is a one-line change to `masthead()` or to `facts()`.
+- **What happens to links already live when this ships?** Still nothing to
+  answer: prototype only, no live links.
 
-- [`09-revoked.html`](09-revoked.html) — the screen goes, or becomes an
-  *Expired* screen. Probably the latter: the state still exists, only its cause
-  changes. Worth deciding whether expired keeps the neutral treatment revoked
-  had.
-- [`index.html`](index.html) — step 13 and the "owner clicks Revoke" arrow out
-  of preview; the security line at the top of the notes column that reads "no
-  expiry, password, or permission levels; live until revoked"; the two passages
-  explaining the owner key.
-- [`13-not-found.html`](13-not-found.html) — defines itself against revoked
-  ("revoked means it worked once, this means it never did"). The distinction
-  survives with expiry substituted, but the copy needs rewriting.
-- The owner key in `localStorage` — it still gates sending, so it stays, but the
-  rationale in `index.html` is now half wrong.
-- [`design.md`](design.md) and [`audit.md`](audit.md) — prose only.
-- The data model in [`../share-flow/design.md`](../share-flow/design.md) — a
-  `revoked_at` becomes an `expires_at`, set at creation rather than on an
-  action. That is the one real behavioural change; everything above is surface.
+---
+
+## Whose name is on a share
+
+**Decided 2026-08-15.** Raised by the wiring map, which found that
+`07-recipient.html` greets the reader by a name the `shares` table had nowhere
+to keep.
+
+Two fields, `owner_name` and `owner_email`, written when the link is made and
+frozen with the snapshot. They come off the connected mailbox: its own display
+name if Unipile carries one, otherwise the local part of the address
+(`martinvkirov` from `martinvkirov@gmail.com`). The owner can correct the name
+on [`03b-name.html`](03b-name.html), and the correction is kept for the next
+link. The address is not editable.
 
 ### Still open
 
-- **Is 7 days configurable at creation, or fixed?** Fixed is simpler and matches
-  the flow's existing refusal of expiry/password/permission dials. A picker on
-  [`02-link.html`](02-link.html) is the obvious place if it becomes a choice.
-- **Does the owner get a way to kill a link early?** Dropping revoke means no.
-  If that turns out to be needed, it comes back and the TTL is additive rather
-  than a replacement.
-- **Does the recipient see the expiry?** Showing "expires in 6 days" on
-  [`07-recipient.html`](07-recipient.html) sets an expectation and prompts them
-  to download now. Not showing it keeps the page clean.
-- **What happens to links already live when this ships?** Prototype-only for
-  now, so nothing — but the answer matters if any exist by then.
-
-### Older versions
-
-`../share-flow`, `../share-flow-v2` and `../share-flow-v3` all carry the same
-revoke screen. Treat them as historical snapshots and leave them alone unless we
-decide otherwise.
+- **Which mailbox, when two are connected?** Drawn as the first account.
+  `POST /shares` takes an optional `account_id` for the same reason the composer
+  has a From picker, but no screen offers the choice at creation, and it is not
+  obvious that one should: the link is not a message.
+- **What if no mailbox is connected at all?** Cannot happen in practice — the
+  invoices got here somehow — but the fields are `NOT NULL`, so the route needs
+  an answer rather than a crash. Probably an empty name and a masthead that
+  degrades to *Shared with you*.

@@ -1,9 +1,10 @@
 # The backend, in plain terms
 
-What has to be built for the share flow to work: **one table and six new
+What has to be built for the share flow to work: **one table and seven new
 endpoints.** This file explains all of it in order. The same facts are pinned
 onto the screens themselves — open [`index.html`](index.html) for that, or read
-this straight through.
+this straight through. What changed between drafts, and the commit to go back
+to, is in [`revisions.md`](revisions.md).
 
 ---
 

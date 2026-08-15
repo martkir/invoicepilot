@@ -314,8 +314,8 @@ footer {
         would otherwise make before getting their link:
         <ol>
           <li><b>No share dialog.</b> The click is the share. The popover reports, it does not ask.</li>
-          <li><b>No expiry, password, or permission levels.</b> Live until revoked; revoke is the
-            one switch.</li>
+          <li><b>No expiry picker, password, or permission levels.</b> Every link gets the same
+            seven days and there is no switch at all: no revoke, and nothing to set.</li>
           <li><b>No separate preview.</b> &ldquo;Open the link&rdquo; opens the exact URL the
             recipient gets.</li>
           <li><b>No picking.</b> The link <em>is</em> the batch: no checkboxes, no partial zip.
@@ -415,9 +415,12 @@ footer {
       <div class="caption">
         <p>The link already exists and is <b>already on the clipboard</b>, so there is nothing to
         confirm. The response also carries an <code>owner_key</code>, which this browser keeps in
-        <code>localStorage</code> and never shows anyone; it is what gates sending and revoking
-        later. The snapshot of invoice ids is <b>frozen here</b>, so a later scan cannot silently
-        widen a link that has already gone out.</p>
+        <code>localStorage</code> and never shows anyone; it is what gates sending the mail and
+        correcting the name on the link later. The snapshot of invoice ids is <b>frozen here</b>,
+        so a later scan cannot silently widen a link that has already gone out — and so are the
+        two fields that say who shared it, taken from the connected mailbox at this moment. The
+        popover names the day the link stops working, because that is now the only thing that ever
+        ends it.</p>
         <p>Opening the link is the button and sending it by email is a text link. A matched pair of
         filled and outlined buttons reads as two equal decisions, and only one of them is the
         point. While the popover is open, the share control itself carries the one tinted state on
@@ -459,8 +462,8 @@ footer {
       <div class="caption">
         <p><b>The page is two columns now.</b> The left rail holds what the batch is and the one
         thing to do with it: the filename at display size, four labelled facts, the download, and
-        for the owner the live state and the revoke. It sticks, so the answer and the action stay
-        on screen through 37 rows. v2 stacked all of that down one column and lifted the document
+        for the owner the live state with the date it ends, the name recipients will see, and the
+        send. It sticks, so the answer and the action stay on screen through 37 rows. v2 stacked all of that down one column and lifted the document
         card 44px into the band above it to break the stripes, which only worked because three
         layered shadows told you which card was in front.</p>
         <p>The right column is <b>what is inside the download</b>: a <code>pdf</code> part and a
@@ -483,7 +486,32 @@ footer {
       <div class="frame tall"><iframe src="03-preview.html" loading="lazy" title="The share page"></iframe></div>
     </div>
   </section>
-  <div class="arrow"><span>click Download all</span></div>
+  <div class="arrow"><span>owner clicks Change</span></div>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="num">4b</span><h2>Correcting the name</h2>
+      <span class="route">PATCH /s/{token}</span>
+      <span class="who w-owner">Owner</span>
+      <a class="open" href="03b-name.html" target="_blank">open full screen ↗</a>
+    </div>
+    <div class="body">
+      <div class="caption">
+        <p>A branch off step 4, and usually skipped. The name a recipient is greeted by comes from
+        the <b>connected mailbox</b>, which is the only thing this product knows about its user:
+        the mailbox&rsquo;s own display name if it carries one, and otherwise the local part of the
+        address — <code>martinvkirov</code> from <code>martinvkirov@gmail.com</code>. That is
+        recognisable enough to send under and wrong enough to want fixing, so it is
+        <b>shown, not hidden</b>, with one control beside it.</p>
+        <p>The edit happens <b>in the rail, in place</b>, with the page it changes still on screen
+        behind it. Only the name is editable: the address underneath it is the mailbox that will
+        actually send, and letting anyone type that would make the line a claim rather than a fact.
+        The correction is kept for the next link too, so this is a screen most people see once.</p>
+      </div>
+      <div class="frame tall"><iframe src="03b-name.html" loading="lazy" title="Correcting the name"></iframe></div>
+    </div>
+  </section>
+  <div class="arrow"><span>back to the link, then Download all</span></div>
 
   <section class="step">
     <div class="step-head">
@@ -663,24 +691,24 @@ footer {
       <div class="frame tall"><iframe src="08-send-failed.html" loading="lazy" title="Send failed"></iframe></div>
     </div>
   </section>
-  <div class="arrow"><span>owner clicks Revoke</span></div>
+  <div class="arrow"><span>seven days pass</span></div>
 
   <section class="step">
     <div class="step-head">
-      <span class="num">13</span><h2>Revoked</h2>
-      <span class="route">DELETE /s/{token}</span>
+      <span class="num">13</span><h2>Expired</h2>
+      <span class="route">GET /s/{token} → 410</span>
       <span class="who w-anyone">Anyone with the link</span>
-      <a class="open" href="09-revoked.html" target="_blank">open full screen ↗</a>
+      <a class="open" href="09-expired.html" target="_blank">open full screen ↗</a>
     </div>
     <div class="body">
       <div class="caption">
         <p>Says so plainly rather than 404ing. The recipient knows the link once worked, so
-        pretending it never existed reads as a bug, and naming who turned it off tells them who to
-        ask. <b>A dead end needs a way out</b>, so it has two: mail the sender, or go back. The
-        mark beside the heading is neutral, because a revoked link is a state and not an
-        error.</p>
+        pretending it never existed reads as a bug, and naming the day it lapsed tells them what
+        to ask for. <b>A dead end needs a way out</b>, so it has two: mail the sender, or go back.
+        The mark beside the heading is a clock and it is neutral, because nobody turned this link
+        off — the seven days it was given ran out, which is a state and not an error.</p>
       </div>
-      <div class="frame tall"><iframe src="09-revoked.html" loading="lazy" title="Revoked"></iframe></div>
+      <div class="frame tall"><iframe src="09-expired.html" loading="lazy" title="Expired"></iframe></div>
     </div>
   </section>
 
@@ -695,8 +723,8 @@ footer {
       <div class="caption">
         <p>A 22-character token in an email is a token that gets broken across two lines, so the
         <b>likeliest 404 in this product has a known cause</b>, and the page names it instead of
-        saying &ldquo;page not found&rdquo;. Branded, and it distinguishes itself from the revoked
-        page: revoked means it worked once, this means it never did.</p>
+        saying &ldquo;page not found&rdquo;. Branded, and it distinguishes itself from the expired
+        page: expired means it worked once, this means it never did.</p>
       </div>
       <div class="frame tall"><iframe src="13-not-found.html" loading="lazy" title="Nothing at this link"></iframe></div>
     </div>

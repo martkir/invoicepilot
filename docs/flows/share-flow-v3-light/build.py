@@ -11,12 +11,13 @@ Structural changes against share-flow-v2/build.py that live in this file
 rather than in the CSS:
 
   · The share page is two columns. A sticky rail carries the batch identity,
-    the four facts, the download, and (for the owner) the live state and the
-    revoke. The right column carries the composer and the manifest. v2 stacked
+    the four facts, the download, and (for the owner) the live state, the name
+    the link goes out under and the send. The right column carries the composer
+    and the manifest. v2 stacked
     all of it down one column and lifted one card 44px into the band above it
     to break the stripes; without a shadow under it that overlap reads as a
     misplaced element, so the layout changed instead of the trick.
-  · The sticky owner bar is gone. Its two controls moved into the rail, which
+  · The sticky owner bar is gone. Its controls moved into the rail, which
     is already sticky, which also removes the --sticky-top offset the sheet's
     own sticky header had to read off the page.
   · The fan of five thumbnails is gone. See docs_part().
@@ -28,6 +29,12 @@ rather than in the CSS:
 
 Not generated here: index.html (the contact sheet), viewer.html, email.html
 (the draft) and the three stylesheets. Those are one-offs, edited directly.
+
+Revision 2 (2026-08-15) settled three things the screens had been drawn
+around; ../share-flow-v3-light-annotated/revisions.md is the log. In this file
+they are: no Revoke control and no revoked screen (a link ends on a date, and
+09-expired.html is what that looks like), an owner display name that the owner
+can correct (03b-name.html), and a mail preview that is the mail itself.
 """
 
 from pathlib import Path
@@ -110,6 +117,22 @@ SUBJECT = "Invoices, Apr to Jun 2026 (37 invoices)"
 # does not exist when there is nothing to pick between.
 ACCOUNTS = ["martin@kirov.dev", "billing@kirov.dev"]
 
+# Who the recipient is told this came from. The address is the connected
+# mailbox and is not the owner's to type; the name is a display name taken from
+# that mailbox and correctable, because the mailbox often has no name on it at
+# all and "martinvkirov" is not what anyone wants to be introduced as.
+OWNER_MAIL = ACCOUNTS[0]
+OWNER_NAME = "Martin Kirov"
+# What the name falls back to before anyone corrects it: the local part of the
+# address, verbatim. It is drawn on 03b-name.html as the value being replaced.
+OWNER_FALLBACK = OWNER_MAIL.split("@")[0]
+
+# Links stop working seven days after they are made, so every screen that
+# mentions the link's life mentions a date rather than a promise. The batch
+# ends 30 June and the share is made a few days later.
+MADE_ON = "5 July 2026"
+EXPIRES = "12 July 2026"
+
 # invoices.csv carries 22 columns per invoice; seven of them are on screen
 # (vendor, invoice number, file, issued, net, VAT, total; "#" is a row number,
 # not data). These are the rest, and they are what the "+15" column counts.
@@ -151,7 +174,11 @@ I_OPEN = icon('<path d="M14.4 3.6h6v6"/><path d="M10.2 13.8 20.4 3.6"/>'
               '<path d="M18.6 13.2v5.2a2.1 2.1 0 0 1-2.1 2.1H5.7a2.1 2.1 0 0 1-2.1-2.1V7.6a2.1 2.1 0 0 1 2.1-2.1h5.2"/>', 15)
 I_CARET = icon('<path d="m6.6 9.4 5.4 5.2 5.4-5.2"/>', 14)
 I_ALERT = icon('<circle cx="12" cy="12" r="8.6"/><path d="M12 7.8v4.6"/><path d="M12 16.1h.01"/>', 16)
-I_REVOKED = icon('<circle cx="12" cy="12" r="8.6"/><path d="m6.4 6.4 11.2 11.2"/>', 22)
+# Expiry is a clock, not a crossed-out circle. The link was not turned off by
+# anyone; its time ran out, and the mark should say which of those happened.
+I_EXPIRED = icon('<circle cx="12" cy="12" r="8.6"/><path d="M12 7.2V12l3.2 2"/>', 22)
+I_PEN = icon('<path d="M14.8 5.4 18.6 9.2"/>'
+             '<path d="M16.4 3.8a2.1 2.1 0 0 1 3 3L8.6 17.6l-4 1.2 1.2-4Z"/>', 14)
 I_LOST = icon('<circle cx="10.8" cy="10.8" r="6.8"/><path d="m15.7 15.7 4.7 4.7"/>'
               '<path d="M8.6 8.6 13 13"/><path d="M13 8.6 8.6 13"/>', 22)
 I_BACK = icon('<path d="M19.4 12H4.6"/><path d="m10.4 5.6-5.8 6.4 5.8 6.4"/>', 15)
@@ -368,7 +395,7 @@ def dashboard(popover: str = "", checked: bool = False, opened: str = "") -> str
 POPOVER = f"""<div class="share-pop" role="status">
             <p class="pop-title"><span class="ok">{I_TICK}</span>Link copied</p>
             <p class="pop-sub">All 37 invoices, {PERIOD}. Anyone with this link can view and
-            download them. It stays live until you revoke it.</p>
+            download them. It stops working on <b>{EXPIRES}</b>.</p>
             <div class="link-row"><code>{LINK}</code>
               <button class="icon-btn" aria-label="Copy the link again">{I_COPY}</button></div>
             <div class="pop-actions">
@@ -380,8 +407,15 @@ POPOVER = f"""<div class="share-pop" role="status">
 
 # ---------------------------------------------------------------- share page
 def masthead(owner: bool) -> str:
-    who = ('<p class="shared-by">Your link<b>martin@kirov.dev</b></p>' if owner else
-           '<p class="shared-by">Shared with you by<b>Martin Kirov</b>martin@kirov.dev</p>')
+    """Whose link this is.
+
+    Both halves are the same two fields off the share - a display name and the
+    mailbox it was made from - frozen when the link was made. The recipient has
+    no account and can be told nothing the link does not carry, so this line is
+    the reason those fields exist.
+    """
+    who = (f'<p class="shared-by">Your link<b>{OWNER_MAIL}</b></p>' if owner else
+           f'<p class="shared-by">Shared with you by<b>{OWNER_NAME}</b>{OWNER_MAIL}</p>')
     return (f'<header class="masthead"><a class="brand" href="index.html">'
             f'<span class="mark">{I_MARK}</span>Invoice Pilot</a>{who}</header>')
 
@@ -409,24 +443,49 @@ ZIPPING = """<div class="get">
     </div>"""
 
 
-def owner_block() -> str:
+def owner_block(editing: bool = False) -> str:
     """The only thing that differs between the owner's page and everyone
     else's, and the reason there is no separate preview mode to keep in step.
 
     It lives at the foot of the rail rather than in a bar across the top of
-    the window, so Revoke is reachable from row 37 without a second sticky
-    element on the page.
+    the window, so the whole of it is reachable from row 37 without a second
+    sticky element on the page.
+
+    Three things, in the order the owner asks about them: how long the link
+    lives, whose name is on it, and how to send it. The first replaced Revoke -
+    a link that ends on a date needs no button, and the date is worth more on
+    the page than the button was. The second is here rather than in the
+    masthead because it is the one field the owner may correct, and owner-only
+    controls belong in the owner block.
     """
+    if editing:
+        return f"""<div class="owner-block">
+        <p class="live"><b>This link is live.</b> Anyone with it can download these invoices.
+          It stops working on <b>{EXPIRES}</b>.</p>
+        <div class="name-edit">
+          <div class="field"><label for="sent-as">Recipients see it from</label>
+            <input id="sent-as" name="sent-as" type="text" autocomplete="name"
+              value="{OWNER_FALLBACK}" aria-describedby="sent-as-note"/></div>
+          <p class="field-note" id="sent-as-note">Taken from {OWNER_MAIL}, which carries no name.
+            Shown on this page and in the email.</p>
+          <div class="rail-actions">
+            <a class="btn btn-secondary" href="03-preview.html">Save</a>
+            <a class="btn-quiet" href="03-preview.html">Cancel</a>
+          </div>
+        </div>
+      </div>"""
     return f"""<div class="owner-block">
-        <p class="live"><b>This link is live.</b> Anyone with it can download these invoices.</p>
+        <p class="live"><b>This link is live.</b> Anyone with it can download these invoices.
+          It stops working on <b>{EXPIRES}</b>.</p>
+        <p class="sent-as">Recipients see it from <b>{OWNER_NAME}</b>
+          <a class="btn-quiet" href="03b-name.html">{I_PEN}Change</a></p>
         <div class="rail-actions">
           <a class="btn btn-secondary" href="04-compose.html">{I_MAIL}Send by email</a>
-          <a class="btn-quiet" href="09-revoked.html">Revoke</a>
         </div>
       </div>"""
 
 
-def rail(owner: bool, action: str) -> str:
+def rail(owner: bool, action: str, editing: bool = False) -> str:
     """What the batch is, and the one thing to do with it.
 
     The filename is the largest thing on the page because "is this the right
@@ -440,7 +499,7 @@ def rail(owner: bool, action: str) -> str:
       </div>
       {facts()}
       {action}
-      {owner_block() if owner else ''}
+      {owner_block(editing) if owner else ''}
     </section>"""
 
 
@@ -581,7 +640,7 @@ SHARE_FOOT = """<footer class="share-foot">
 
 
 def share_page(*, owner: bool, banner: str = "", composer: str = "",
-               action: str = DOWNLOAD) -> str:
+               action: str = DOWNLOAD, editing: bool = False) -> str:
     """Owner and recipient are the same page.
 
     There is no what-they-will-see mode to keep in step with what they
@@ -592,7 +651,7 @@ def share_page(*, owner: bool, banner: str = "", composer: str = "",
   {masthead(owner)}
   {banner}
   <div class="share-cols">
-    {rail(owner, action)}
+    {rail(owner, action, editing)}
     <div class="stack">
       {composer}
       <div class="doc-card">
@@ -752,15 +811,19 @@ def dead(mark: str, title: str, body: str, actions: str, desc_id: str) -> str:
 </main>"""
 
 
-REVOKED = dead(
-    I_REVOKED,
-    "This link was turned off",
-    "<p>Martin Kirov revoked it, so the invoices behind it are no longer downloadable. "
-    "Nothing was deleted; ask him for a new link and it takes him two clicks.</p>"
-    "<p class='quiet'>Revoked links stay revoked, and a new link gets a new address.</p>",
-    f'<a class="btn btn-primary" href="mailto:martin@kirov.dev">{I_MAIL}Email Martin</a>'
+# Nobody turned this off: the seven days ran out. The page says whose link it
+# was and when it lapsed, because both are things the recipient would otherwise
+# have to ask for, and asking is the only way out of this screen.
+EXPIRED = dead(
+    I_EXPIRED,
+    "This link has expired",
+    f"<p>{OWNER_NAME} shared these invoices on {MADE_ON}, and share links stop working seven "
+    f"days later. It lapsed on {EXPIRES}. Nothing was deleted; ask for a new link and it takes "
+    "two clicks.</p>"
+    "<p class='quiet'>Every link expires on its own, and a new one gets a new address.</p>",
+    f'<a class="btn btn-primary" href="mailto:{OWNER_MAIL}">{I_MAIL}Email {OWNER_NAME.split()[0]}</a>'
     f'<a class="btn-quiet" href="index.html">{I_BACK}Back to the flow</a>',
-    "revoked-title",
+    "expired-title",
 )
 
 # A mistyped or truncated token is the likeliest way anyone lands here, so the
@@ -771,8 +834,8 @@ NOT_FOUND = dead(
     "<p>The address is not one we recognise. Links that break across two lines in an email are "
     "the usual cause, so check that the whole thing after <code>/s/</code> made it, all 22 "
     "characters.</p>"
-    "<p class='quiet'>If it was copied whole, the share may have been revoked. "
-    "The person who sent it can tell you.</p>",
+    "<p class='quiet'>A link that has run out of time says so instead, and names the day it "
+    "did. This one was never an address at all.</p>",
     f'<a class="btn btn-primary" href="03-preview.html">{I_BACK}Try the link again</a>'
     '<a class="btn-quiet" href="index.html">Back to the flow</a>',
     "notfound-title",
@@ -789,6 +852,8 @@ SCREENS = {
     "01b-row.html": ("The row, opened", dashboard(opened="Hetzner Online GmbH"), D_ROW, ""),
     "02-link.html": ("Link created", dashboard(POPOVER), D_DASH, ""),
     "03-preview.html": ("The share page", share_page(owner=True), D_SHARE, "share-page"),
+    "03b-name.html": ("Correcting the name",
+                      share_page(owner=True, editing=True), D_SHARE, "share-page"),
     "04-compose.html": ("Composer", share_page(owner=True, composer=composer()), D_SHARE, "share-page"),
     "05-from.html": ("Choosing the mailbox",
                      share_page(owner=True, composer=composer(menu_open=True)), D_SHARE, "share-page"),
@@ -796,7 +861,7 @@ SCREENS = {
     "07-recipient.html": ("Recipient's view", share_page(owner=False), D_SHARE, "share-page"),
     "08-send-failed.html": ("Send failed",
                             share_page(owner=True, composer=composer(MAIL_ERROR)), D_SHARE, "share-page"),
-    "09-revoked.html": ("Revoked", REVOKED, "This share link has been turned off.", "share-page"),
+    "09-expired.html": ("Expired", EXPIRED, "This share link has run out of time.", "share-page"),
     "10-loading.html": ("Loading", loading_page(), D_SHARE, "share-page"),
     "11-zipping.html": ("Preparing the download",
                         share_page(owner=False, action=ZIPPING), D_SHARE, "share-page"),

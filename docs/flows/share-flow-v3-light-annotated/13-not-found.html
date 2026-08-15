@@ -25,7 +25,7 @@
   <section class="dead" aria-labelledby="notfound-title" data-pin="1">
     <span class="dead-mark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m15.7 15.7 4.7 4.7"/><path d="M8.6 8.6 13 13"/><path d="M13 8.6 8.6 13"/></svg></span>
     <h1 id="notfound-title">There is nothing at this link</h1>
-    <p>The address is not one we recognise. Links that break across two lines in an email are the usual cause, so check that the whole thing after <code>/s/</code> made it, all 22 characters.</p><p class='quiet'>If it was copied whole, the share may have been revoked. The person who sent it can tell you.</p>
+    <p>The address is not one we recognise. Links that break across two lines in an email are the usual cause, so check that the whole thing after <code>/s/</code> made it, all 22 characters.</p><p class='quiet'>A link that has run out of time says so instead, and names the day it did. This one was never an address at all.</p>
     <div class="dead-actions" data-pin="2"><a class="btn btn-primary" href="03-preview.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.4 12H4.6"/><path d="m10.4 5.6-5.8 6.4 5.8 6.4"/></svg>Try the link again</a><a class="btn-quiet" href="index.html">Back to the flow</a></div>
   </section>
   <footer class="share-foot">
@@ -40,12 +40,15 @@
     <p class="wiring-lede">The 404, and why it has to be a different screen from the 410.</p>
   </div>
   <ol class="wiring-list">
-    <li class="wiring-item"><p class="wiring-el"><span class="wiring-n">1</span><span>Nothing at this link</span></p><p class="wiring-call"><b>GET</b> /api/s/{token}</p><p class="wiring-tables"><span class="wiring-table is-new">shares · new</span><span class="wiring-table">invoices</span></p><pre class="wiring-sql">SELECT token, invoice_ids, created_at, expires_at
+    <li class="wiring-item"><p class="wiring-el"><span class="wiring-n">1</span><span>Nothing at this link</span></p><p class="wiring-call"><b>GET</b> /api/s/{token}</p><p class="wiring-tables"><span class="wiring-table is-new">shares · new</span><span class="wiring-table">invoices</span></p><pre class="wiring-sql">SELECT token, invoice_ids, owner_name, owner_email,
+       created_at, expires_at
 FROM shares WHERE token = $1;     -- primary key, no index needed
 
 SELECT id, issued_on, data FROM invoices
 WHERE id = ANY($1::text[])
-ORDER BY issued_on DESC NULLS LAST, id;</pre><p class="wiring-note">Two queries, and the first one deliberately does not filter on expires_at. `WHERE expires_at &gt; now()` would fold an expired share into a missing one and cost the page the difference between 410 and 404 - which is the difference between the two dead-end screens. The row is fetched, then the expiry is compared.</p><p class="wiring-note">The first query returned no row: this token was never minted. Telling it apart from an expired one is the difference between &#x27;check what you pasted&#x27; and &#x27;ask for a new link&#x27;, which is why the expiry is compared in the route rather than filtered in the query.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">2</span><span>Try again</span></p><p class="wiring-none">no request</p><p class="wiring-note">No request. The likeliest cause is a token broken across two lines by a mail client, so the page names that rather than retrying anything.</p></li>
+ORDER BY issued_on DESC NULLS LAST, id;</pre><p class="wiring-note">Two queries, and the first one deliberately does not filter on expires_at. `WHERE expires_at &gt; now()` would fold an expired share into a missing one and cost the page the difference between 410 and 404 - which is the difference between the two dead-end screens. The row is fetched, then the expiry is compared.
+
+It also carries `owner_name` and `owner_email`, which is what lets the recipient&#x27;s page name a person: they have no account and can be shown nothing this response does not hold.</p><p class="wiring-note">The first query returned no row: this token was never minted. Telling it apart from an expired one is the difference between &#x27;check what you pasted&#x27; and &#x27;ask for a new link&#x27;, which is why the expiry is compared in the route rather than filtered in the query. It is also the one dead end that can name nobody: with no row there is no owner to mail, which is the visible difference between this page and 09-expired.html.</p></li><li class="wiring-item"><p class="wiring-el"><span class="wiring-n">2</span><span>Try again</span></p><p class="wiring-none">no request</p><p class="wiring-note">No request. The likeliest cause is a token broken across two lines by a mail client, so the page names that rather than retrying anything.</p></li>
   </ol>
   <p class="wiring-foot">Generated by annotate.py from the screens in
     <a href="../share-flow-v3-light/index.html">share-flow-v3-light</a>.

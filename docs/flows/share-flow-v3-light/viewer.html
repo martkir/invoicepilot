@@ -274,7 +274,7 @@ kbd {
 const FALLBACK = [
   '01-idle', '02-link', '10-loading', '03-preview', '11-zipping', '04-compose',
   '05-from', '12-invalid', '06-sent', 'email', '07-recipient', '08-send-failed',
-  '09-revoked', '13-not-found',
+  '09-expired', '13-not-found',
 ].map((f, i) => ({ src: f + '.html', title: f.replace(/^\d+-/, '').replace(/-/g, ' '), num: String(i + 1) }));
 
 const el = {

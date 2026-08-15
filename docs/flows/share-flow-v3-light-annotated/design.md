@@ -1,13 +1,15 @@
 # Share flow v3 light, annotated: what this folder is
 
-The fourteen screens of [`../share-flow-v3-light`](../share-flow-v3-light/design.md),
+The fifteen screens of [`../share-flow-v3-light`](../share-flow-v3-light/design.md),
 with every element that a request fills marked, and a panel beside each screen
 naming the endpoint, the table and the query behind it. Open
 [`index.html`](index.html) for the map, or any screen for the screen.
 
 For the backend on its own, without the screens around it, read
-[`backend.md`](backend.md): the table, the ten routes and every query, in plain
-terms. This file is about how the annotation is made and what it turned up.
+[`backend.md`](backend.md): the table, the eleven routes and every query, in
+plain terms. This file is about how the annotation is made and what it turned
+up. [`revisions.md`](revisions.md) is the log of what changed between drafts of
+the flow, and the commit to check out to see any of them again.
 
 This folder owns **no design**. It owns one stylesheet, one generator and this
 file. The screens are read out of the design folder, the three stylesheets are
@@ -37,57 +39,68 @@ moved under `draft/` after they were written.
 ## What the wiring says, in one paragraph
 
 One new table, `shares`, holding a token, a hashed owner key, a JSONB snapshot
-of invoice ids, and two timestamps. Ten endpoints touch these screens and
-**four of them already ship** — `/api/accounts`, `/api/scan`, `/api/invoices`
-and `/api/invoices/{id}/document`, read off `backend/services/api.py` rather
-than imagined. The six new ones are all scoped under `/s/{token}`, and every
-one of them looks the share up by primary key. There is no query in the flow
-that is not a primary-key lookup or an `id = ANY(...)` over the snapshot.
+of invoice ids, the name and address of the mailbox it was made from, and two
+timestamps. Eleven endpoints touch these screens and **four of them already
+ship** — `/api/accounts`, `/api/scan`, `/api/invoices` and
+`/api/invoices/{id}/document`, read off `backend/services/api.py` rather than
+imagined. The seven new ones are all scoped under `/api/shares` or
+`/api/s/{token}`, and every one of them looks the share up by primary key.
+There is no query in the flow that is not a primary-key lookup or an
+`id = ANY(...)` over the snapshot.
 
-## The amendment the screens predate
+## The two amendments this map produced
 
-[`../share-flow-v3-light/notes.md`](../share-flow-v3-light/notes.md) replaced
-revoke with a 7-day TTL on 2026-08-14. The wiring is annotated to that
-decision: `shares` carries `expires_at` rather than `revoked_at`, set at
-creation, and there is no `DELETE /s/{token}`.
+Both started as pins nothing could answer, and both are now drawn. The map is
+where they were found, which is the argument for annotating a flow at all: the
+questions came out of asking *what request fills this element?* one element at
+a time.
 
-The screens still draw Revoke, because they were drawn first. Rather than
-quietly annotate a control that is going, the two places it appears — pin 8 on
-[`03-preview.html`](03-preview.html) and the whole of
-[`09-revoked.html`](09-revoked.html) — say so in the panel. A wiring map that
-silently documented a route nobody intends to build would be worse than one
-that argues with the screen it is drawn on.
+**Revoke became a 7-day TTL.**
+[`../share-flow-v3-light/notes.md`](../share-flow-v3-light/notes.md) decided it
+on 2026-08-14 and the screens caught up on 2026-08-15. `shares` carries
+`expires_at` rather than `revoked_at`, set at creation; there is no
+`DELETE /s/{token}`; the owner block states a date where a button used to be;
+and `09-revoked.html` is now
+[`09-expired.html`](09-expired.html), same page and same 410, different cause.
 
-One consequence is worth keeping when the screens are redrawn: **the manifest
-query does not filter on expiry.** `WHERE expires_at > now()` would fold an
-expired share into a missing one and cost the page the difference between 410
-and 404 — which is the difference between
-[`09-revoked.html`](09-revoked.html) and
+One consequence is load-bearing: **the manifest query does not filter on
+expiry.** `WHERE expires_at > now()` would fold an expired share into a missing
+one and cost the page the difference between 410 and 404 — which is the
+difference between [`09-expired.html`](09-expired.html) and
 [`13-not-found.html`](13-not-found.html). The row is fetched, then the expiry
 is compared.
 
+**A share carries who made it.** `owner_name` and `owner_email` are written at
+creation from the connected mailbox — its own display name if Unipile has one,
+otherwise the local part of the address — and frozen with the snapshot. The
+owner can correct the name on [`03b-name.html`](03b-name.html), which is the
+one `UPDATE` in the flow and the reason the owner key outlived revoke.
+
 ## What nothing answers yet
 
-Five pins are flagged as open questions rather than descriptions. They are
-collected at the foot of [`index.html`](index.html); three of them are one
-problem each.
+Nothing. Five pins were flagged as open questions when this folder was first
+generated; all five are answered, and each keeps its entry on the screen that
+raised it, marked *Answered* rather than deleted. They are collected at the
+foot of [`index.html`](index.html).
 
-**The owner's identity.** [`03-preview.html`](03-preview.html) says *Your link
-· martin@kirov.dev* and [`07-recipient.html`](07-recipient.html) says *Shared
-with you by Martin Kirov · martin@kirov.dev*. `shares` as specified carries no
-owner at all — not a name, not an address. Either the manifest derives it from
-the mailbox on the snapshot's invoices, or the table gains a column. The
-recipient's copy is the one that settles it: they have no account and can be
-shown nothing the manifest does not carry.
+That the five were three problems is worth keeping in view, because it is the
+shape this kind of review tends to have:
 
-**The composer's preview.** [`04-compose.html`](04-compose.html) has a real
-`<iframe>`, and the design is explicit that it must show *the bytes the API is
-about to send* rather than a mock-up. No route in any spec serves that, so
-either `GET /s/{token}/email/preview` exists — the tenth endpoint in the map —
-or the preview becomes a second template that can drift from the one that
-sends, which is the outcome the design rules out by name.
+**The owner's identity**, raised twice — on
+[`03-preview.html`](03-preview.html) and on
+[`07-recipient.html`](07-recipient.html). The recipient's copy is what settled
+it: they have no account and can be shown nothing the manifest does not carry,
+so the identity has to travel inside the link. Deriving it at read time from
+the mailbox on the snapshot's invoices was the alternative, and it is wrong for
+a reason the screens make obvious — the mailbox that *received* an invoice is
+not necessarily the person sharing it.
 
-**Revoke, twice**, as above.
+**The composer's preview**, on [`04-compose.html`](04-compose.html): a real
+`<iframe>` whose `src` no specified route could serve.
+`GET /api/s/{token}/email/preview` exists now, which keeps the design's own
+rule that the preview is the bytes the send will use.
+
+**Revoke**, raised twice, as above.
 
 ## How it is generated
 
@@ -109,7 +122,7 @@ that one structure.
 
 ### The viewer
 
-[`viewer.html`](viewer.html) pages through all fifteen screens with the arrow
+[`viewer.html`](viewer.html) pages through all sixteen screens with the arrow
 keys, the panel travelling with each one. It is the design folder's viewer with
 **one thing replaced: the screen list.**
 
@@ -123,14 +136,14 @@ list has a real single source — the same table that places the pins — so it 
 written out rather than rediscovered.
 
 What it gains from being generated: the chip in the bar counts the screen's
-pins, and the caption bar carries the screen's routes and the number of open
-questions on it. Paging through the flow reads as the flow *and* as its wiring.
+pins, and the caption bar carries the screen's routes, the number of open
+questions on it and the number that have been answered. Paging through the flow
+reads as the flow *and* as its wiring.
 
 The order is the flow's, not the filenames' — loading before the page it stands
 in for, the mail between sending it and the recipient opening it. It is the
-order that viewer already carried, plus `01b-row.html`, which the original list
-omits because nothing in the flow passes through it. It is in this folder and
-reachable, so it pages one step after the screen it opens out of.
+order that viewer already carried, plus the two branch screens `01b-row.html`
+and `03b-name.html`, each paging one step after the screen it opens out of.
 
 ### The one file that is not annotated
 

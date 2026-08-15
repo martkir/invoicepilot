@@ -108,13 +108,14 @@ somewhere else.
 - **The rail (320px)** is what the batch *is* and the one thing to do with it:
   the `zip` chip, the filename at display size, four labelled facts on a
   hairline rhythm, `Download all`, and the sentence naming what lands in the
-  folder. For the owner it also carries the live state, `Send by email` and
-  `Revoke`.
+  folder. For the owner it also carries the live state with the date the link
+  ends, the name recipients will see it from with one control to correct it,
+  and `Send by email`.
 - **The right column** is what is inside the batch: the composer when it is
   open, then the manifest card with its `pdf` part and its `csv` part.
 
-Because the rail is sticky, `Revoke` and `Download all` are reachable from
-row 37 without scrolling back, which is what v2 used a second sticky element
+Because the rail is sticky, the owner block and `Download all` are reachable
+from row 37 without scrolling back, which is what v2 used a second sticky element
 for. That element is gone, and with it the `--sticky-top` variable the sheet's
 own sticky header had to read off the page.
 
@@ -123,9 +124,9 @@ rail and the manifest are a full screen apart anyway.
 
 ---
 
-## The six screens whose content changed
+## The screens whose content changed
 
-Everything else is the same markup in new tokens. These six carry a decision.
+Everything else is the same markup in new tokens. These carry a decision.
 
 ### The opened row, [`01b-row.html`](01b-row.html)
 
@@ -190,6 +191,36 @@ foot of the rail rather than in a bar across the top of the window. One status
 dot, static, because "this link is live" is real state and Section 7.A allows
 exactly that.
 
+Three things, in the order the owner asks about them: how long the link lives,
+whose name is on it, and how to send it.
+
+**The live line names a date.** `Revoke` is gone — [`notes.md`](notes.md)
+replaced it with a fixed seven days on 2026-08-14 — and what replaced it is not
+another control but a fact. A link that ends on its own needs no switch, and
+the date is worth more on the page than the switch was. It is the same sentence
+in three places: the popover that mints the link, this block, and the footer of
+the mail.
+
+**The name is shown, and it is correctable.** Everything the recipient is told
+about who shared with them has to be carried by the link itself, because they
+have no account. Both fields come off the connected mailbox when the link is
+made: its display name if it has one, and otherwise the local part of the
+address — `martinvkirov` from `martinvkirov@gmail.com`. That is recognisable
+enough to send under and wrong enough to want fixing, so the block states it
+rather than hiding it, with one quiet control beside it.
+
+### Correcting the name, [`03b-name.html`](03b-name.html)
+
+A branch off the share page, usually skipped. The edit happens in the rail, in
+place, with the page it changes still behind it — the name is shown to people
+the owner cannot see, so it belongs beside the sentence that says who those
+people are.
+
+Only the name is editable. The address under it is the mailbox that will
+actually send, and a typed address would make that line a claim rather than a
+fact. The correction is kept for the next link too, so this is a screen most
+people see once, if at all.
+
 ### The composer, [`04-compose.html`](04-compose.html)
 
 Labels above their fields, which is the shape Section 4.6 asks for and which
@@ -228,7 +259,8 @@ work, it changes what each step looks like when it lands.
 3. Share page: rail, manifest card, zip download. *Shippable here.*
 4. Thumbnails at extraction, filling the tiles.
 5. Composer, the draft, and `POST /s/{token}/email`.
-6. Revoke, and virtualization past 50 rows.
+6. Correcting the display name (`PATCH /s/{token}`), and virtualization past
+   50 rows.
 
 The opened row is not in that list because it is not part of the share flow.
 It rides along with the reskin, apart from the three markup changes named

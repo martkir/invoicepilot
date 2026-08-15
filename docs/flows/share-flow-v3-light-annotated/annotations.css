@@ -253,6 +253,26 @@ body {
     font-weight: 500;
 }
 
+/* A question this pin raised and that has since been answered. Same shape as
+   the open one, one step quieter: the rule is the panel's own line rather than
+   --danger, because the entry is now history rather than a warning. It is kept
+   instead of deleted - which element turned out to need a decision is worth as
+   much as the decision, and a map that silently closed its own questions would
+   read as one that had never been wrong. */
+.wiring-decided {
+    margin: var(--s-xs) 0 0;
+    padding: var(--s-xs);
+    border-left: 2px solid var(--rule);
+    color: var(--ink-soft);
+    font-size: var(--t-caption);
+    line-height: 1.55;
+}
+
+.wiring-decided b {
+    color: var(--ink);
+    font-weight: 500;
+}
+
 .wiring-foot {
     padding-top: var(--s-sm);
     border-top: 1px solid var(--rule);
@@ -449,4 +469,12 @@ body {
     margin: var(--s-xxs) 0 0;
     color: var(--ink-soft);
     font-size: var(--t-caption);
+}
+
+/* The same list, for questions that have been answered. Numbered markers in
+   --ink-soft rather than the list's own colour: these are a record, and the
+   list above them - when it has anything in it - is the work. */
+.map-gaps.is-settled::marker,
+.map-gaps.is-settled li::marker {
+    color: var(--ink-soft);
 }
