@@ -285,8 +285,18 @@ messages, 94% of the invoices pass and 5 of 126 non-invoices do.
 
 For what passes the gate and still parses to nothing, a scan asks Claude to
 write the template — **once per sending domain, for the life of that domain**,
-at roughly five cents a time. Set `ANTHROPIC_API_KEY` to turn it on; without one
-everything else works unchanged and unknown issuers are simply reported.
+at roughly five cents a time. It turns itself on as soon as the Anthropic SDK
+can authenticate — an `ANTHROPIC_API_KEY`, an `ANTHROPIC_AUTH_TOKEN`, an OAuth
+profile from `ant auth login`, or workload identity federation, resolved in that
+order. With none of them everything else works unchanged and unknown issuers are
+simply reported.
+
+For the deployed stack use an API key or federation: an OAuth profile lives in
+`~/.config/anthropic/` on the machine that logged in, so a container needs it
+mounted and writable, and its refresh token expires eventually. OAuth is the
+convenient one for running `invoicepilot scan` from your own machine. Note that
+an `ANTHROPIC_API_KEY` set to the *empty* string still wins the resolution order
+and shadows the rest — unset it rather than blanking it.
 
 What the model returns is a template, never an invoice: it is asked where the
 fields are, not what they say. Every figure in the database is still extracted

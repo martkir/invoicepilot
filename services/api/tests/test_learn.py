@@ -197,3 +197,38 @@ def test_grounding_hands_the_model_values_already_found():
 
     assert RECEIPT in grounded
     assert "# Values detected" in grounded
+
+
+def test_an_oauth_profile_counts_as_configured(tmp_path, monkeypatch):
+    """`ant auth login` writes a profile the SDK reads on its own.
+
+    Nothing here has to know how to use it — only that something is there, so
+    the module does not disable itself in front of working credentials.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.setenv("ANTHROPIC_CONFIG_DIR", str(tmp_path))
+    (tmp_path / "credentials").mkdir()
+    learn.get_settings.cache_clear()
+
+    assert learn.credentials_available()
+    assert learn.provider() is not None
+
+
+def test_an_auth_token_counts_as_configured(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "sk-ant-oat01-example")
+    learn.get_settings.cache_clear()
+
+    assert learn.credentials_available()
+
+
+def test_nothing_configured_is_not_an_error(tmp_path, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("ANTHROPIC_PROFILE", raising=False)
+    monkeypatch.setenv("ANTHROPIC_CONFIG_DIR", str(tmp_path / "absent"))
+    learn.get_settings.cache_clear()
+
+    assert not learn.credentials_available()
+    assert learn.provider() is None

@@ -51,9 +51,11 @@ class Settings(BaseSettings):
     unipile_notify_url: str | None = None
 
     # Lets a scan teach itself an issuer nobody has written a template for —
-    # see invoicepilot/learn.py. Optional: without it every other part of the
-    # scan works unchanged and unknown issuers are simply reported, so leaving
-    # it unset is a supported deployment rather than a broken one.
+    # see invoicepilot/learn.py. Optional, and only one of the ways in: the SDK
+    # also resolves ANTHROPIC_AUTH_TOKEN, an `ant auth login` OAuth profile and
+    # workload identity federation on its own, so this stays None on a
+    # deployment that uses one of those. None of them is a supported
+    # deployment rather than a broken one.
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5"
 

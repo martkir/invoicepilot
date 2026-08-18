@@ -22,9 +22,14 @@ fail the same way.
 Kept templates land under the data directory, carry `priority: 1` so they can
 never outrank a hand-written one, and are unreviewed until somebody moves them
 into templates/invoice2data/ by hand.
+
+Credentials are whatever the Anthropic SDK can resolve — an API key, an
+ANTHROPIC_AUTH_TOKEN, an `ant auth login` OAuth profile, or workload identity
+federation. Nothing configured disables the module rather than failing a scan.
 """
 
 import json
+import os
 import re
 import tempfile
 from datetime import UTC, datetime
@@ -148,12 +153,12 @@ class Claude:
 
     name = "claude"
 
-    def __init__(self, api_key: str, model: str) -> None:
-        self._api_key = api_key
+    def __init__(self, model: str, api_key: str | None = None) -> None:
         self._model = model
+        self._api_key = api_key
 
     def is_available(self) -> bool:
-        return bool(self._api_key)
+        return True
 
     def extract_structured(
         self,
@@ -164,7 +169,13 @@ class Claude:
     ) -> dict:
         from anthropic import Anthropic
 
-        response = Anthropic(api_key=self._api_key).messages.create(
+        # Constructed with no key unless one is configured, so the SDK resolves
+        # credentials itself and every supported way in works: an API key, an
+        # ANTHROPIC_AUTH_TOKEN, an `ant auth login` OAuth profile, or workload
+        # identity federation. Passing api_key=None explicitly would be the
+        # same thing, but saying it this way keeps the two paths visible.
+        client = Anthropic(api_key=self._api_key) if self._api_key else Anthropic()
+        response = client.messages.create(
             model=self._model,
             max_tokens=MAX_TOKENS,
             system=instructions or "",
@@ -180,17 +191,61 @@ class Claude:
         return json.loads(body)
 
 
-def provider() -> Claude | None:
-    """The configured provider, or None when no key is set.
+# Where `ant auth login` stores an OAuth profile. The SDK reads it on its own;
+# this is only so that "is anything configured" can be answered without making
+# a request, since constructing a client succeeds whether or not it is.
+CONFIG_DIR_VAR = "ANTHROPIC_CONFIG_DIR"
+DEFAULT_CONFIG_DIR = Path.home() / ".config" / "anthropic"
 
-    No key is a supported deployment, not a misconfiguration: everything except
-    this module works without one, so the absence disables the feature quietly
-    rather than failing a scan.
+# All four must be present for the SDK to attempt federation.
+FEDERATION_VARS = (
+    "ANTHROPIC_FEDERATION_RULE_ID",
+    "ANTHROPIC_ORGANIZATION_ID",
+    "ANTHROPIC_SERVICE_ACCOUNT_ID",
+)
+
+
+def credentials_available() -> bool:
+    """Whether the SDK has anything to authenticate with.
+
+    Mirrors its own resolution order — API key, auth token, OAuth profile,
+    workload identity federation — because a client constructs happily with no
+    credentials at all and only fails at request time. Asking here is what
+    keeps "nothing configured" a quiet no-op instead of one error per message.
+    """
+    if get_settings().anthropic_api_key or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+        return True
+    if os.environ.get("ANTHROPIC_PROFILE"):
+        return True
+    config_dir = Path(os.environ.get(CONFIG_DIR_VAR) or DEFAULT_CONFIG_DIR)
+    if (config_dir / "credentials").is_dir():
+        return True
+    return all(os.environ.get(name) for name in FEDERATION_VARS) and bool(
+        os.environ.get("ANTHROPIC_IDENTITY_TOKEN_FILE")
+        or os.environ.get("ANTHROPIC_IDENTITY_TOKEN")
+    )
+
+
+def provider() -> Claude | None:
+    """A provider, or None when nothing is configured to authenticate with.
+
+    Nothing configured is a supported deployment rather than a misconfiguration:
+    every other part of a scan works without it, so the absence disables this
+    quietly.
     """
     settings = get_settings()
-    if not settings.anthropic_api_key:
+    # An ANTHROPIC_API_KEY set to the empty string is the documented trap: it
+    # still wins its place in the resolution order and authenticates with
+    # nothing, shadowing a profile that would have worked. Worth saying out
+    # loud, because the resulting 401 names none of this.
+    if os.environ.get("ANTHROPIC_API_KEY") == "":
+        log.warning(
+            "ANTHROPIC_API_KEY is set but empty, which shadows every other "
+            "credential source. Unset it, or give it a value."
+        )
+    if not credentials_available():
         return None
-    return Claude(settings.anthropic_api_key, settings.anthropic_model)
+    return Claude(settings.anthropic_model, api_key=settings.anthropic_api_key or None)
 
 
 def domain_of(sender: str) -> str:

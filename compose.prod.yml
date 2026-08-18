@@ -55,9 +55,14 @@ services:
       UNIPILE_API_KEY: ${UNIPILE_API_KEY:-}
       UNIPILE_DSN: ${UNIPILE_DSN:-}
       UNIPILE_NOTIFY_URL: ${UNIPILE_NOTIFY_URL:-}
-      # Optional. Without it a scan still runs; it just cannot teach
-      # itself an issuer no template covers.
+      # Optional, and either one will do — the SDK resolves the key first,
+      # then the token. Without either, a scan still runs; it just cannot
+      # teach itself an issuer no template covers. An `ant auth login` OAuth
+      # profile is not wired up here on purpose: it lives in a home directory
+      # on whichever machine logged in, so a container would need it mounted
+      # and writable, and its refresh token expires.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
       DEBUG_LOGS_ENABLED: ${DEBUG_LOGS_ENABLED:-false}
     volumes:
       # The extracted documents. A named volume rather than a bind mount: these
