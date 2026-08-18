@@ -233,6 +233,13 @@ def scan_account(
     tool = f"invoice2data {version('invoice2data')}"
     errors: list[ScanError] = []
     found = new = taught = 0
+    # Domains whose drafting request failed for a reason that is not the
+    # document's fault — a rate limit, a timeout, an outage. Deliberately not
+    # recorded on disk the way a rejected draft is, because those are worth
+    # retrying; but not retried again inside *this* scan either, or one outage
+    # becomes one failed request per message. A rate-limited run of this
+    # mailbox asked about the same sender fifteen times before this existed.
+    stalled: set[str] = set()
 
     def file_candidates(candidates: list, message: dict, subject: str, fetch: extract.Fetch) -> int:
         """Parse and store whatever of one message parses. Returns how many."""
@@ -292,7 +299,8 @@ def scan_account(
         # request, so only the second case reaches learn.teach.
         if not filed and learn_issuers and taught < MAX_TEMPLATES_PER_SCAN:
             sender = (message.get("from_attendee") or {}).get("identifier") or ""
-            if gate.looks_like_invoice(
+            domain = learn.domain_of(sender)
+            if domain not in stalled and gate.looks_like_invoice(
                 sender,
                 extract.body_text(message),
                 has_attachment=bool(message.get("attachments")),
@@ -302,6 +310,7 @@ def scan_account(
                 except Exception as exc:  # noqa: BLE001 — one issuer must not end a scan
                     log.warning("could not draft a template for %s: %s", sender, exc)
                     errors.append(ScanError(mailbox, subject, f"could not draft a template: {exc}"))
+                    stalled.add(domain)
                     path = None
                 if path:
                     taught += 1

@@ -5,7 +5,7 @@ a regression that reaches the database fails by needing DATABASE_URL rather than
 by asserting.
 """
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -254,3 +254,41 @@ def test_keywords_reach_the_query_and_no_keywords_drops_it(monkeypatch, marks: d
 
     assert asked[0] == keyword_query()
     assert asked[1] is None
+
+
+def test_a_stalled_issuer_is_not_asked_about_again_this_scan(monkeypatch):
+    """A rate limit is worth retrying later, not fifteen times now.
+
+    learn.teach deliberately records nothing when the request itself fails —
+    a timeout says nothing about the document. But without an in-scan memory
+    that means one outage costs one request per message: a rate-limited run of
+    a real mailbox asked about receipts@bolt.eu fifteen times.
+    """
+    from invoicepilot import gate, learn, process
+
+    asked = []
+
+    def always_fails(text, sender, **kwargs):
+        asked.append(sender)
+        raise RuntimeError("rate limited")
+
+    monkeypatch.setattr(learn, "teach", always_fails)
+    monkeypatch.setattr(gate, "looks_like_invoice", lambda *a, **k: True)
+    monkeypatch.setattr(process.extract, "candidates", lambda *a, **k: [])
+    monkeypatch.setattr(process.extract, "body_text", lambda m: "Total 1.00")
+    monkeypatch.setattr(process, "teachable_text", lambda c: "Total 1.00")
+    monkeypatch.setattr(process, "scan_from", lambda *a, **k: None)
+    monkeypatch.setattr(process.mailboxes, "set_watermark", lambda *a, **k: None)
+    monkeypatch.setattr(process, "session_scope", lambda: nullcontext(None))
+
+    sender = {"identifier": "receipts@bolt.eu"}
+    messages = [
+        {"from_attendee": sender, "subject": f"ride {n}", "provider_id": "p", "id": str(n)}
+        for n in range(5)
+    ]
+    monkeypatch.setattr(process, "iter_emails", lambda *a, **k: (messages, False))
+
+    result = process.scan_account("base", "key", "ws", {"id": "a1", "name": "m"})
+
+    assert asked == ["receipts@bolt.eu"]
+    assert len(result.errors) == 1
