@@ -10,6 +10,7 @@ import time
 from collections.abc import Iterator
 
 import pytest
+from conftest import TEST_WORKSPACE
 from fastapi.testclient import TestClient
 
 from invoicepilot import __version__, accounts, invoices, scan_jobs
@@ -61,7 +62,7 @@ def test_disconnecting_an_unknown_account_is_a_404(
 ) -> None:
     """A 404 from Unipile means the mailbox is already gone, not that we are broken."""
 
-    def gone(base: str, api_key: str, account_id: str) -> None:
+    def gone(base: str, api_key: str, allowed: list[str], account_id: str) -> None:
         raise UnipileError("DELETE https://api.example.com/accounts/x -> HTTP 404: not found")
 
     monkeypatch.setattr(accounts, "disconnect", gone)
@@ -71,7 +72,7 @@ def test_disconnecting_an_unknown_account_is_a_404(
 def test_disconnect_reports_other_unipile_failures_as_502(
     connected: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def broken(base: str, api_key: str, account_id: str) -> None:
+    def broken(base: str, api_key: str, allowed: list[str], account_id: str) -> None:
         raise UnipileError("DELETE https://api.example.com/accounts/x -> HTTP 500: boom")
 
     monkeypatch.setattr(accounts, "disconnect", broken)
@@ -105,7 +106,9 @@ def test_a_scan_reports_progress_and_refuses_a_second_one(
     reported = threading.Event()
     release = threading.Event()
 
-    def blocking_scan(*, follow_links, on_progress=None, **options) -> ScanResult:
+    def blocking_scan(
+        workspace_id, allowed, *, follow_links, on_progress=None, **options
+    ) -> ScanResult:
         on_progress(Progress("me@example.com", "March invoice", 3, 8, 1))
         reported.set()
         release.wait(timeout=5)
@@ -130,7 +133,7 @@ def test_a_scan_reports_progress_and_refuses_a_second_one(
 
     release.set()
     for _ in range(500):
-        if scan_jobs.get(job_id).status != "running":
+        if scan_jobs.get(job_id, TEST_WORKSPACE).status != "running":
             break
         time.sleep(0.01)
     assert client.get(f"/scan/{job_id}").json() == {
@@ -149,12 +152,14 @@ def test_a_finished_scan_does_not_block_the_next_one(
     client: TestClient, monkeypatch: pytest.MonkeyPatch, no_jobs: None
 ) -> None:
     monkeypatch.setattr(
-        scan_jobs, "scan_all", lambda **kwargs: ScanResult(mailboxes=("me@example.com",))
+        scan_jobs,
+        "scan_all",
+        lambda *args, **kwargs: ScanResult(mailboxes=("me@example.com",)),
     )
     first = client.post("/scan")
     assert first.status_code == 202
     for _ in range(500):
-        if scan_jobs.get(first.json()["id"]).status != "running":
+        if scan_jobs.get(first.json()["id"], TEST_WORKSPACE).status != "running":
             break
         time.sleep(0.01)
     assert client.post("/scan").status_code == 202

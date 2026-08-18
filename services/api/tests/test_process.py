@@ -22,6 +22,16 @@ from invoicepilot.process import (
     scan_from,
 )
 
+# The workspace these tests scan into. Which one it is never matters here —
+# what a scan does *within* one workspace is the subject, and what separates
+# two of them is test_workspaces.py.
+WS = "ws-test"
+
+# The account ids that workspace owns, as accounts.list_connected would be
+# given. Stubbed out alongside it in `two_mailboxes`, so the value only has to
+# be a list.
+ALLOWED = ["a1", "a2"]
+
 
 @pytest.fixture
 def marks(monkeypatch: pytest.MonkeyPatch) -> dict[str, datetime]:
@@ -33,9 +43,13 @@ def marks(monkeypatch: pytest.MonkeyPatch) -> dict[str, datetime]:
         yield None
 
     monkeypatch.setattr(process, "session_scope", no_session)
-    monkeypatch.setattr(process.mailboxes, "watermark", lambda _s, mailbox: store.get(mailbox))
+    # Keyed on the mailbox alone: these tests run in one workspace, and the
+    # column that separates two of them is covered in test_workspaces.py.
+    monkeypatch.setattr(process.mailboxes, "watermark", lambda _s, _ws, mailbox: store.get(mailbox))
     monkeypatch.setattr(
-        process.mailboxes, "set_watermark", lambda _s, mailbox, at: store.update({mailbox: at})
+        process.mailboxes,
+        "set_watermark",
+        lambda _s, _ws, mailbox, at: store.update({mailbox: at}),
     )
     return store
 
@@ -46,7 +60,7 @@ def two_mailboxes(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         process,
         "list_connected",
-        lambda base, api_key: [
+        lambda base, api_key, allowed: [
             {"id": "a1", "name": "one@example.com"},
             {"id": "a2", "name": "two@example.com"},
         ],
@@ -57,14 +71,14 @@ def two_mailboxes(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_a_mailbox_never_scanned_reaches_sixty_days_back(marks: dict) -> None:
-    at = scan_from("new@example.com")
+    at = scan_from(WS, "new@example.com")
     assert abs((datetime.now(UTC) - SEED_LOOKBACK) - at) < timedelta(seconds=5)
 
 
 def test_a_scanned_mailbox_resumes_from_its_watermark(marks: dict) -> None:
     mark = datetime(2026, 8, 10, 12, 0, tzinfo=UTC)
     marks["seen@example.com"] = mark
-    assert scan_from("seen@example.com") == mark - RESCAN_OVERLAP
+    assert scan_from(WS, "seen@example.com") == mark - RESCAN_OVERLAP
 
 
 def test_an_ancient_watermark_is_honoured_rather_than_clamped(marks: dict) -> None:
@@ -75,13 +89,13 @@ def test_an_ancient_watermark_is_honoured_rather_than_clamped(marks: dict) -> No
     """
     ancient = datetime(2024, 1, 1, tzinfo=UTC)
     marks["old@example.com"] = ancient
-    assert scan_from("old@example.com") == ancient - RESCAN_OVERLAP
+    assert scan_from(WS, "old@example.com") == ancient - RESCAN_OVERLAP
 
 
 def test_since_overrides_the_watermark(marks: dict) -> None:
     marks["seen@example.com"] = datetime(2026, 8, 10, tzinfo=UTC)
     asked = datetime(2026, 1, 1, tzinfo=UTC)
-    assert scan_from("seen@example.com", asked) == asked
+    assert scan_from(WS, "seen@example.com", asked) == asked
 
 
 # --- the keyword filter ----------------------------------------------------
@@ -131,7 +145,9 @@ def test_progress_counts_the_scan_not_the_mailbox(
     "scanned 1" partway through.
     """
 
-    def two_messages(base, api_key, account, *, on_progress=None, **kwargs) -> ScanResult:
+    def two_messages(
+        base, api_key, workspace_id, account, *, on_progress=None, **kwargs
+    ) -> ScanResult:
         mailbox = account["name"]
         for index in (1, 2):
             on_progress(Progress(mailbox, f"message {index}", index, 2, index))
@@ -141,7 +157,9 @@ def test_progress_counts_the_scan_not_the_mailbox(
 
     seen: list[tuple[int, int, int]] = []
     result = scan_all(
-        on_progress=lambda p: seen.append((p.messages_scanned, p.messages_total, p.invoices_found))
+        WS,
+        ALLOWED,
+        on_progress=lambda p: seen.append((p.messages_scanned, p.messages_total, p.invoices_found)),
     )
 
     assert seen == [(1, 2, 1), (2, 2, 2), (3, 4, 3), (4, 4, 4)]
@@ -153,7 +171,9 @@ def test_an_unreachable_mailbox_does_not_shift_the_ones_after_it(
 ) -> None:
     """A mailbox that failed scanned nothing, so it must add nothing to the tally."""
 
-    def first_one_fails(base, api_key, account, *, on_progress=None, **kwargs) -> ScanResult:
+    def first_one_fails(
+        base, api_key, workspace_id, account, *, on_progress=None, **kwargs
+    ) -> ScanResult:
         mailbox = account["name"]
         if account["id"] == "a1":
             raise process.UnipileError("credentials expired")
@@ -163,7 +183,7 @@ def test_an_unreachable_mailbox_does_not_shift_the_ones_after_it(
     monkeypatch.setattr(process, "scan_account", first_one_fails)
 
     seen: list[int] = []
-    result = scan_all(on_progress=lambda p: seen.append(p.messages_scanned))
+    result = scan_all(WS, ALLOWED, on_progress=lambda p: seen.append(p.messages_scanned))
 
     assert seen == [1]
     assert result.messages_scanned == 1
@@ -181,7 +201,7 @@ def mailbox(monkeypatch: pytest.MonkeyPatch):
     def run(messages: list[dict], capped: bool = False, **kwargs) -> ScanResult:
         monkeypatch.setattr(process, "iter_emails", lambda *a, **k: (messages, capped))
         return process.scan_account(
-            "https://api.test", "key", {"id": "a1", "name": "one@example.com"}, **kwargs
+            "https://api.test", "key", WS, {"id": "a1", "name": "one@example.com"}, **kwargs
         )
 
     return run
@@ -229,8 +249,8 @@ def test_keywords_reach_the_query_and_no_keywords_drops_it(monkeypatch, marks: d
 
     monkeypatch.setattr(process, "iter_emails", spy)
     account = {"id": "a1", "name": "one@example.com"}
-    process.scan_account("https://api.test", "key", account)
-    process.scan_account("https://api.test", "key", account, keywords=False)
+    process.scan_account("https://api.test", "key", WS, account)
+    process.scan_account("https://api.test", "key", WS, account, keywords=False)
 
     assert asked[0] == keyword_query()
     assert asked[1] is None

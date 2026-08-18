@@ -56,6 +56,7 @@ invoicepilot/
     │           ├── invoice_store.py# domain: extracted invoices on disk
     │           ├── invoices.py     # domain: extracted invoices in Postgres
     │           ├── mailboxes.py    # domain: how far each mailbox is scanned
+    │           ├── workspaces.py   # domain: whose data is whose — the cookie, and mailbox ownership
     │           ├── shares.py       # domain: share links and what a token resolves to
     │           ├── share_zip.py    # domain: the download — invoices.csv + the documents
     │           ├── share_mail.py   # domain: the mail a share is sent with
@@ -281,9 +282,17 @@ manager at this size, but do not add a third copy.
 
 ## Database
 
-Two tables. Everything the parser found is stored in `data` as JSONB — the same
-payload `invoice_store` writes to disk — with only `id` and `issued_on` lifted
-out as columns, because those are what Postgres has to key and sort on.
+Six tables, three of them the workspace scoping. Everything the parser found is
+stored in `data` as JSONB — the same payload `invoice_store` writes to disk —
+with only `id` and `issued_on` lifted out as columns, because those are what
+Postgres has to key and sort on.
+
+There is no Alembic. `migrate.run()` calls `create_all`, which creates missing
+tables but never alters an existing one, so a change to a table that already
+holds rows is written out as guarded DDL in `migrate.py` and keyed off the
+catalog rather than a version number. That is affordable while such changes are
+rare; a second one that cannot be expressed this way is the signal to add a
+migration tool rather than a second special case.
 
 `shares` is the second, and the only thing in the product that Postgres is the
 source of truth for besides the invoices themselves: a link has to outlive the
@@ -295,3 +304,27 @@ there is no query in the share flow that is not a primary-key lookup.
     which is their source of truth; copying them into Postgres would only give
     the two a way to disagree. In-flight scans live in memory, because they are
     worth nothing once the process ends.
+
+    `workspace_accounts` is the one exception, and the test it passed is worth
+    keeping: it records *which workspace owns* an account, which is not a copy
+    of anything. There is one Unipile tenant and one API key for the whole
+    deployment, so every visitor's mailbox lands in the same list and Unipile
+    cannot answer whose it is. Status, address and credentials are still read
+    from Unipile and still not stored. A table earns its place when it holds a
+    fact no other system has, not when it mirrors one that does.
+
+23. **Everything user-facing is scoped to a workspace.** The dashboard is
+    served on a public URL with no login, so a query without a `workspace_id`
+    filter is a data leak rather than an oversight. `invoicepilot/workspaces.py`
+    owns the identity — an httpOnly cookie, minted lazily, unguessable, with no
+    recovery by design. Two rules follow from it:
+
+    - **The scope comes from the request, except behind `/s/{token}`.** A share
+      recipient holds the link and has their own empty workspace or none, so
+      those routes read `share.workspace_id` off the row. Reading the cookie
+      there makes every link ever sent resolve to an empty manifest.
+    - **`workspace_id` is part of the key wherever the rest of the key comes
+      from the mail.** `invoices` and `mailbox_scans` are keyed on the pair
+      because an invoice id is derived from the message and two workspaces
+      scanning one mailbox agree on it exactly. `shares` is not, because a
+      token is already unique.

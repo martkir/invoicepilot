@@ -5,9 +5,16 @@ for which mailboxes exist. Nothing here is mirrored into Postgres — a copy
 would only give the two a way to disagree.
 
 Connecting a mailbox is a hosted flow: Unipile returns a wizard URL, the user
-approves in a browser, and the account appears on the tenant. Unipile can
-announce that with a webhook, but only to a publicly reachable URL, so locally
-the caller polls list_connected() until it shows up.
+approves in a browser, and the account appears on the tenant. Unipile announces
+that with a webhook, which is also what attributes the new account to the
+workspace that asked for it — see invoicepilot/workspaces.py.
+
+There is one Unipile tenant and one API key for the whole deployment, so every
+visitor's mailbox lands in the same list and Unipile cannot say which is whose.
+That is why each function here takes `allowed`: the account ids the calling
+workspace owns, from workspaces.account_ids(). Anything outside that list is
+somebody else's mailbox and is treated as though it did not exist. The list is
+passed in rather than looked up here, so this module still needs no database.
 """
 
 from invoicepilot.core.logging import get_logger
@@ -26,10 +33,14 @@ log = get_logger(__name__)
 LINK_TTL_MINUTES = 15
 
 
-def list_connected(base: str, api_key: str) -> list[dict]:
-    """Usable mailboxes, one entry per address, newest first.
+def list_connected(base: str, api_key: str, allowed: list[str]) -> list[dict]:
+    """Usable mailboxes this workspace owns, one entry per address, newest first.
 
-    Two kinds of account are dropped here.
+    Three kinds of account are dropped here.
+
+    An account the caller's workspace does not own goes first, before anything
+    else is considered. The tenant is shared by every visitor, so this filter is
+    the whole boundary between one person's mailboxes and another's.
 
     An account whose status is not OK has lapsed credentials and cannot be
     read, so it is treated as though it were never connected — there is no
@@ -42,9 +53,13 @@ def list_connected(base: str, api_key: str) -> list[dict]:
     holds the freshest credentials, and scanning both would parse the same
     inbox twice and double every count.
     """
+    owned = set(allowed)
+    if not owned:
+        return []
+
     newest: dict[str, dict] = {}
     for account in sorted(
-        list_accounts(base, api_key),
+        (a for a in list_accounts(base, api_key) if a["id"] in owned),
         key=lambda a: a.get("created_at") or "",
         reverse=True,
     ):
@@ -65,18 +80,25 @@ def describe(account: dict) -> dict:
     }
 
 
-def owner(base: str, api_key: str, account_id: str | None = None) -> tuple[str, str] | None:
+def owner(
+    base: str, api_key: str, allowed: list[str], account_id: str | None = None
+) -> tuple[str, str] | None:
     """(name, address) of a mailbox: who a share is made as, and sent as.
 
     `account_id` arrives from a browser on both routes that use this, so it is
-    checked against the tenant here rather than trusted — None back means it is
-    not one of this user's mailboxes. Without an id the first connected mailbox
-    answers, which is what the dashboard's Share button sends.
+    checked against the workspace's own mailboxes rather than trusted — None
+    back means it is not one of this user's. Without an id the first connected
+    mailbox answers, which is what the dashboard's Share button sends.
+
+    Checking against `allowed` and not merely against the tenant is the point:
+    on a shared tenant an unfiltered check would accept any account id in the
+    deployment, and this gates both minting a share as a mailbox and sending
+    mail as one.
 
     Raises UnipileError when no mailbox is connected at all: a share names the
     person who made it, and there is nobody to name.
     """
-    connected = list_connected(base, api_key)
+    connected = list_connected(base, api_key, allowed)
     if not connected:
         raise UnipileError("No mailboxes are connected — connect one before sharing.")
 
@@ -95,8 +117,8 @@ def owner(base: str, api_key: str, account_id: str | None = None) -> tuple[str, 
     return (label if label and "@" not in label else address.split("@")[0], address)
 
 
-def disconnect(base: str, api_key: str, account_id: str) -> None:
-    """Disconnect the mailbox an account belongs to.
+def disconnect(base: str, api_key: str, allowed: list[str], account_id: str) -> list[str]:
+    """Disconnect the mailbox an account belongs to. Returns the ids deleted.
 
     Every account for that address goes, not just the one named. Reconnecting
     leaves the previous account behind rather than replacing it, so one address
@@ -104,15 +126,29 @@ def disconnect(base: str, api_key: str, account_id: str) -> None:
     deleting only the newest would leave a hidden duplicate to take its place —
     the row would reappear and nothing would look disconnected.
 
+    That sweep is intersected with `allowed`, and it is the reason this function
+    returns a list. Matching on the address alone was correct while one person
+    owned the tenant; on a shared one it reaches across workspaces, so a visitor
+    disconnecting their own Gmail would delete the live connection of everyone
+    else who had connected the same address. The ids come back so the caller can
+    drop the matching ownership rows.
+
     Invoices already extracted are deliberately left alone: they record what was
     spent, and that does not stop being true because the mailbox was unlinked.
     """
-    accounts = list_accounts(base, api_key)
+    owned = set(allowed)
+    if account_id not in owned:
+        # Not ours to delete, and not ours to confirm the existence of either.
+        # The route turns this into the same 404 an unknown id gets.
+        raise UnipileError(f"HTTP 404: no such account {account_id}")
+
+    accounts = [a for a in list_accounts(base, api_key) if a["id"] in owned]
     named = next((a for a in accounts if a["id"] == account_id), None)
     if named is None:
-        # Let Unipile produce the 404, so an unknown id reports consistently.
+        # Owned by this workspace but gone from the tenant. Let Unipile produce
+        # the 404, so an unknown id reports consistently.
         delete_account(base, api_key, account_id)
-        return
+        return [account_id]
 
     address = (named.get("name") or "").strip().lower()
     targets = [
@@ -122,17 +158,35 @@ def disconnect(base: str, api_key: str, account_id: str) -> None:
     for target in targets:
         delete_account(base, api_key, target)
     log.info("disconnected %s (%d account(s))", address or account_id, len(targets))
+    return targets
 
 
-def connect_link(base: str, api_key: str, *, providers: tuple[str, ...] = ("GOOGLE",)) -> str:
-    """A hosted auth wizard URL for connecting a new mailbox."""
-    return create_hosted_auth_link(
-        base,
-        api_key,
-        {
-            "type": "create",
-            "providers": list(providers),
-            "api_url": base,
-            "expiresOn": expires_on(LINK_TTL_MINUTES),
-        },
-    )
+def connect_link(
+    base: str,
+    api_key: str,
+    *,
+    notify_url: str | None = None,
+    providers: tuple[str, ...] = ("GOOGLE",),
+) -> str:
+    """A hosted auth wizard URL for connecting a new mailbox.
+
+    `notify_url` is what makes the finished account attributable: the wizard
+    runs in the user's browser and the account surfaces on a tenant shared by
+    everyone, so the callback carrying our nonce is the only thing that says
+    who asked for it. It is optional because a local run has no publicly
+    reachable URL for Unipile to reach — and without it the account arrives
+    unclaimed and stays invisible, which is the intended failure.
+
+    The nonce travels as a path segment rather than a query parameter: both are
+    accepted when the link is created, but a path segment is the harder of the
+    two for an intermediary to drop.
+    """
+    payload = {
+        "type": "create",
+        "providers": list(providers),
+        "api_url": base,
+        "expiresOn": expires_on(LINK_TTL_MINUTES),
+    }
+    if notify_url:
+        payload["notify_url"] = notify_url
+    return create_hosted_auth_link(base, api_key, payload)

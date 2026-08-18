@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from invoicepilot import invoices
 from invoicepilot.core.config import get_settings
-from invoicepilot.invoice_store import document_path
+from invoicepilot.invoice_store import document_path, workspace_root
 from invoicepilot.models import Share
 
 # 16 bytes is 22 urlsafe characters — the token is the whole credential, so it
@@ -73,17 +73,23 @@ class Snapshot:
     summary: Summary
 
 
-def mint(session: Session, *, invoice_ids: list[str], owner: tuple[str, str]) -> tuple[Share, str]:
+def mint(
+    session: Session, *, workspace_id: str, invoice_ids: list[str], owner: tuple[str, str]
+) -> tuple[Share, str]:
     """Write one share row. Returns it and the owner key, which is not stored.
 
     Only the key's sha256 is kept, and the key itself is returned exactly once:
     the creating browser holds it, and that is what separates the owner from a
     recipient holding the same link.
+
+    The workspace is recorded because the ids alone stop being enough to find
+    the invoices once the same id can exist in two workspaces.
     """
     owner_key = secrets.token_urlsafe(OWNER_KEY_BYTES)
     name, email = owner
     share = Share(
         token=secrets.token_urlsafe(TOKEN_BYTES),
+        workspace_id=workspace_id,
         owner_key_hash=key_hash(owner_key),
         invoice_ids=invoice_ids,
         owner_name=name,
@@ -126,13 +132,20 @@ def url(token: str) -> str:
 
 
 def snapshot(session: Session, share: Share) -> Snapshot:
-    """Resolve a share's frozen ids into the invoices, files and figures it covers."""
-    items = invoices.by_ids(session, share.invoice_ids)
-    entries = documents(items)
+    """Resolve a share's frozen ids into the invoices, files and figures it covers.
+
+    Scoped by `share.workspace_id` throughout, and never by who is asking. The
+    caller here is usually a recipient: they hold the link, they have no
+    account, and the workspace cookie their browser carries is their own empty
+    one or nothing at all. Reading the scope off the request instead would make
+    every link ever sent resolve to an empty manifest.
+    """
+    items = invoices.by_ids(session, share.workspace_id, share.invoice_ids)
+    entries = documents(items, workspace_root(share.workspace_id))
     return Snapshot(share, items, entries, summarise(items, entries))
 
 
-def documents(items: list[dict]) -> dict[str, Entry]:
+def documents(items: list[dict], root: Path) -> dict[str, Entry]:
     """The document each invoice carries, keyed by invoice id.
 
     An invoice read out of an email body has none, and is simply absent here —
@@ -146,7 +159,7 @@ def documents(items: list[dict]) -> dict[str, Entry]:
     entries: dict[str, Entry] = {}
     taken: set[str] = set()
     for item in items:
-        path = document_path(item)
+        path = document_path(item, root)
         if path is None:
             continue
         base, _, token = item["id"].rpartition("__")

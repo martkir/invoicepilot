@@ -19,6 +19,11 @@ interface Props {
    *  the age of the last one otherwise, the reason when one failed. Composed
    *  by the caller — the table shows it and knows nothing about which it is. */
   meta: string
+  /** Whether this workspace has a mailbox at all. Only the empty state uses
+   *  it, to tell a first visit ("connect something") from a scanned-but-empty
+   *  one ("press Update") — two states that used to be indistinguishable
+   *  because there was only ever one user with one set of mailboxes. */
+  hasSources: boolean
   onUpdate: () => void
   selected: Set<string>
   onToggle: (id: string) => void
@@ -31,6 +36,7 @@ export function InvoiceTable({
   scanning,
   scanLabel,
   meta,
+  hasSources,
   onUpdate,
   selected,
   onToggle,
@@ -252,10 +258,15 @@ export function InvoiceTable({
       </table>
 
       {/* The mockup had no empty state because its rows were hardcoded; an
-          empty database is reachable now. */}
+          empty database is reachable now — and since the dashboard became
+          public it is what every first visit sees, so the line has to say
+          which of the two empties this is. Telling someone with no mailbox to
+          press Update sends them to a button that can only fail. */}
       {!loading && invoices.length === 0 && (
         <div className="table-foot">
-          No invoices yet. Press Update to scan your connected mailboxes.
+          {hasSources
+            ? 'No invoices yet. Press Update to scan your connected mailboxes.'
+            : 'No invoices yet. Add a source to connect a mailbox, then press Update.'}
         </div>
       )}
 

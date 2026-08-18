@@ -18,7 +18,7 @@ from invoicepilot import extract, mailboxes
 from invoicepilot.accounts import list_connected
 from invoicepilot.core.db import session_scope
 from invoicepilot.core.logging import get_logger
-from invoicepilot.invoice_store import mail_token, save_invoice
+from invoicepilot.invoice_store import mail_token, save_invoice, workspace_root
 from invoicepilot.invoices import row_id, save
 from invoicepilot.unipile import UnipileError, credentials, download_attachment, iter_emails
 
@@ -134,11 +134,13 @@ def keyword_query(keywords: tuple[str, ...] = INVOICE_KEYWORDS) -> str:
     return " OR ".join(keywords)
 
 
-def scan_from(mailbox: str, since: datetime | None = None) -> datetime:
+def scan_from(workspace_id: str, mailbox: str, since: datetime | None = None) -> datetime:
     """The oldest message date this mailbox's next scan should reach.
 
-    An explicit `since` wins. Otherwise the mailbox's own watermark, rolled
-    back by RESCAN_OVERLAP, and for a mailbox never scanned, the seed window.
+    An explicit `since` wins. Otherwise this workspace's own watermark for the
+    mailbox, rolled back by RESCAN_OVERLAP, and for one never scanned, the seed
+    window. Another workspace's progress on the same address does not count:
+    they have their own invoices to show for it and this one has none.
 
     A watermark older than the seed window is honoured rather than clamped to
     it. Clamping would advance the mark past mail nobody had looked at, and an
@@ -148,7 +150,7 @@ def scan_from(mailbox: str, since: datetime | None = None) -> datetime:
     if since:
         return since
     with session_scope() as session:
-        mark = mailboxes.watermark(session, mailbox)
+        mark = mailboxes.watermark(session, workspace_id, mailbox)
     if mark:
         return mark - RESCAN_OVERLAP
     return datetime.now(UTC) - SEED_LOOKBACK
@@ -169,6 +171,7 @@ def message_date(message: dict) -> datetime | None:
 def scan_account(
     base: str,
     api_key: str,
+    workspace_id: str,
     account: dict,
     *,
     follow_links: bool = True,
@@ -176,17 +179,21 @@ def scan_account(
     since: datetime | None = None,
     on_progress: OnProgress | None = None,
 ) -> ScanResult:
-    """Parse one mailbox's unscanned mail and file what parses.
+    """Parse one mailbox's unscanned mail and file what parses, for one workspace.
 
     Which mail that is comes from the mailbox's watermark, which this advances
     on the way out — so a second call straight afterwards has almost nothing
     left to do. `since` overrides the watermark for a backfill; `keywords=False`
     drops the invoice-word filter, which is how you measure what it skips.
+
+    Everything written lands under the workspace: the rows, the watermark and
+    the documents on disk. Two workspaces scanning the same address produce two
+    independent sets of all three.
     """
     account_id = account["id"]
     mailbox = account.get("name") or account_id
 
-    after = scan_from(mailbox, since)
+    after = scan_from(workspace_id, mailbox, since)
     messages, capped = iter_emails(
         base,
         api_key,
@@ -230,6 +237,7 @@ def scan_account(
                 tool=tool,
                 parsed_from=list(invoice.parsed_from),
                 templates=list(invoice.templates),
+                root=workspace_root(workspace_id),
             )
             invoice_id = row_id(
                 invoice.fields,
@@ -241,7 +249,7 @@ def scan_account(
             # mean an interruption discarded every row while leaving every
             # folder on disk — the two sinks would drift apart.
             with session_scope() as session:
-                if save(session, invoice_id, payload):
+                if save(session, workspace_id, invoice_id, payload):
                     new += 1
             found += 1
 
@@ -266,7 +274,7 @@ def scan_account(
         newest = max((d for d in map(message_date, messages) if d), default=None)
         if newest:
             with session_scope() as session:
-                mailboxes.set_watermark(session, mailbox, newest)
+                mailboxes.set_watermark(session, workspace_id, mailbox, newest)
 
     return ScanResult(
         mailboxes=(mailbox,),
@@ -278,15 +286,22 @@ def scan_account(
 
 
 def scan_all(
+    workspace_id: str,
+    allowed: list[str],
     *,
     follow_links: bool = True,
     keywords: bool = True,
     since: datetime | None = None,
     on_progress: OnProgress | None = None,
 ) -> ScanResult:
-    """Scan every connected mailbox. Raises UnipileError if none can be reached."""
+    """Scan this workspace's connected mailboxes.
+
+    `allowed` is the workspace's own account ids. Raises UnipileError when it
+    owns no reachable mailbox — the tenant's other accounts are not this
+    workspace's to scan, so a deployment full of them still counts as none.
+    """
     base, api_key = credentials()
-    accounts = list_connected(base, api_key)
+    accounts = list_connected(base, api_key, allowed)
     if not accounts:
         raise UnipileError("No mailboxes are connected — connect one before scanning.")
 
@@ -313,6 +328,7 @@ def scan_all(
                 scan_account(
                     base,
                     api_key,
+                    workspace_id,
                     account,
                     follow_links=follow_links,
                     keywords=keywords,

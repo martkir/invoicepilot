@@ -22,6 +22,12 @@ export class ApiError extends Error {
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${BASE}${path}`, {
     ...init,
+    // Which workspace is asking travels in an httpOnly cookie, so every call
+    // has to carry credentials. This is already the default for a same-origin
+    // request and is stated anyway: the app is same-origin only because of the
+    // /api proxy, and if that ever changed a silently dropped cookie would
+    // look like an empty account rather than like a broken request.
+    credentials: 'same-origin',
     headers: { 'content-type': 'application/json', ...init?.headers },
   })
 

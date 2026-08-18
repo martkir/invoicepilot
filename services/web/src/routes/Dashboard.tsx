@@ -74,6 +74,7 @@ export default function Dashboard() {
             scanning={scanning}
             scanLabel={scanLabel}
             meta={meta()}
+            hasSources={accounts.length > 0}
             onUpdate={() => void update()}
             selected={selected}
             onToggle={toggle}

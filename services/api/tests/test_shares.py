@@ -31,6 +31,7 @@ def a_share(**overrides) -> Share:
     fields = {
         "token": "7Kq2mXbN4vRt9wLpZaHc3f",
         "owner_key_hash": shares.key_hash(OWNER_KEY),
+        "workspace_id": "test-workspace",
         "invoice_ids": [],
         "owner_name": "Martin Kirov",
         "owner_email": "martin@kirov.dev",
@@ -74,7 +75,7 @@ def linked(monkeypatch: pytest.MonkeyPatch):
 
     def use(share: Share | None, rows: list[dict] | None = None) -> TestClient:
         monkeypatch.setattr(shares, "get", lambda session, token: share)
-        monkeypatch.setattr(invoices, "by_ids", lambda session, ids: rows or [])
+        monkeypatch.setattr(invoices, "by_ids", lambda session, ws, ids: rows or [])
         return TestClient(api)
 
     return use
@@ -106,30 +107,32 @@ def test_an_undated_batch_still_has_a_name() -> None:
     assert summary.invoices == 1
 
 
-def test_the_counts_separate_invoices_from_documents(items: list[dict]) -> None:
+def test_the_counts_separate_invoices_from_documents(items: list[dict], corpus_root) -> None:
     """An invoice read out of an email body has no file; it is still in the batch."""
-    entries = shares.documents(items)
+    entries = shares.documents(items, corpus_root)
     summary = shares.summarise(items, entries)
     assert summary.invoices == len(items)
     assert summary.documents == len(entries) <= summary.invoices
     assert summary.bytes == sum(entry.bytes for entry in entries.values())
 
 
-def test_two_invoices_that_agree_on_a_name_both_survive_the_zip(with_pdf: dict) -> None:
+def test_two_invoices_that_agree_on_a_name_both_survive_the_zip(
+    with_pdf: dict, corpus_root
+) -> None:
     """A zip with the same entry name twice quietly loses one of them."""
     payload = with_pdf["payload"]
     twins = [
         {"id": "2026-08-03__bolt__1-63eur__aaaaaa", "issued_on": None, **payload},
         {"id": "2026-08-03__bolt__1-63eur__bbbbbb", "issued_on": None, **payload},
     ]
-    names = [entry.name for entry in shares.documents(twins).values()]
+    names = [entry.name for entry in shares.documents(twins, corpus_root).values()]
     assert names[0] == "2026-08-03__bolt__1-63eur.pdf"
     assert len(set(names)) == 2, names
 
 
 # --------------------------------------------------------------- the zip ----
-def test_the_zip_carries_every_document_and_one_csv(items: list[dict]) -> None:
-    entries = shares.documents(items)
+def test_the_zip_carries_every_document_and_one_csv(items: list[dict], corpus_root) -> None:
+    entries = shares.documents(items, corpus_root)
     snapshot = shares.Snapshot(a_share(), items, entries, shares.summarise(items, entries))
 
     blob = b"".join(share_zip.stream(snapshot))
@@ -149,9 +152,9 @@ def test_the_zip_carries_every_document_and_one_csv(items: list[dict]) -> None:
     assert any(row["email_message_id"] for row in rows)
 
 
-def test_the_zip_is_written_as_it_is_read(items: list[dict]) -> None:
+def test_the_zip_is_written_as_it_is_read(items: list[dict], corpus_root) -> None:
     """Nothing assembles the batch in memory, so the first bytes arrive early."""
-    entries = shares.documents(items)
+    entries = shares.documents(items, corpus_root)
     snapshot = shares.Snapshot(a_share(), items, entries, shares.summarise(items, entries))
 
     chunks = [chunk for chunk in share_zip.stream(snapshot) if chunk]

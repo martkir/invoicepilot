@@ -48,7 +48,42 @@ def migrate() -> None:
 
 
 @cli.command()
+def workspaces() -> None:
+    """List the workspaces, so a scan or a backfill can name one.
+
+    A workspace is normally minted by a browser and identified only by its
+    cookie, which nothing outside that browser can see. This is how an operator
+    finds the id — including the one the migration filed the pre-workspace
+    invoices into.
+    """
+    # Imported here rather than at module scope, for the same reason `migrate`
+    # is: `version` and `config` must keep working without SQLAlchemy loading.
+    from invoicepilot import workspaces as ws
+    from invoicepilot.core.db import session_scope
+
+    with session_scope() as session:
+        rows = ws.summarise(session)
+
+    if not rows:
+        typer.echo("No workspaces yet.")
+        return
+
+    typer.echo(f"{'id':<45} {'created':<20} {'mailboxes':>9} {'invoices':>9}")
+    for row in rows:
+        created = row["created_at"].strftime("%Y-%m-%d %H:%M")
+        typer.echo(f"{row['id']:<45} {created:<20} {row['accounts']:>9} {row['invoices']:>9}")
+
+
+@cli.command()
 def scan(
+    workspace: Annotated[
+        str,
+        typer.Option(
+            help="Which workspace to scan into. `invoicepilot workspaces` lists them. "
+            "Required: a mailbox belongs to a workspace, and so do the invoices a "
+            "scan files, so there is no sensible default to guess at.",
+        ),
+    ],
     since: Annotated[
         datetime | None,
         typer.Option(
@@ -82,7 +117,9 @@ def scan(
     nothing and looks like ordinary mail here. Add YAML under
     templates/invoice2data/ to teach a new issuer.
     """
-    from invoicepilot.invoice_store import DATA_ROOT
+    from invoicepilot import workspaces as ws
+    from invoicepilot.core.db import session_scope
+    from invoicepilot.invoice_store import workspace_root
     from invoicepilot.process import Progress, scan_all
     from invoicepilot.unipile import UnipileError
 
@@ -93,8 +130,16 @@ def scan(
             f"{progress.invoices_found} invoice(s) so far"
         )
 
+    with session_scope() as session:
+        if not ws.exists(session, workspace):
+            log.error("no workspace %s — `invoicepilot workspaces` lists them", workspace)
+            raise SystemExit(1)
+        allowed = ws.account_ids(session, workspace)
+
     try:
         result = scan_all(
+            workspace,
+            allowed,
             follow_links=follow_links,
             keywords=keywords,
             since=since.replace(tzinfo=UTC) if since else None,
@@ -117,7 +162,7 @@ def scan(
         return
     typer.echo(
         f"\n{result.invoices_found} invoice(s) recognised, {result.invoices_new} of them new."
-        f"\nFiled under {DATA_ROOT} and in the database."
+        f"\nFiled under {workspace_root(workspace)} and in the database."
     )
 
 

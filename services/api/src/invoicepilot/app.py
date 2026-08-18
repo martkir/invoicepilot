@@ -8,16 +8,26 @@ threadpool. Declaring them async would put that work on the event loop and
 stall the whole service for the length of a scan.
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
-from invoicepilot import __version__, accounts, invoices, scan_jobs, share_mail, share_zip, shares
+from invoicepilot import (
+    __version__,
+    accounts,
+    invoices,
+    scan_jobs,
+    share_mail,
+    share_zip,
+    shares,
+    workspaces,
+)
+from invoicepilot.core.config import get_settings
 from invoicepilot.core.db import session_scope
-from invoicepilot.core.logging import setup_logging
-from invoicepilot.invoice_store import document_path, thumbnail
+from invoicepilot.core.logging import get_logger, setup_logging
+from invoicepilot.invoice_store import document_path, thumbnail, workspace_root
 from invoicepilot.models import Share
 from invoicepilot.schemas import (
     Account,
@@ -36,12 +46,71 @@ from invoicepilot.unipile import UnipileError, credentials
 
 setup_logging()
 
+log = get_logger(__name__)
+
 api = FastAPI(title="Invoice Pilot API", version=__version__)
 
 # Unipile's base URL and key, resolved per request. A dependency rather than a
 # call in each handler so that missing configuration and an unreachable tenant
 # report the same way everywhere — see the UnipileError handler below.
 CredentialsDep = Annotated[tuple[str, str], Depends(credentials)]
+
+
+def workspace(request: Request, response: Response) -> str:
+    """Who is asking, as an id — the scope every route below reads and writes in.
+
+    There is no login. The dashboard is served on a public URL, so identity is
+    a cookie this sets the first time a browser arrives without a usable one.
+    Same browser, same workspace; a different browser is a different person and
+    starts empty, which is the whole point of the thing.
+
+    Note what this does *not* gate: it refuses nobody. Anyone may have a
+    workspace, and what they get is their own. The scoping is the security
+    boundary, not an admission check.
+    """
+    with session_scope() as session:
+        workspace_id, minted = workspaces.ensure(session, request.cookies.get(workspaces.COOKIE))
+
+    if minted:
+        response.set_cookie(
+            workspaces.COOKIE,
+            workspace_id,
+            max_age=workspaces.COOKIE_MAX_AGE,
+            httponly=True,
+            # Off for a plain-HTTP origin, or the dev server could never keep
+            # the cookie at all: browsers drop a Secure cookie sent over http.
+            # Derived from the public origin rather than a setting of its own,
+            # so there is no second switch to forget in production.
+            secure=get_settings().public_base_url.startswith("https://"),
+            # Lax, not Strict: a share link followed out of a mail client is a
+            # cross-site navigation, and under Strict the recipient would
+            # arrive without their own cookie and be minted a new workspace on
+            # every visit.
+            samesite="lax",
+            path="/",
+        )
+    return workspace_id
+
+
+WorkspaceDep = Annotated[str, Depends(workspace)]
+
+
+def owned_accounts(ws: WorkspaceDep) -> list[str]:
+    """The Unipile account ids this workspace may act on.
+
+    One tenant serves every visitor, so this list is what separates "my
+    mailboxes" from "the deployment's mailboxes". Passed into accounts.* rather
+    than looked up there, which is what keeps that module free of the database.
+
+    A dependency rather than a call inside each handler, for the same reason
+    `credentials` is one: it reaches a backend, so it is the seam a test needs
+    to override.
+    """
+    with session_scope() as session:
+        return workspaces.account_ids(session, ws)
+
+
+AllowedDep = Annotated[list[str], Depends(owned_accounts)]
 
 
 @api.exception_handler(UnipileError)
@@ -61,27 +130,78 @@ def health() -> HealthResponse:
 
 
 @api.get("/accounts", response_model=list[Account])
-def list_accounts(creds: CredentialsDep) -> list[Account]:
-    """Mailboxes Unipile currently holds credentials for."""
-    return [Account(**accounts.describe(a)) for a in accounts.list_connected(*creds)]
+def list_accounts(creds: CredentialsDep, allowed: AllowedDep) -> list[Account]:
+    """Mailboxes this workspace has connected.
+
+    Not every mailbox on the tenant — that list is everyone's, and answering it
+    here is what the workspace scoping exists to prevent.
+    """
+    connected = accounts.list_connected(*creds, allowed)
+    return [Account(**accounts.describe(a)) for a in connected]
 
 
 @api.post("/accounts/connect", response_model=ConnectLink)
-def connect_account(creds: CredentialsDep) -> ConnectLink:
-    """A hosted auth URL for connecting a mailbox.
+def connect_account(creds: CredentialsDep, ws: WorkspaceDep) -> ConnectLink:
+    """A hosted auth URL for connecting a mailbox to this workspace.
 
     The caller opens it, the user approves, and the account appears on the
-    tenant — which the caller observes by polling /accounts, because Unipile's
-    webhook needs a publicly reachable URL that a local run does not have.
+    tenant — which the caller observes by polling /accounts.
+
+    The nonce in the callback URL is what makes the finished account
+    attributable. The wizard runs in the user's own browser and the account
+    surfaces on a tenant shared by every visitor, so without the callback there
+    is nothing to say whose it is. If it never arrives the account stays
+    unclaimed and invisible rather than being guessed at.
     """
-    return ConnectLink(url=accounts.connect_link(*creds))
+    with session_scope() as session:
+        nonce = workspaces.start_connect(session, ws)
+
+    origin = get_settings().public_base_url.rstrip("/")
+    return ConnectLink(
+        url=accounts.connect_link(*creds, notify_url=f"{origin}/api/unipile/connected/{nonce}")
+    )
+
+
+@api.post("/unipile/connected/{nonce}", status_code=204)
+def account_connected(nonce: str, payload: dict[str, Any] | None = None) -> None:
+    """Unipile's callback: file a freshly connected account against a workspace.
+
+    Public and unauthenticated, because Unipile is the caller and carries no
+    credential of ours. The nonce is the check — it was minted for one connect
+    flow, is single-use, and expires with the link it travelled in.
+
+    Answers 204 whether or not the nonce meant anything. A webhook that reports
+    failure gets retried, and there is nothing to retry: an unknown nonce is a
+    flow that expired or a replay, and neither improves on a second attempt.
+
+    The body is logged because its exact shape is Unipile's to change and this
+    is the only place it is ever seen — the first real connect after a deploy
+    is the only chance to find out it moved.
+    """
+    body = payload or {}
+    account_id = body.get("account_id") or body.get("accountId") or body.get("id")
+    if not account_id:
+        log.warning("connect callback carried no account id: %s", body)
+        return
+
+    with session_scope() as session:
+        claimed = workspaces.claim(session, nonce, str(account_id))
+    if claimed is None:
+        log.info("connect callback for an unknown or spent nonce")
 
 
 @api.delete("/accounts/{account_id}", status_code=204)
-def disconnect_account(account_id: str, creds: CredentialsDep) -> None:
-    """Disconnect a mailbox. Invoices already extracted from it are kept."""
+def disconnect_account(
+    account_id: str, creds: CredentialsDep, ws: WorkspaceDep, allowed: AllowedDep
+) -> None:
+    """Disconnect a mailbox. Invoices already extracted from it are kept.
+
+    An account this workspace does not own reports 404 rather than 403: whether
+    some other visitor has connected a given mailbox is not this caller's to
+    find out.
+    """
     try:
-        accounts.disconnect(*creds, account_id)
+        removed = accounts.disconnect(*creds, allowed, account_id)
     except UnipileError as exc:
         # Unipile 404s an unknown id. Only this route can read that as "gone
         # already" rather than "broken" — everywhere else a 404 from Unipile
@@ -89,6 +209,9 @@ def disconnect_account(account_id: str, creds: CredentialsDep) -> None:
         if "HTTP 404" not in str(exc):
             raise
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    with session_scope() as session:
+        workspaces.forget_account(session, ws, removed)
 
 
 @api.post(
@@ -99,18 +222,20 @@ def disconnect_account(account_id: str, creds: CredentialsDep) -> None:
     # cannot see it has no reason to handle it.
     responses={409: {"description": "A scan is already running."}},
 )
-def start_scan(request: ScanRequest | None = None) -> ScanJob:
-    """Start scanning every connected mailbox. Returns immediately with a job id."""
+def start_scan(
+    ws: WorkspaceDep, allowed: AllowedDep, request: ScanRequest | None = None
+) -> ScanJob:
+    """Start scanning this workspace's mailboxes. Returns immediately with a job id."""
     options = request or ScanRequest()
     try:
-        return _as_job(scan_jobs.start(follow_links=options.follow_links))
+        return _as_job(scan_jobs.start(ws, allowed, follow_links=options.follow_links))
     except scan_jobs.ScanInProgress as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @api.get("/scan/{job_id}", response_model=ScanJob)
-def scan_status(job_id: str) -> ScanJob:
-    job = scan_jobs.get(job_id)
+def scan_status(job_id: str, ws: WorkspaceDep) -> ScanJob:
+    job = scan_jobs.get(job_id, ws)
     if job is None:
         raise HTTPException(status_code=404, detail="No such scan.")
     return _as_job(job)
@@ -118,32 +243,36 @@ def scan_status(job_id: str) -> ScanJob:
 
 @api.get("/invoices", response_model=InvoicePage)
 def list_invoices(
+    ws: WorkspaceDep,
     limit: Annotated[int, Query(ge=1, le=invoices.MAX_PAGE)] = invoices.DEFAULT_PAGE,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> InvoicePage:
-    """One page of stored invoices, newest first."""
+    """One page of this workspace's invoices, newest first."""
     with session_scope() as session:
         return InvoicePage(
-            items=invoices.recent(session, limit=limit, offset=offset),
-            total=invoices.count(session),
+            items=invoices.recent(session, ws, limit=limit, offset=offset),
+            total=invoices.count(session, ws),
         )
 
 
 @api.get("/invoices/{invoice_id}/document")
-def invoice_document(invoice_id: str) -> FileResponse:
+def invoice_document(invoice_id: str, ws: WorkspaceDep) -> FileResponse:
     """The vendor's own file for one invoice.
 
     Served inline so a browser can render the PDF in place. Not every invoice
     has one — a receipt that only ever existed as an email body has nothing to
     return, which is a 404 the client is expected to handle rather than an
     error worth logging.
+
+    Another workspace's invoice id is the same 404 as one that does not exist.
+    The lookup is scoped, so there is no branch here that could tell them apart.
     """
     with session_scope() as session:
-        payload = invoices.get(session, invoice_id)
+        payload = invoices.get(session, ws, invoice_id)
     if payload is None:
         raise HTTPException(status_code=404, detail="No such invoice.")
 
-    path = document_path(payload)
+    path = document_path(payload, workspace_root(ws))
     if path is None:
         raise HTTPException(status_code=404, detail="This invoice has no document.")
 
@@ -155,13 +284,20 @@ def invoice_document(invoice_id: str) -> FileResponse:
 
 
 @api.post("/shares", response_model=ShareCreated, status_code=201)
-def create_share(payload: ShareCreate, creds: CredentialsDep) -> ShareCreated:
+def create_share(
+    payload: ShareCreate, creds: CredentialsDep, ws: WorkspaceDep, allowed: AllowedDep
+) -> ShareCreated:
     """Mint a link for a batch of invoices. The only place a share is written.
 
     The owner key comes back here and never again — the browser keeps it, and
     it is what separates the person who made the link from anyone holding it.
+
+    Two scopes meet here and they are both this caller's: the mailbox it is
+    sent as must be one this workspace owns, and the ids it covers are read
+    within this workspace. An id belonging to somebody else simply is not found
+    and drops out of the snapshot.
     """
-    mailbox = accounts.owner(*creds, payload.account_id)
+    mailbox = accounts.owner(*creds, allowed, payload.account_id)
     if mailbox is None:
         raise HTTPException(status_code=403, detail="Not one of your connected mailboxes.")
     name, address = mailbox
@@ -169,9 +305,10 @@ def create_share(payload: ShareCreate, creds: CredentialsDep) -> ShareCreated:
     with session_scope() as session:
         ids = payload.invoice_ids
         if ids is None:
-            ids = invoices.all_ids(session)
+            ids = invoices.all_ids(session, ws)
         share, owner_key = shares.mint(
             session,
+            workspace_id=ws,
             invoice_ids=ids,
             owner=((payload.owner_name or name).strip(), address),
         )
@@ -193,7 +330,13 @@ def create_share(payload: ShareCreate, creds: CredentialsDep) -> ShareCreated:
     responses={410: {"description": "The link has expired."}},
 )
 def share_manifest(token: str) -> ShareManifest:
-    """Everything the share page shows: who shared it, and what is in the zip."""
+    """Everything the share page shows: who shared it, and what is in the zip.
+
+    No workspace dependency, here or on any other /s/{token} route. The caller
+    is a recipient: they hold the link, they have no account, and the cookie
+    their browser carries is their own empty workspace or nothing at all. The
+    scope comes off the share row instead — see shares.snapshot().
+    """
     with session_scope() as session:
         snapshot = shares.snapshot(session, _live_share(session, token))
         share, summary = snapshot.share, snapshot.summary
@@ -239,9 +382,10 @@ def share_thumbnail(token: str, invoice_id: str) -> FileResponse:
         share = _live_share(session, token)
         if invoice_id not in share.invoice_ids:
             raise HTTPException(status_code=404, detail="No such invoice in this share.")
-        payload = invoices.get(session, invoice_id)
+        payload = invoices.get(session, share.workspace_id, invoice_id)
+        root = workspace_root(share.workspace_id)
 
-    image = thumbnail(payload) if payload else None
+    image = thumbnail(payload, root) if payload else None
     if image is None:
         raise HTTPException(status_code=404, detail="This invoice has no document.")
     return FileResponse(image, media_type="image/webp")
@@ -283,13 +427,19 @@ def send_share_email(token: str, payload: ShareEmail, creds: CredentialsDep) -> 
     Two things are checked before Unipile is called: the owner key, and that
     the mailbox is really one of this user's. Both arrive from the browser, and
     the only thing that may send as a mailbox is that mailbox's owner.
+
+    The mailbox is checked against the *share's* workspace, not the caller's
+    cookie. The owner key is what authorises acting as this share, so it is the
+    share's own mailboxes that it authorises sending from — which also means an
+    owner who has lost their cookie but kept the key can still send.
     """
     with session_scope() as session:
         share = _live_share(session, token)
         _owned(share, payload.owner_key)
         snapshot = shares.snapshot(session, share)
+        allowed = workspaces.account_ids(session, share.workspace_id)
 
-    if accounts.owner(*creds, payload.from_account_id) is None:
+    if accounts.owner(*creds, allowed, payload.from_account_id) is None:
         raise HTTPException(status_code=403, detail="Not one of your connected mailboxes.")
 
     share_mail.send(

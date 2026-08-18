@@ -33,6 +33,23 @@ from invoicepilot.core.config import get_settings
 DATA_ROOT = get_settings().data_dir
 
 SLUG_STRIP_RE = re.compile(r"[^a-z0-9]+")
+
+
+def workspace_root(workspace_id: str, root: Path = DATA_ROOT) -> Path:
+    """Where one workspace's documents live: `<data_dir>/<workspace>/<mailbox>/…`.
+
+    The extra level exists because a mailbox address is not unique across the
+    deployment — two people can connect the same one, and without this their
+    invoices would be written into the same folders.
+
+    Every path function below already takes `root`, so this is the only thing
+    that had to change: pass this instead of DATA_ROOT and the containment
+    check in document_path() confines each workspace to its own subtree for
+    free.
+    """
+    return root / workspace_id
+
+
 # Enough of the mail token to separate two invoices that agree on every other
 # part of the name; the full ids live in invoice.json.
 ID_PREFIX = 6
