@@ -7,7 +7,7 @@
    be forked to see the change.
 
    Shipping this for real means pasting the :root block below over
-   frontend/src/styles/tokens.css. Nothing else in the app has to move.
+   services/web/src/styles/tokens.css. Nothing else in the app has to move.
 
    What changed and why is written up in audit.md; the short version:
 
@@ -30,7 +30,7 @@
        an offline open degrades to exactly what v1 looked like.
 
        Production: @fontsource-variable/geist rather than this CDN — the app
-       has no font dependency today (checked frontend/package.json: React 19
+       has no font dependency today (checked services/web/package.json: React 19
        and Vite, nothing else), and a share page that stalls on fonts.gstatic
        is a share page that stalls. */
     --font: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;

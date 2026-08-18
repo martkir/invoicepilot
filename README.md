@@ -4,7 +4,7 @@
 [![Docker](https://img.shields.io/badge/docker-%23000000.svg?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-%23000000.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 
-[![Invoice Pilot](https://img.shields.io/badge/invoicepilot-7f56da)](https://meetneura.ai) [![Powered by Neura AI](https://img.shields.io/badge/Powered%20by-Neura%20AI-7f56da)](https://meetneura.ai)
+[![Invoice Pilot](https://img.shields.io/badge/invoicepilot-7f56da)](https://meetneura.ai) [![Powered by Neura AI](https://img.shields.io/badge/Powered%20by-Neura%20AI-7f56da)](https://meetneura.ai) [![Live](https://img.shields.io/badge/live-dashboard-7f56da)](https://invoicepilot-f02dc983.88-198-24-98.sslip.io)
 
 # Invoice Pilot
 
@@ -13,6 +13,11 @@ mailbox, extracts the fields, and organizes them. Free to use, modify and
 distribute under the MIT License.
 
 ![Demo](docs/assets/demo.png)
+
+**Live dashboard:** <https://invoicepilot-f02dc983.88-198-24-98.sslip.io> — behind
+basic auth, since the application has no login of its own (see [Putting it on
+the internet](#putting-it-on-the-internet)). Share links under `/s/<token>` are
+exempt and open to anyone holding the link.
 
 > **Status.** Invoice Pilot was originally a Rust TUI. It is being rewritten as
 > a Python backend with a web dashboard, and that rewrite is in progress — see
@@ -43,7 +48,7 @@ Working today:
   Unipile wizard to connect a new mailbox.
 - **Extraction pipeline** — mail through Unipile, `invoice2data` over
   attachments, forwarded `.eml` contents, message bodies and PDFs linked from
-  a body. Shared by the API and `scripts/parse_invoices.py`.
+  a body. Shared by the API and `services/api/scripts/parse_invoices.py`.
 - **Storage** — Postgres for the metadata the dashboard queries, plus
   `.data/<mailbox>/<date>__<vendor>__<amount>__<id>/` for the vendor's own
   document. Both are keyed identically, so re-scanning updates rather than
@@ -56,17 +61,18 @@ Not yet built: preview/download of a stored document, selection actions,
 pagination, and sorting by column — the dashboard renders those controls but
 they are inert. Not yet ported from the Rust version: Google Drive upload,
 institution-based folder organization, scheduled runs and completion emails
-(`backend/drive.py` and `backend/gmail.py` are placeholders).
+(neither has been started).
 
 ## Layout
 
 ```
-backend/     Python package — CLI, FastAPI service, domain modules
-frontend/    Vite-served dashboard
-scripts/     run-and-exit ops tooling
-templates/   invoice2data extraction templates
-tests/       pytest suite
-docker/      Dockerfiles, one compose file, nginx config
+compose.yml       dev stack: postgres + dashboard
+compose.prod.yml  deployed stack: postgres + api + dashboard
+services/api/     the FastAPI service — package, tests, ops scripts, Dockerfile
+services/web/     the dashboard — Vite app, Caddy config, Dockerfile
+deploy/           host-level config that is not a container
+tools/            dev tooling owned by no service
+docs/             design notes and flow mockups
 ```
 
 See [STRUCTURE.md](STRUCTURE.md) for the rules governing where new code goes.
@@ -101,17 +107,18 @@ provider OAuth and you only set `UNIPILE_API_KEY` and `UNIPILE_DSN`.
 ## Setup
 
 ```bash
-cp .env.example .env      # then fill in your credentials
-just setup                # or: ./scripts/bootstrap.sh
+cp services/api/.env.example services/api/.env   # backend credentials
+cp .env.example .env                            # compose credentials
+just setup                # creates .venv and installs services/api
 source .venv/bin/activate
 
 just start-db             # Postgres in Docker, port 57552
 just migrate              # create tables, backfill anything already in .data/
 
-just web-install          # npm install in frontend/
+just web-install          # npm install in services/web/
 ```
 
-`bootstrap.sh` uses `uv` if it is installed and falls back to `venv` + `pip`.
+`just setup` uses `uv` if it is installed and falls back to `venv` + `pip`.
 `just migrate` needs `DATABASE_URL` set and the database running.
 
 ## Running
@@ -128,16 +135,16 @@ just lint                 # ruff check + format --check
 Without `just`:
 
 ```bash
-./scripts/run_api.sh
-cd frontend && npm install && npm run dev
-python -m backend --help
+cd services/api && uvicorn invoicepilot.app:api --reload
+cd services/web && npm install && npm run dev
+python -m invoicepilot --help
 ```
 
 Run `just api` and `just web` together: the Vite dev server proxies `/api` to
 the backend, so the dashboard calls same-origin paths and neither CORS config
 nor a base-URL variable is needed.
 
-`just web-deploy` is the same dashboard built and served by nginx in a
+`just web-deploy` is the same dashboard built and served by Caddy in a
 container on port 8090, with the same same-origin `/api` (proxied to the host's
 port 8000 rather than to Vite). The container holds a build, not the source, so
 rerun it after a frontend change or 8090 goes on serving the previous bundle.
@@ -152,9 +159,9 @@ to `POST /scan`) to keep a scan strictly offline.
 
 ### Containers
 
-[docker/compose.yml](docker/compose.yml) holds the two services this project
-runs in Docker, and `docker/.env` holds their credentials, which is why every
-command below passes `--env-file .env`.
+[compose.yml](compose.yml) holds the two services this project runs in Docker
+while you develop, and the `.env` beside it holds their credentials — compose
+reads both without any flags, because they sit together at the repo root.
 
 ```bash
 just start-db             # postgres service, port 57552
@@ -163,16 +170,71 @@ just web-deploy           # web service, port 8090, rebuilding the image
 just web-down
 ```
 
-The API is deliberately not a service. It runs on the host under uvicorn, and
-the dashboard container's nginx proxies `/api` to it through
+The API is deliberately not a service *here*. It runs on the host under
+uvicorn, and the dashboard container's Caddy proxies `/api` to it through
 `host.docker.internal`; containerising it would mean rebuilding an image on
-every backend edit.
+every backend edit, and the reload loop is the point of running it locally.
+
+## Deploying
+
+[compose.prod.yml](compose.prod.yml) is the same application
+with nothing left on the host: Postgres, the API and the dashboard are all
+containers, and the dashboard's Caddy proxies `/api` across the compose network
+instead of back out to `host.docker.internal`.
+
+```bash
+cp .env.example .env      # then fill in
+just deploy               # build and start all three
+just deploy-logs
+just deploy-down
+```
+
+Two variables in `.env` decide whether the deploy is correct rather than
+merely running. `POSTGRES_PASSWORD` is the database. `PUBLIC_BASE_URL` is the
+origin share links are handed out under — it must be the public HTTPS address
+of the *dashboard*, because a link opens the share page, which then calls
+`/api/s/<token>` back on that same origin. It is baked into every link already
+sent, so changing it later strands them.
+
+The schema is created by the API container on startup (`invoicepilot migrate`,
+which is a no-op the second time), so there is no separate migrate step: an
+empty volume plus `just deploy` is the whole install. Extracted documents live
+in the `invoicepilot-invoice-data` volume — real financial documents, and the
+only copy.
+
+### Putting it on the internet
+
+Nothing in the stack binds a public interface: the dashboard is published on
+`127.0.0.1:8090` and the API is not published at all. Something on the host has
+to terminate TLS for the public hostname and proxy to that port.
+[deploy/caddy-public.caddy](deploy/caddy-public.caddy) is that piece, written
+for a host already running Caddy — copy it into the site directory, set the
+hostname and a password hash, and reload:
+
+```bash
+cp deploy/caddy-public.caddy ~/serverkit/caddy/sites/invoicepilot.caddy
+docker exec serverkit-caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+Without a domain, `sslip.io` resolves `<anything>.<dashed-ip>.sslip.io` to that
+IP with no registration, which is enough for Let's Encrypt to issue.
+
+That file also puts basic auth on the dashboard, and the reason is worth
+keeping in mind if you remove it: this application has no login of its own, and
+its API can read every extracted invoice, connect and disconnect mailboxes, and
+send mail as them. Share links are exempt from the password — `/s/<token>`,
+`/api/s/*` and `/assets/*` stay open, because a recipient has no account and
+the whole product is that they need none.
 
 ## Configuration
 
-All settings come from a single `.env` at the repo root, read by
-[backend/core/config.py](backend/core/config.py). Every key it reads is
-documented in [.env.example](.env.example).
+The api service's settings come from `services/api/.env`, read by
+[services/api/src/invoicepilot/core/config.py](services/api/src/invoicepilot/core/config.py).
+Every key it reads is documented in
+[services/api/.env.example](services/api/.env.example). The containers' own
+settings are a separate `.env` at the repo root, documented in
+[.env.example](.env.example) — the same credential appears in both, because the
+API runs on the host in development and in a container when deployed.
 
 Keys carried over from the Rust binary that nothing reads yet (Drive upload,
 scheduling, keyword filters, Wise, notification email) are listed at the bottom
@@ -235,7 +297,8 @@ CI runs the same lint and test steps plus a frontend build — see
 6. **Open a Pull Request** describing the change
 
 Useful places to start: porting the Drive upload and institution-detection
-logic, defining the dashboard's API endpoints in `backend/schemas.py`, adding
+logic, defining the dashboard's API endpoints in
+`services/api/src/invoicepilot/schemas.py`, adding
 `invoice2data` templates for vendors that don't parse yet, or widening test
 coverage.
 

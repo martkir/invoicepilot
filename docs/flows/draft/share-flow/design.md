@@ -217,7 +217,7 @@ crushes the Vendor column to nothing.
 
 ### In the zip: `invoices.csv`
 
-Columns below are exactly what `backend/extract.py` yields today — checked
+Columns below are exactly what `services/api/src/invoicepilot/extract.py` yields today — checked
 against the real payloads in `.data/`, not invented. Order matters: an
 accountant reads left to right and stops when they have what they need.
 
@@ -303,8 +303,8 @@ five requests, so no image on this page is ever lazy. The sheet below lists all
 ## Sending mail
 
 Unipile already holds the mailbox credentials and already does mail transport
-(`backend/unipile.py`), so this is `POST /api/v1/emails` with the chosen
-`account_id` — no second OAuth, no Gmail client to write. `backend/gmail.py` is
+(`services/api/src/invoicepilot/unipile.py`), so this is `POST /api/v1/emails` with the chosen
+`account_id` — no second OAuth, no Gmail client to write. `services/api/src/invoicepilot/gmail.py` is
 still a placeholder and stays one. The id has to be checked against
 `accounts.list_connected()` on the way through: it arrives from the browser, and
 the only thing that may send as a mailbox is that mailbox's owner.

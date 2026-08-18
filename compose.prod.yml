@@ -1,0 +1,95 @@
+# The deployed stack: database, API and dashboard, all in containers.
+#
+#   docker compose -f compose.prod.yml up -d --build
+#
+# This is the difference from compose.yml, which is the local-development file:
+# there the API runs on the host under uvicorn --reload and only Postgres and
+# the dashboard are containers. Here nothing runs on the host, and the
+# dashboard's Caddy proxies /api to the api service over the compose network
+# instead of back out to host.docker.internal.
+#
+# Only the dashboard publishes a port, and only on loopback: Caddy on this box
+# terminates TLS for the public hostname and proxies to it. Nothing in this
+# file is reachable from the internet by itself.
+name: invoicepilot
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: invoicepilot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: invoicepilot
+      POSTGRES_USER: ${POSTGRES_USERNAME:?set POSTGRES_USERNAME in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    ports:
+      # Loopback only, and not 5432: this is here so `psql` from the box works,
+      # not so anything connects over the network. The api service reaches
+      # Postgres by service name, which never goes through this mapping.
+      - "127.0.0.1:${POSTGRES_LOCAL_PORT:-57552}:5432"
+    volumes:
+      # /var/lib/postgresql, not /var/lib/postgresql/data: since 18 the image
+      # keeps its cluster in a version-named subdirectory (PGDATA is
+      # /var/lib/postgresql/18/docker) and refuses to start when it finds a
+      # mount on the old path, because that mount would silently hold nothing.
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d invoicepilot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: services/api
+    container_name: invoicepilot-api
+    restart: unless-stopped
+    environment:
+      # +psycopg selects psycopg 3, which is the driver this project installs.
+      # Plain postgresql:// means psycopg2 to SQLAlchemy, and that is not here.
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@postgres:5432/invoicepilot
+      # The public origin share links are handed out under. It is the address
+      # of the dashboard, not of this service: a link opens the share page,
+      # which calls back into /api/s/<token>. Wrong here means every link
+      # already sent points somewhere that does not answer.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL in .env}
+      UNIPILE_API_KEY: ${UNIPILE_API_KEY:-}
+      UNIPILE_DSN: ${UNIPILE_DSN:-}
+      UNIPILE_NOTIFY_URL: ${UNIPILE_NOTIFY_URL:-}
+      DEBUG_LOGS_ENABLED: ${DEBUG_LOGS_ENABLED:-false}
+    volumes:
+      # The extracted documents. A named volume rather than a bind mount: these
+      # are real invoices, and they must not depend on a checkout staying put.
+      - invoice_data:/app/.data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # urllib, because the image has no curl and adding one to carry a
+      # healthcheck is a package to patch forever.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # The dashboard: a build served by Caddy, which also owns /api for the
+  # browser. The container holds the built bundle rather than the source, so a
+  # frontend change needs --build or it goes on serving the previous one.
+  web:
+    build: services/web
+    container_name: invoicepilot-web
+    restart: unless-stopped
+    environment:
+      # Read by services/web/Caddyfile. The image's default points at the host's
+      # uvicorn; here the API is a container on this network.
+      API_UPSTREAM: api:8000
+    ports:
+      - "127.0.0.1:${WEB_LOCAL_PORT:-8090}:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+    name: invoicepilot-postgres-data
+  invoice_data:
+    name: invoicepilot-invoice-data

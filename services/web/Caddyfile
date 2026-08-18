@@ -1,0 +1,41 @@
+# Serves the built dashboard and gives it a same-origin /api, which is what the
+# Vite dev proxy does in development. Without this the React app loads and then
+# fails every request: the browser resolves /api against this container, and
+# nothing here would answer it.
+#
+# Plain HTTP on :80. TLS is not this container's job — it is published on
+# loopback and something in front of it (Caddy again, on the host) terminates
+# the public hostname.
+:80 {
+	encode zstd gzip
+	root * /usr/share/caddy
+
+	# API_UPSTREAM is host.docker.internal:8000 when the API runs on the host
+	# under uvicorn --reload, and api:8000 when it runs as a container beside
+	# this one. handle_path strips the /api prefix, so the service sees the
+	# route it actually declares: /api/invoices reaches it as /invoices.
+	handle_path /api/* {
+		reverse_proxy {$API_UPSTREAM} {
+			# A scan runs for minutes and a share zip is streamed. Neither is
+			# a request to hold in a buffer waiting for the last byte.
+			flush_interval -1
+		}
+	}
+
+	# Vite fingerprints these, so the name changes whenever the bytes do and
+	# they can be cached indefinitely.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# index.html keeps its name across deploys, so it must be revalidated every
+	# time. Without this the browser applies heuristic caching and a redeploy
+	# goes on serving the previous build until someone hard-refreshes.
+	header /index.html Cache-Control "no-cache"
+
+	# Single-page app: unknown paths are routes, not missing files. /s/<token>
+	# is the whole reason — the share page reads its token off the URL.
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}

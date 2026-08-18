@@ -1,0 +1,4 @@
+# Build context excludes. Without these, `COPY . ./` drags the host's
+# node_modules into the image and overwrites the layer npm install just built.
+node_modules/
+dist/

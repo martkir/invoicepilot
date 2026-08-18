@@ -19,8 +19,8 @@ Every screen links four sheets, in this order:
 
 | File | Owner | Fate on ship |
 | --- | --- | --- |
-| `frontend/src/styles/tokens.css` | the app | replaced by the `:root` block of `tokens-v2.css` |
-| `frontend/src/styles/dashboard.css` | the app | absorbs `redesign.css` |
+| `services/web/src/styles/tokens.css` | the app | replaced by the `:root` block of `tokens-v2.css` |
+| `services/web/src/styles/dashboard.css` | the app | absorbs `redesign.css` |
 | [`tokens-v2.css`](tokens-v2.css) | this folder | *becomes* `tokens.css` |
 | [`redesign.css`](redesign.css) | this folder | folded into `dashboard.css`, then deleted |
 | [`flow.css`](flow.css) | this folder | ships as the share UI's own stylesheet |

@@ -42,7 +42,7 @@ One new table, `shares`, holding a token, a hashed owner key, a JSONB snapshot
 of invoice ids, the name and address of the mailbox it was made from, and two
 timestamps. Eleven endpoints touch these screens and **four of them already
 ship** — `/api/accounts`, `/api/scan`, `/api/invoices` and
-`/api/invoices/{id}/document`, read off `backend/services/api.py` rather than
+`/api/invoices/{id}/document`, read off `services/api/src/invoicepilot/app.py` rather than
 imagined. The seven new ones are all scoped under `/api/shares` or
 `/api/s/{token}`, and every one of them looks the share up by primary key.
 There is no query in the flow that is not a primary-key lookup or an

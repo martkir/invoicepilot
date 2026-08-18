@@ -1,0 +1,45 @@
+# The public hostname, for the Caddy that terminates TLS on the host.
+#
+# The compose stack publishes the dashboard on loopback only, so this file is
+# what makes it reachable — and it is not part of the stack: it belongs to
+# whatever already owns :80 and :443 on the box. On a serverkit host that is
+# ~/serverkit, and installing this is a copy:
+#
+#   cp docker/caddy-public.caddy ~/serverkit/caddy/sites/invoicepilot.caddy
+#   # edit the hostname and the password hash, then:
+#   docker exec serverkit-caddy caddy reload --config /etc/caddy/Caddyfile
+#
+# Copy rather than symlink: the directory is mounted read-only into the Caddy
+# container, and a link would resolve to a path that does not exist in there.
+# Note that serverkit's init.sh clears caddy/sites/ and re-renders the files it
+# generates, so re-running it drops this one — copy it back.
+#
+# The hostname must match PUBLIC_BASE_URL in docker/.env. That variable is what
+# every share link already sent points at, so the two disagreeing means links
+# that resolve to nothing.
+invoicepilot.example.sslip.io {
+	encode zstd gzip
+
+	# The dashboard ships no login of its own, and what it can do is not read
+	# only: it lists every extracted invoice, connects and disconnects
+	# mailboxes, and sends mail as them. This is the only thing between that
+	# and the internet, so the hostname being hard to guess is not the control.
+	#
+	# Share links are the exception, and have to be — a recipient has no
+	# account and no password to be given. /s/<token> is the page, /api/s/*
+	# is everything that page fetches (manifest, thumbnails, the zip), and
+	# /assets/* is the bundle it loads, which is the same build the dashboard
+	# uses and carries no secrets.
+	#
+	# Generate the hash with:
+	#   docker run --rm caddy:2-alpine caddy hash-password --plaintext 'yours'
+	@guarded not path /s/* /api/s/* /assets/*
+	basic_auth @guarded {
+		admin $2a$14$replace-this-with-a-real-hash
+	}
+
+	# WEB_LOCAL_PORT from docker/.env. Reachable because the host's Caddy runs
+	# with network_mode: host — the port is bound to 127.0.0.1 and never
+	# published beyond it.
+	reverse_proxy 127.0.0.1:8090
+}

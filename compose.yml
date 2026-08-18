@@ -1,0 +1,58 @@
+# The two containers this project runs: the database, and the built dashboard.
+#
+#   docker compose up -d
+#
+# The API is deliberately not here. It runs on the host under uvicorn, which is
+# what `just api` starts and what the dashboard's Caddy proxies /api to through
+# host.docker.internal below. Containerising it would mean rebuilding an image
+# on every backend edit, and the reload loop is the point of running it locally.
+#
+# Credentials come from .env beside this file, which compose reads on its own
+# because both sit at the repository root — no --env-file needed.
+#
+# The project name is explicit because compose otherwise names it after the
+# directory it was invoked from, which is now the same directory compose.prod.yml
+# sits in. Sharing a name would make each stack report the other's containers as
+# orphans to be removed.
+name: invoicepilot-dev
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: invoice-pilot-postgres
+    environment:
+      POSTGRES_DB: invoicepilot
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      # Not 5432: a developer machine usually has a local Postgres already, and
+      # a port clash on the default is a confusing failure.
+      - "57552:5432"
+    volumes:
+      # /var/lib/postgresql, not /var/lib/postgresql/data: since 18 the image
+      # keeps its cluster in a version-named subdirectory (PGDATA is
+      # /var/lib/postgresql/18/docker) and refuses to start when it finds a
+      # mount on the old path, because that mount would silently hold nothing.
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d invoicepilot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # The dashboard, built by the image and served by Caddy. The container holds
+  # a build rather than the source, so a frontend change needs `--build` or
+  # 8090 goes on serving the previous bundle.
+  web:
+    build: services/web
+    container_name: invoicepilot-web
+    ports:
+      - "8090:80"
+    extra_hosts:
+      # What makes the host's port 8000 reachable from inside the container,
+      # which is where services/web/Caddyfile sends /api by default.
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data:
+    name: invoicepilot-postgres-data

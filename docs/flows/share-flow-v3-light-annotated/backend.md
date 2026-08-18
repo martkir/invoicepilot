@@ -113,8 +113,8 @@ different feature with a different table, not a tweak to this one.
 
 ### Creating it
 
-No Alembic needed. `scripts/migrate_db.py` calls `Base.metadata.create_all()`,
-which only ever adds what is missing. Add the model to `backend/models.py`, run
+No Alembic needed. ``invoicepilot migrate`` calls `Base.metadata.create_all()`,
+which only ever adds what is missing. Add the model to `services/api/src/invoicepilot/models.py`, run
 the script, done.
 
 ---
@@ -343,9 +343,9 @@ backend and everything else to the frontend.
 Small, but each one blocks something:
 
 1. **A `PUBLIC_BASE_URL` setting.** `POST /shares` has to return a full URL, and
-   the email needs one for its button. `backend/core/config.py` only knows the
+   the email needs one for its button. `services/api/src/invoicepilot/core/config.py` only knows the
    host and port it binds to.
-2. **Sending email.** `backend/unipile.py` can list mail and download
+2. **Sending email.** `services/api/src/invoicepilot/unipile.py` can list mail and download
    attachments, but it cannot send. Needs one function calling Unipile's
    `POST /api/v1/emails`.
 3. **Pillow.** Already have `pypdfium2` for rendering the PDF page, but encoding

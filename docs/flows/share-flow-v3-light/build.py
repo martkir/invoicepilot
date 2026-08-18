@@ -44,7 +44,7 @@ from urllib.parse import quote
 OUT = Path(__file__).parent
 
 # ---------------------------------------------------------------- data ------
-# Columns match what backend/extract.py actually produces. `invoice_no`, `net`
+# Columns match what services/api/src/invoicepilot/extract.py actually produces. `invoice_no`, `net`
 # and `vat` are blank for the Bolt row on purpose: that one is a ride receipt
 # read out of a mail body, and it genuinely carries only issuer, date, amount,
 # currency and VAT number. Every column below has to survive being empty.
@@ -83,7 +83,7 @@ ROWS = [
 TILES = ROWS[:5]
 
 # The rest of the payload, for the one row the flow opens. ROWS carries the
-# four columns the table shows; these are the other fields backend/extract.py
+# four columns the table shows; these are the other fields services/api/src/invoicepilot/extract.py
 # files under `invoice`, `email` and `document`, which is what the panel is
 # for. Dates are spelled out here because the panel renders them through
 # longDate() and dateTime() rather than the table's dd.mm.yyyy.
@@ -232,8 +232,8 @@ def page(title: str, body: str, *, desc: str, body_class: str = "") -> str:
 <meta property="og:description" content="{desc}"/>
 <meta name="theme-color" content="#eef0f6"/>
 <link rel="icon" href="{FAVICON}"/>
-<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
-<link rel="stylesheet" href="../../../frontend/src/styles/dashboard.css"/>
+<link rel="stylesheet" href="../../../services/web/src/styles/tokens.css"/>
+<link rel="stylesheet" href="../../../services/web/src/styles/dashboard.css"/>
 <link rel="stylesheet" href="tokens-v3.css"/>
 <link rel="stylesheet" href="reskin.css"/>
 <link rel="stylesheet" href="flow.css"/>
@@ -592,7 +592,7 @@ def sheet_row(row: Row, n: int) -> str:
 def csv_part() -> str:
     """A plain sheet: hairline grid, tabular figures, counts on the last line.
 
-    Columns are what backend/extract.py actually yields, the net/VAT split
+    Columns are what services/api/src/invoicepilot/extract.py actually yields, the net/VAT split
     included, because that is what the batch is for. No currency column: the
     whole batch is EUR, and one would only earn its width if a share ever
     mixed two.

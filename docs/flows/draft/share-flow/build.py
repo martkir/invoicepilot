@@ -14,7 +14,7 @@ from typing import NamedTuple
 OUT = Path(__file__).parent
 
 # ---------------------------------------------------------------- data
-# Columns match what backend/extract.py actually produces — see the real
+# Columns match what services/api/src/invoicepilot/extract.py actually produces — see the real
 # payloads under .data/. `invoice_no`, `net` and `vat` are blank for the Bolt
 # row on purpose: that one is a ride receipt read out of the mail body, and it
 # genuinely carries only issuer, date, amount, currency and VAT number. Every
@@ -95,8 +95,8 @@ def page(title: str, body: str) -> str:
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>{title}</title>
-<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
-<link rel="stylesheet" href="../../../frontend/src/styles/dashboard.css"/>
+<link rel="stylesheet" href="../../../services/web/src/styles/tokens.css"/>
+<link rel="stylesheet" href="../../../services/web/src/styles/dashboard.css"/>
 <link rel="stylesheet" href="flow.css"/>
 </head>
 <body>
@@ -274,7 +274,7 @@ def share_row(row: Row, n: int) -> str:
 def share_table() -> str:
     """A plain sheet: hairline grid, tabular figures, counts on the last line.
 
-    Columns are what backend/extract.py actually yields — invoice number and
+    Columns are what services/api/src/invoicepilot/extract.py actually yields — invoice number and
     the net/VAT split included, because that is what the batch is *for*. No
     currency column: the whole batch is EUR, and one would only earn its width
     if a share ever mixed two.

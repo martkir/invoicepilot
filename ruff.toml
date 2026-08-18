@@ -1,0 +1,22 @@
+# Repo-wide lint, so one `ruff check .` at the root covers every service plus
+# docs/ and tools/. It lives here rather than in a service's pyproject.toml
+# because those two directories belong to no service and would otherwise go
+# unlinted.
+line-length = 100
+
+# Where first-party packages live, so isort keeps `invoicepilot` in its own
+# import block instead of filing it with the third-party dependencies. Without
+# this the package looks external, because it is installed rather than sitting
+# in a directory beside this file.
+src = [".", "services/api/src"]
+
+[lint]
+select = ["E", "F", "I", "UP"]
+
+[lint.per-file-ignores]
+# The mockup generators are mostly HTML string literals. Wrapping a <div> at
+# column 100 makes the markup harder to read, not easier.
+"docs/flows/*/build.py" = ["E501"]
+# Same reason, and one harder one: a mail is inline styles and a webfont URL,
+# neither of which can be broken across lines without changing what is sent.
+"services/api/src/invoicepilot/share_mail.py" = ["E501"]

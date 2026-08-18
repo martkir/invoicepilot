@@ -1,6 +1,6 @@
 /* reskin.css: the diff against chrome that already ships.
    ==========================================================================
-   Every selector here overrides something in frontend/src/styles/dashboard.css.
+   Every selector here overrides something in services/web/src/styles/dashboard.css.
    It is kept apart from flow.css on purpose: flow.css is UI that does not
    exist yet, this file is a diff against UI that does. When the redesign is
    accepted these rules fold into dashboard.css and this file disappears;

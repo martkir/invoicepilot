@@ -28,7 +28,7 @@ from urllib.parse import quote
 OUT = Path(__file__).parent
 
 # ---------------------------------------------------------------- data ------
-# Columns match what backend/extract.py actually produces — see the real
+# Columns match what services/api/src/invoicepilot/extract.py actually produces — see the real
 # payloads under .data/. `invoice_no`, `net` and `vat` are blank for the Bolt
 # row on purpose: that one is a ride receipt read out of the mail body, and it
 # genuinely carries only issuer, date, amount, currency and VAT number. Every
@@ -164,8 +164,8 @@ def page(title: str, body: str, *, desc: str, body_class: str = "") -> str:
 <meta property="og:description" content="{desc}"/>
 <meta name="theme-color" content="#A8382C"/>
 <link rel="icon" href="{FAVICON}"/>
-<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
-<link rel="stylesheet" href="../../../frontend/src/styles/dashboard.css"/>
+<link rel="stylesheet" href="../../../services/web/src/styles/tokens.css"/>
+<link rel="stylesheet" href="../../../services/web/src/styles/dashboard.css"/>
 <link rel="stylesheet" href="tokens-v2.css"/>
 <link rel="stylesheet" href="redesign.css"/>
 <link rel="stylesheet" href="flow.css"/>
@@ -421,7 +421,7 @@ def sheet_row(row: Row, n: int) -> str:
 def csv_part() -> str:
     """A plain sheet: hairline grid, tabular figures, counts on the last line.
 
-    Columns are what backend/extract.py actually yields — invoice number and
+    Columns are what services/api/src/invoicepilot/extract.py actually yields — invoice number and
     the net/VAT split included, because that is what the batch is *for*. No
     currency column: the whole batch is EUR, and one would only earn its
     width if a share ever mixed two.

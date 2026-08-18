@@ -1,6 +1,6 @@
 /* redesign.css — targeted upgrades to chrome that already ships.
    ==========================================================================
-   Everything here overrides something in frontend/src/styles/dashboard.css.
+   Everything here overrides something in services/web/src/styles/dashboard.css.
    It is kept apart from flow.css on purpose: flow.css is UI that does not
    exist yet, this file is a diff against UI that does. When the redesign is
    accepted, the rules below get folded into dashboard.css and this file

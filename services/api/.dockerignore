@@ -1,0 +1,19 @@
+# Build context excludes. The context is this service's directory, so nothing
+# from the frontend or docs can reach an image and does not need excluding.
+
+# Secrets and extracted financial documents — must never enter an image.
+.env
+.env.backup
+.data/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Ops tooling runs on a workstation, not in the image.
+scripts/
+tests/

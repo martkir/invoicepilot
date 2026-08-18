@@ -38,10 +38,10 @@ rather than `gap` - because where the question was is as much a part of the map
 as the answer, and a map that quietly closed its own open questions would be
 harder to trust than one that shows them being closed.
 
-Queries are written as the SQL the SQLAlchemy in backend/ emits, not as ORM
+Queries are written as the SQL the SQLAlchemy in services/api/src/invoicepilot/ emits, not as ORM
 calls, because the question this folder answers is what the database is asked
-to do. The four endpoints that ship today were read off backend/services/api.py
-and backend/invoices.py; the six new ones are the plan.
+to do. The four endpoints that ship today were read off services/api/src/invoicepilot/app.py
+and services/api/src/invoicepilot/invoices.py; the six new ones are the plan.
 """
 
 import html
@@ -54,7 +54,7 @@ HERE = Path(__file__).parent
 SRC = HERE.parent / "share-flow-v3-light"
 
 # The three sheets stay in the design folder. Same depth, so the two links into
-# frontend/src/styles/ that every screen carries need no rewriting at all.
+# services/web/src/styles/ that every screen carries need no rewriting at all.
 SHEETS = ("tokens-v3.css", "reskin.css", "flow.css")
 
 
@@ -69,14 +69,14 @@ class Endpoint(NamedTuple):
     tables: tuple[tuple[str, bool], ...]
     sql: str
     note: str
-    # False for the four routes backend/services/api.py already serves.
+    # False for the four routes services/api/src/invoicepilot/app.py already serves.
     is_new: bool = True
 
 
 NO_TABLE: tuple[tuple[str, bool], ...] = ()
 
 ENDPOINTS: dict[str, Endpoint] = {
-    # ---- what ships today, read off backend/services/api.py ----------------
+    # ---- what ships today, read off services/api/src/invoicepilot/app.py ----------------
     "accounts": Endpoint(
         "GET",
         "/api/accounts",
@@ -245,8 +245,8 @@ ENDPOINTS: dict[str, Endpoint] = {
         "The one route the owner key gates. `from_account_id` arrives from the "
         "browser, so it is checked against /api/accounts on the way through - "
         "the only thing that may send as a mailbox is that mailbox's owner. "
-        "backend/unipile.py has no send function yet; this is the one call it "
-        "is missing.",
+        "services/api/src/invoicepilot/unipile.py has no send function yet; "
+        "this is the one call it is missing.",
     ),
 }
 
@@ -711,7 +711,8 @@ SCREENS: dict[str, tuple[str, str, tuple[Pin, ...]]] = {
                 "The error",
                 "email_send",
                 "The Unipile detail is shown verbatim because 'something went "
-                "wrong' is not something anyone can act on. backend/unipile.py "
+                "wrong' is not something anyone can act on. "
+                "services/api/src/invoicepilot/unipile.py "
                 "already surfaces the API's error body rather than swallowing "
                 "it, so the string exists; the route has to pass it through "
                 "rather than replace it.",
@@ -1233,7 +1234,7 @@ def index() -> str:
 <meta name="color-scheme" content="light"/>
 <title>Wiring map · Invoice Pilot</title>
 <meta name="description" content="Every element of the share flow, and what powers it."/>
-<link rel="stylesheet" href="../../../frontend/src/styles/tokens.css"/>
+<link rel="stylesheet" href="../../../services/web/src/styles/tokens.css"/>
 <link rel="stylesheet" href="../share-flow-v3-light/tokens-v3.css"/>
 <link rel="stylesheet" href="annotations.css"/>
 </head>

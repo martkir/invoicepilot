@@ -6,8 +6,8 @@ on:
   pull_request:
 
 jobs:
-  backend:
-    name: Backend (lint + tests)
+  api:
+    name: API (lint + tests)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +18,7 @@ jobs:
           cache: pip
 
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e "services/api[dev]"
 
       - name: Lint
         run: |
@@ -26,10 +26,11 @@ jobs:
           ruff format --check .
 
       - name: Test
+        working-directory: services/api
         run: pytest
 
-  frontend:
-    name: Frontend (build)
+  web:
+    name: Web (build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,9 +40,9 @@ jobs:
           node-version: "22"
 
       - name: Install
-        working-directory: frontend
+        working-directory: services/web
         run: npm install
 
       - name: Build
-        working-directory: frontend
+        working-directory: services/web
         run: npm run build

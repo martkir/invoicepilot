@@ -7,7 +7,7 @@
    change.
 
    Shipping this for real means pasting the :root block below over
-   frontend/src/styles/tokens.css and folding reskin.css into dashboard.css.
+   services/web/src/styles/tokens.css and folding reskin.css into dashboard.css.
 
    What v3 changes against v2 is written up in audit.md. The short version is
    that v2 was a warm, light, shadowed, grained system built around an oxide

@@ -1,0 +1,46 @@
+[project]
+name = "invoicepilot"
+version = "0.1.0"
+description = "Python CLI and API for Invoice Pilot"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.1",
+    "invoice2data>=1.0",
+    # invoice2data's PDF text backend. Not pulled in by invoice2data itself,
+    # and without it every PDF fails to read rather than parsing.
+    "pypdfium2>=5.0",
+    # Encodes the share page's thumbnails. pypdfium2 rasterises page one
+    # already; `bitmap.to_pil()` is what needs this, and there is no WebP
+    # encoder in the standard library.
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",
+    "ruff>=0.5",
+]
+
+[project.scripts]
+invoicepilot = "invoicepilot.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/invoicepilot"]
+
+# Lint config is not here: it is repo-wide, in ../../ruff.toml, so one
+# `ruff check .` at the root still covers docs/ and tools/ as well as this
+# service.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -7,7 +7,7 @@
    change.
 
    Shipping this for real means pasting the :root block below over
-   frontend/src/styles/tokens.css and folding reskin.css into dashboard.css.
+   services/web/src/styles/tokens.css and folding reskin.css into dashboard.css.
 
    This is the light twin of ../share-flow-v3. Every screen, every rule and
    every string is that folder's, and the only thing that changed is this

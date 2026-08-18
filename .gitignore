@@ -1,10 +1,9 @@
 # Secrets and local config
 *.env
 .env.backup
-/docker/.env
 
 # Extracted invoices — real financial documents, never committed.
-/.data/
+/services/api/.data/
 
 # Python
 .venv/
@@ -17,8 +16,8 @@ dist/
 build/
 
 # Frontend
-/frontend/node_modules/
-/frontend/dist/
+/services/web/node_modules/
+/services/web/dist/
 
 # Working notes
 CHANGES.md
