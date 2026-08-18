@@ -24,11 +24,13 @@ const LABELS: Record<Phase, string> = {
   error: 'Failed',
 }
 
-/** What the running scan has got through. Null when none is running, and
- *  null again the moment one finishes — the new rows are the report then, and
- *  a tally left behind beside them would just be the same news twice. */
+/** What the running scan has got through, and how much of what. Null when
+ *  none is running, and null again the moment one finishes — the new rows are
+ *  the report then, and a tally left behind beside them would just be the same
+ *  news twice. */
 export interface ScanProgress {
   messages: number
+  total: number
   invoices: number
 }
 
@@ -92,7 +94,11 @@ export function useScan() {
           // the mailbox. Reported as nothing, so the line can say so in words
           // instead of counting up from a pair of noughts.
           if (job.messages_scanned > 0) {
-            setProgress({ messages: job.messages_scanned, invoices: job.invoices_found })
+            setProgress({
+              messages: job.messages_scanned,
+              total: job.messages_total,
+              invoices: job.invoices_found,
+            })
           }
           later(() => void poll(), POLL_MS)
           return

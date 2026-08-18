@@ -20,6 +20,9 @@ export interface ScanJob {
   mailboxes: string[]
   messages_scanned: number
   invoices_found: number
+  /** What `messages_scanned` counts towards. Climbs as the scan reaches each
+   *  further mailbox, so it is a denominator that grows, not a fixed target. */
+  messages_total: number
   invoices_new: number
   errors: ScanError[]
   /** Set only when the scan itself failed, as opposed to individual documents. */

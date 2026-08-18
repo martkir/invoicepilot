@@ -33,7 +33,8 @@ export default function Dashboard() {
   // yet is one that has not reached its first message.
   const meta = () => {
     if (error) return error
-    if (scanning) return progress ? scanned(progress.messages, progress.invoices) : 'Starting scan…'
+    if (scanning)
+      return progress ? scanned(progress.messages, progress.total, progress.invoices) : 'Starting scan…'
     return lastUpdate ? `Updated ${relative(lastUpdate)}` : 'Not scanned yet'
   }
 

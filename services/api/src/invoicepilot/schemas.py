@@ -53,6 +53,10 @@ class ScanJob(BaseModel):
     # shows so a long scan reads as progress rather than as a hang.
     messages_scanned: int = 0
     invoices_found: int = 0
+    # What `messages_scanned` is counting towards. Known only per listed
+    # mailbox, so with several connected it climbs as the scan reaches each
+    # one: a denominator that grows, not a fixed target.
+    messages_total: int = 0
     # Known only once the scan is over, so empty for as long as it runs.
     mailboxes: list[str] = []
     invoices_new: int = 0

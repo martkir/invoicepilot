@@ -31,6 +31,27 @@ export function issued(value: string | null): string {
   return day && month && year ? `${day}.${month}.${year}` : value
 }
 
+/** "12.01.2026 to 14.08.2026" — the stretch of time the rows on screen cover.
+ *  Null when not one of them carries a date, since a range of nothing is not
+ *  a fact worth a line.
+ *
+ *  It answers the question the tally above the table cannot: "Scanned 340
+ *  emails" says how much mail was read, not how far back the invoices you have
+ *  actually go. Same format as the Issued column it summarises, so the two
+ *  ends of the range read as two of the cells above them.
+ *
+ *  Both ends are taken from the dates the rows carry, not from the scan: an
+ *  invoice is filed under the date it was issued, and mail from March can
+ *  arrive in August. */
+export function period(dates: (string | null | undefined)[]): string | null {
+  // ISO dates sort as text, which is the whole reason the API sends them that
+  // way rather than as anything friendlier.
+  const dated = dates.filter((date): date is string => Boolean(date)).sort()
+  if (dated.length === 0) return null
+  const [first, last] = [dated[0], dated[dated.length - 1]]
+  return first === last ? issued(first) : `${issued(first)} to ${issued(last)}`
+}
+
 /** "8 August 2026, 07:22" from an ISO timestamp. */
 export function dateTime(value?: string): string {
   if (!value) return '-'
@@ -66,11 +87,18 @@ function plural(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? '' : 's'}`
 }
 
-/** "Scanned 9 emails · 1 invoice" — a scan's tally while it is still running.
- *  It replaces the clock rather than joining it: a scan in flight is what the
- *  line is for at that moment, and the age of the last one can wait. */
-export function scanned(messages: number, invoices: number): string {
-  return `Scanned ${plural(messages, 'email')} · ${plural(invoices, 'invoice')}`
+/** "Scanned 128 of 340 emails · 17 invoices" — a scan's tally while it is
+ *  still running. It replaces the clock rather than joining it: a scan in
+ *  flight is what the line is for at that moment, and the age of the last one
+ *  can wait.
+ *
+ *  The denominator climbs as each further mailbox is listed, so "128 of 340"
+ *  can become "128 of 520" mid-scan. Shown anyway: a count against a total
+ *  that moves still reads as progress, where a bare count reads as a number
+ *  with no end in sight. */
+export function scanned(messages: number, total: number, invoices: number): string {
+  const counted = total > 0 ? `${messages} of ${plural(total, 'email')}` : plural(messages, 'email')
+  return `Scanned ${counted} · ${plural(invoices, 'invoice')}`
 }
 
 /** "just now", "3 min ago" — the age of the last successful scan. */

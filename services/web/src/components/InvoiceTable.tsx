@@ -6,7 +6,7 @@ import type { Invoice, ShareCreated } from '../api/types'
 import { InvoiceDetail } from './InvoiceDetail'
 import { SharePop } from './SharePop'
 import { Toast } from './Toast'
-import { amount, initials, issued } from '../lib/format'
+import { amount, initials, issued, period } from '../lib/format'
 import { ownerName, rememberOwnerKey } from '../lib/owner'
 import { Download, Eye, Refresh, Share } from './Icons'
 
@@ -273,7 +273,17 @@ export function InvoiceTable({
       {invoices.length > 0 && (
         <div className="table-foot">
           <span className="per-page">
-            {selected.size ? `${selected.size} selected` : `${invoices.length} of ${invoices.length} shown`}
+            {[
+              selected.size
+                ? `${selected.size} selected`
+                : `${invoices.length} of ${invoices.length} shown`,
+              // The count says how many, the range says of when. The stretch
+              // is the table's either way: a selection changes what is ticked,
+              // not what the rows below cover.
+              period(invoices.map((item) => item.issued_on)),
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </span>
           <span className="pager">
             <span className="page-num">1</span>

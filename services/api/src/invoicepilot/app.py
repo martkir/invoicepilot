@@ -483,7 +483,10 @@ def _owned(share: Share, owner_key: str) -> None:
 def _as_job(job: scan_jobs.Job) -> ScanJob:
     # `counts` answers from the running scan's last report or from its finished
     # result, whichever the job has, so there is no running/done branch here.
+    # The denominator is the exception: only a running scan has one to report,
+    # so it comes off the last report and settles to the final count with it.
     counts = job.counts
+    live = job.progress
     return ScanJob(
         id=job.id,
         status=job.status,
@@ -491,6 +494,7 @@ def _as_job(job: scan_jobs.Job) -> ScanJob:
         mailboxes=list(counts.mailboxes),
         messages_scanned=counts.messages_scanned,
         invoices_found=counts.invoices_found,
+        messages_total=live.messages_total if live else counts.messages_scanned,
         invoices_new=counts.invoices_new,
         errors=[
             {"mailbox": e.mailbox, "subject": e.subject, "detail": e.detail} for e in counts.errors

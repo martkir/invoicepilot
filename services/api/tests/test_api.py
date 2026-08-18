@@ -130,6 +130,9 @@ def test_a_scan_reports_progress_and_refuses_a_second_one(
     running = client.get(f"/scan/{job_id}").json()
     assert running["status"] == "running"
     assert (running["messages_scanned"], running["invoices_found"]) == (3, 1)
+    # And what the first of those is counting towards, which is the rest of the
+    # line the dashboard draws: "Scanned 3 of 8 emails".
+    assert running["messages_total"] == 8
 
     release.set()
     for _ in range(500):
@@ -143,6 +146,9 @@ def test_a_scan_reports_progress_and_refuses_a_second_one(
         "mailboxes": ["me@example.com"],
         "messages_scanned": 8,
         "invoices_found": 1,
+        # A finished scan has no denominator left to climb towards: it settles
+        # to the count, so the line cannot end on "8 of 12".
+        "messages_total": 8,
         "invoices_new": 0,
         "errors": [],
     }
