@@ -173,3 +173,39 @@ def test_links_that_do_not_advertise_a_document_are_left_alone():
     )
 
     assert extract.invoice_links(markup) == []
+
+
+def test_airbnb_reads_the_charge_not_its_conversion():
+    """The receipt states the total twice — €1,209.00 and 2,364.60 лв. The
+    larger figure is a conversion, not what left the account."""
+    fields = parse("airbnb_receipt.txt")
+
+    assert fields["template_name"] == "airbnb.yml"
+    assert fields["amount"] == 1209.0
+    assert fields["currency"] == "EUR"
+    assert fields["invoice_number"] == "AAAAAAAAAA"
+    assert fields["date"].date().isoformat() == "2026-06-26"
+
+
+def test_uber_reads_the_discounted_total():
+    """Total $17.46 against a trip fare of $24.29 — the label decides, not size."""
+    fields = parse("uber_trip.txt")
+
+    assert fields["template_name"] == "uber.yml"
+    assert fields["amount"] == 17.46
+    assert fields["date"].date().isoformat() == "2026-08-01"
+
+
+def test_incogni_reads_the_total_and_the_vat():
+    fields = parse("incogni_receipt.txt")
+
+    assert fields["template_name"] == "incogni.yml"
+    assert fields["amount"] == 28.78
+    assert fields["amount_tax"] == 4.80
+
+
+@pytest.mark.parametrize("name", ["uber_trip.txt", "incogni_receipt.txt"])
+def test_a_receipt_with_no_invoice_number_still_parses(name):
+    """The default required_fields demands one, and these issuers issue none —
+    a template that forgets to say so matches and then extracts nothing."""
+    assert parse(name)["amount"] is not None

@@ -292,3 +292,36 @@ def test_a_stalled_issuer_is_not_asked_about_again_this_scan(monkeypatch):
 
     assert asked == ["receipts@bolt.eu"]
     assert len(result.errors) == 1
+
+
+def test_a_document_nothing_read_is_noticed(monkeypatch):
+    """The signal the document fix hangs on.
+
+    enrich() appends `document:<name>` to parsed_from only when a template
+    matched the vendor's own file, so a document present without it was
+    fetched, stored, and never parsed.
+    """
+    from invoicepilot import process
+    from invoicepilot.extract import Extracted
+    from invoicepilot.invoice_store import Document
+
+    pdf = Document("invoice.pdf", b"%PDF-", "linked")
+
+    assert process.unread_document(
+        Extracted({}, "email-body", parsed_from=("email-body",), document=pdf)
+    )
+    assert not process.unread_document(
+        Extracted(
+            {}, "email-body", parsed_from=("email-body", "document:invoice.pdf"), document=pdf
+        )
+    )
+    assert not process.unread_document(Extracted({}, "email-body", parsed_from=("email-body",)))
+    # An image is filed for the record; invoice2data has no OCR here to read it.
+    assert not process.unread_document(
+        Extracted(
+            {},
+            "email-body",
+            parsed_from=("email-body",),
+            document=Document("invoice.png", b"", "attachment"),
+        )
+    )

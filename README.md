@@ -270,6 +270,11 @@ missed:
 | `bolt_invoice_bg.yml` | Bolt's own invoice PDF, in Bulgarian |
 | `telekom_hotspot.yml` | Telekom's HotSpot receipt |
 | `vp_consulting.yml` | ВИ ПИ ПАРТНЪРС ООД's monthly accounting invoice |
+| `airbnb.yml` | an Airbnb stay receipt |
+| `uber.yml` | an Uber trip receipt |
+| `incogni.yml` | an Incogni subscription receipt |
+
+The last three were drafted by the learn loop and reviewed before promotion.
 
 The two Stripe ones are not per-vendor: they capture the issuer from the
 document, so they cover every vendor Stripe bills for. Adding a template is the
@@ -311,6 +316,14 @@ by regex from a YAML file you can read, and re-parsing an old invoice calls
 nothing. A draft is kept only if it reproduces the document it was written from
 and reads an amount that document actually states; otherwise it is discarded and
 the domain marked so the next scan does not pay to fail the same way.
+
+An issuer can need two: invoice2data matches one template against one layout,
+and a vendor may send both a summary mail and its own document. Bolt does —
+an English receipt saying `Total charged €1.17`, and a Bulgarian PDF behind a
+link carrying the invoice number and the VAT split. So when a mail parses but
+the document it fetched does not, a second template is drafted for that
+document, checked against what the mail already established: it must not
+contradict a field they share, because invoice2data lets the document win.
 
 Kept templates land in `<data_dir>/templates/`, carry `priority: 1` so they can
 never outrank a hand-written one, and are unreviewed until you move them into

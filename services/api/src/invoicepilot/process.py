@@ -158,6 +158,22 @@ def teachable_text(candidates: list) -> str:
     return longest
 
 
+def unread_document(invoice: extract.Extracted) -> bool:
+    """Whether this invoice carries a document that nothing could read.
+
+    `enrich` appends `document:<name>` to parsed_from only when a template
+    matched the vendor's own file, so a document present without that entry was
+    fetched, stored, and never parsed — the fields only it states are missing
+    from the row. A PDF, because that is what invoice2data reads; an image is
+    filed for the record and nothing more.
+    """
+    return (
+        invoice.document is not None
+        and invoice.document.name.endswith(".pdf")
+        and not any(source.startswith("document:") for source in invoice.parsed_from)
+    )
+
+
 def scan_from(workspace_id: str, mailbox: str, since: datetime | None = None) -> datetime:
     """The oldest message date this mailbox's next scan should reach.
 
@@ -241,10 +257,17 @@ def scan_account(
     # mailbox asked about the same sender fifteen times before this existed.
     stalled: set[str] = set()
 
-    def file_candidates(candidates: list, message: dict, subject: str, fetch: extract.Fetch) -> int:
-        """Parse and store whatever of one message parses. Returns how many."""
-        nonlocal found, new
-        filed = 0
+    def parse_candidates(
+        candidates: list, message: dict, subject: str, fetch: extract.Fetch
+    ) -> list[tuple]:
+        """Everything in one message that parses, paired with what it came from.
+
+        Separate from storing it, so a document nothing could read has somewhere
+        to be noticed before the row is written — see the loop below. Parsing
+        twice costs another pass over the same bytes; storing twice would
+        double-count the scan's own totals.
+        """
+        parsed = []
         for candidate in candidates:
             invoice, error = extract.extract(candidate, message, fetch, follow_links=follow_links)
             if error:
@@ -252,7 +275,13 @@ def scan_account(
                 continue
             if invoice is None:
                 continue
+            parsed.append((candidate, invoice))
+        return parsed
 
+    def store(parsed: list[tuple], message: dict, subject: str) -> None:
+        """Write what parsed, to disk and to Postgres."""
+        nonlocal found, new
+        for candidate, invoice in parsed:
             errors.extend(ScanError(mailbox, subject, e) for e in invoice.errors)
             _, payload = save_invoice(
                 mailbox,
@@ -280,11 +309,28 @@ def scan_account(
                 if save(session, workspace_id, invoice_id, payload):
                     new += 1
             found += 1
-            filed += 1
-        return filed
+
+    def try_teaching(kind: str, text: str, sender: str, subject: str, known: dict | None) -> bool:
+        """One drafting attempt, with every reason not to make it applied first."""
+        nonlocal taught
+        domain = learn.domain_of(sender)
+        if not text.strip() or domain in stalled or taught >= MAX_TEMPLATES_PER_SCAN:
+            return False
+        try:
+            path = learn.teach(text, sender, kind=kind, known=known)
+        except Exception as exc:  # noqa: BLE001 — one issuer must not end a scan
+            log.warning("could not draft a %s template for %s: %s", kind, sender, exc)
+            errors.append(ScanError(mailbox, subject, f"could not draft a template: {exc}"))
+            stalled.add(domain)
+            return False
+        if path is None:
+            return False
+        taught += 1
+        return True
 
     for index, message in enumerate(messages, start=1):
         subject = message.get("subject") or "(no subject)"
+        sender = (message.get("from_attendee") or {}).get("identifier") or ""
 
         def fetch(attachment_id: str, message: dict = message) -> bytes:
             return download_attachment(
@@ -292,32 +338,36 @@ def scan_account(
             )
 
         candidates = extract.candidates(message, fetch)
-        filed = file_candidates(candidates, message, subject, fetch)
+        parsed = parse_candidates(candidates, message, subject, fetch)
 
-        # Nothing parsed. Either it is not an invoice, or it is one from an
-        # issuer nobody has taught — which the gate separates without a
-        # request, so only the second case reaches learn.teach.
-        if not filed and learn_issuers and taught < MAX_TEMPLATES_PER_SCAN:
-            sender = (message.get("from_attendee") or {}).get("identifier") or ""
-            domain = learn.domain_of(sender)
-            if domain not in stalled and gate.looks_like_invoice(
+        if learn_issuers and not parsed:
+            # Nothing parsed. Either it is not an invoice, or it is one from an
+            # issuer nobody has taught — which the gate separates without a
+            # request, so only the second case reaches learn.teach.
+            if gate.looks_like_invoice(
                 sender,
                 extract.body_text(message),
                 has_attachment=bool(message.get("attachments")),
-            ):
-                try:
-                    path = learn.teach(teachable_text(candidates), sender)
-                except Exception as exc:  # noqa: BLE001 — one issuer must not end a scan
-                    log.warning("could not draft a template for %s: %s", sender, exc)
-                    errors.append(ScanError(mailbox, subject, f"could not draft a template: {exc}"))
-                    stalled.add(domain)
-                    path = None
-                if path:
-                    taught += 1
-                    # Re-run the same message against the template it just
-                    # produced, so the invoice that paid for it is also the
-                    # first one filed by it.
-                    filed = file_candidates(candidates, message, subject, fetch)
+            ) and try_teaching(learn.MAIL, teachable_text(candidates), sender, subject, None):
+                parsed = parse_candidates(candidates, message, subject, fetch)
+
+        elif learn_issuers:
+            # It parsed, but a document was fetched that nothing could read —
+            # so the row is missing whatever only that document states. Bolt is
+            # the case: the mail gives the date and the total, and the invoice
+            # number and VAT split are in the Bulgarian PDF behind its link.
+            # No gate is needed here; the mail parsing already proved this is an
+            # invoice, and the fields it produced are what the new template gets
+            # checked against.
+            for _, invoice in parsed:
+                if not unread_document(invoice):
+                    continue
+                text = extract.pdf_text(invoice.document.blob)
+                if try_teaching(learn.DOCUMENT, text, sender, subject, invoice.fields):
+                    parsed = parse_candidates(candidates, message, subject, fetch)
+                break
+
+        store(parsed, message, subject)
 
         if on_progress:
             on_progress(Progress(mailbox, subject, index, len(messages), found))

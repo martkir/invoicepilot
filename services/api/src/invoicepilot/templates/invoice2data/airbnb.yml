@@ -1,0 +1,27 @@
+# Airbnb's receipt for a stay, in the mail body. Drafted by the learn loop and
+# reviewed before landing here — see README, "Teaching itself an issuer".
+#
+# The receipt states the total twice, once in the currency charged and once
+# converted to the guest's local one ("€ 1,209.00" and "2,364.60 лв."). Anchor
+# on "Amount paid (EUR)" and not on the larger figure: the conversion is not
+# what left the account.
+issuer: Airbnb Ireland UC
+keywords:
+  - Airbnb Ireland UC
+  - Receipt ID
+fields:
+  # "Receipt ID: RCMDR2KDZS · June 26, 2026" — the receipt's own id and date,
+  # which is the day it was paid rather than the day of the stay.
+  invoice_number: 'Receipt ID:\s*([A-Z0-9]+)'
+  date: 'Receipt ID:\s*\S+\s*·\s*([A-Z][a-z]+ \d{1,2}, \d{4})'
+  amount: 'Amount paid \(EUR\)\s*€\s*([\d.,]+)'
+  vat_number: 'VAT Number:\s*([A-Z]{2}\s?[A-Z0-9]+)'
+required_fields:
+  - date
+  - amount
+  - invoice_number
+options:
+  currency: EUR
+  decimal_separator: '.'
+  date_formats:
+    - '%B %d, %Y'

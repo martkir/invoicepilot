@@ -1,0 +1,21 @@
+# Incogni's subscription receipt, in the mail body. Drafted by the learn loop
+# and reviewed before landing here — see README, "Teaching itself an issuer".
+issuer: Incogni Inc.
+keywords:
+  - Incogni Inc.
+  - entity No 5186159
+fields:
+  date: 'Date\s+(\d{4}-\d{2}-\d{2})'
+  amount: 'TOTAL\s*€\s*([\d.,]+)'
+  # "VAT/Sales Tax 21% € 4.99" — the rate is part of the label, not the value.
+  amount_tax: 'VAT/Sales Tax\s*\d+%\s*€\s*([\d.,]+)'
+required_fields:
+  # Without this the default demands an invoice_number, and this issuer's
+  # receipts carry none — the template would match and then extract nothing.
+  - date
+  - amount
+options:
+  currency: EUR
+  decimal_separator: '.'
+  date_formats:
+    - '%Y-%m-%d'

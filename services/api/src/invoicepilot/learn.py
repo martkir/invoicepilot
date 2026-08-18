@@ -337,8 +337,23 @@ def slug(domain: str) -> str:
     return SLUG_RE.sub("-", domain).strip("-")
 
 
-def attempted(domain: str) -> bool:
-    """Whether this domain has already been taught, or already failed to be.
+# An issuer can need two templates, because invoice2data matches one template
+# against one document's text and a vendor may send two. Bolt is the case in
+# point: an English mail saying "Total charged €1.17", and a Bulgarian PDF
+# behind a link carrying the invoice number and the VAT split. No regex set
+# reads both, so they are taught and stored separately.
+MAIL = "mail"
+DOCUMENT = "document"
+
+
+def stem(domain: str, kind: str) -> str:
+    """The filename a template for this issuer and this document type takes."""
+    name = slug(domain)
+    return name if kind == MAIL else f"{name}-{kind}"
+
+
+def attempted(domain: str, kind: str = MAIL) -> bool:
+    """Whether this has already been taught, or already failed to be.
 
     Both are recorded on disk rather than in memory, because the question is
     asked once per scan and the answer has to survive a restart. Without it a
@@ -346,7 +361,7 @@ def attempted(domain: str) -> bool:
     forever.
     """
     directory = extract.GENERATED_TEMPLATE_DIR
-    name = slug(domain)
+    name = stem(domain, kind)
     return (directory / f"{name}.yml").is_file() or (directory / f"{name}.failed").is_file()
 
 
@@ -356,7 +371,15 @@ def _quote(value: str) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def render(draft: dict, domain: str, sender: str, note: str | None = None) -> str:
+def render(
+    draft: dict,
+    domain: str,
+    sender: str,
+    note: str | None = None,
+    *,
+    kind: str = MAIL,
+    known: dict | None = None,
+) -> str:
     """A drafted template as the YAML that will be read back.
 
     Written by hand rather than dumped, because a person is meant to review
@@ -370,8 +393,9 @@ def render(draft: dict, domain: str, sender: str, note: str | None = None) -> st
     }
     required = [name for name in ("date", "amount", "invoice_number") if name in fields]
 
+    subject = "the document attached to" if kind == DOCUMENT else "a message sent by"
     lines = [
-        f"# Drafted from a message sent by {sender}",
+        f"# Drafted from {subject} {sender}",
         f"# on {datetime.now(UTC).date().isoformat()}, and NOT reviewed by a person.",
         "#",
         "# Kept only because it reproduced the document it was written from and",
@@ -379,10 +403,17 @@ def render(draft: dict, domain: str, sender: str, note: str | None = None) -> st
         "# wrong, and move it into templates/invoice2data/ to promote it;",
         "# `priority: 1` keeps it from ever outranking a template written by hand.",
     ]
+    if kind == DOCUMENT:
+        lines += [
+            "#",
+            "# This reads the vendor's own document, which the mail only summarises.",
+            "# invoice2data merges the two, and the document wins on any field they",
+            "# share — so it was also checked against what the mail already said.",
+        ]
     if note:
         lines += ["#", f"# CHECK: {note}"]
     lines += [
-        f"issuer: {_quote(draft.get('issuer') or domain)}",
+        f"issuer: {_quote((known or {}).get('issuer') or draft.get('issuer') or domain)}",
         "priority: 1",
         "keywords:",
     ]
@@ -447,7 +478,27 @@ def stated_amounts(text: str) -> set[float]:
     return found
 
 
-def rejection(fields: dict | None, text: str) -> str | None:
+def disagreement(fields: dict, known: dict) -> str | None:
+    """Where this template contradicts what the mail already established.
+
+    Only reachable for a document template, and the strongest check in the
+    module — the mail parsed first, so for once there is a right answer to
+    compare against rather than a heuristic. It matters because `merge_fields`
+    lets the document win every field the two share: a template that read
+    Bolt's net 0.98 as the amount would silently replace a correct 1.17.
+    """
+    for name in ("amount", "amount_untaxed", "amount_tax", "invoice_number"):
+        mine, theirs = fields.get(name), known.get(name)
+        if mine in (None, "") or theirs in (None, ""):
+            continue
+        if str(mine) != str(theirs):
+            return f"reads {name} as {mine}, but the mail said {theirs}"
+    if not set(fields) - set(known) - {"template_name", "desc", "currency", "issuer"}:
+        return "adds nothing the mail did not already carry"
+    return None
+
+
+def rejection(fields: dict | None, text: str, known: dict | None = None) -> str | None:
     """Why this draft cannot be trusted, or None if it can.
 
     The amount check is the one worth having, and it is deliberately weaker
@@ -478,7 +529,7 @@ def rejection(fields: dict | None, text: str) -> str | None:
     stated = stated_amounts(text)
     if stated and amount not in stated:
         return f"read the amount as {amount}, which the document does not state as money"
-    return None
+    return disagreement(fields, known) if known else None
 
 
 def advisory(fields: dict, text: str) -> str | None:
@@ -525,49 +576,78 @@ def grounded(text: str) -> str:
     return f"{text}\n\n# Values detected in this document:\n{hints}"
 
 
-def _record_failure(domain: str, reason: str) -> None:
+def _record_failure(domain: str, kind: str, reason: str) -> None:
     directory = extract.GENERATED_TEMPLATE_DIR
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / f"{slug(domain)}.failed").write_text(
+    (directory / f"{stem(domain, kind)}.failed").write_text(
         f"{datetime.now(UTC).isoformat(timespec='seconds')}\n{reason}\n", encoding="utf-8"
     )
 
 
-def teach(text: str, sender: str, *, using: Claude | None = None) -> Path | None:
-    """Draft, check and keep a template for this sender's documents.
+DOCUMENT_NOTE = """
+This text is the vendor's own document. The mail that carried it has already
+been read, and gave: {known}. Write regexes for what the *document* adds — the
+invoice number and the net/VAT split are usually only here. Where the document
+also states something the mail gave, your regex must produce the same value.
+"""
 
-    Returns where it was written, or None when nothing was kept — no key
-    configured, this domain already tried, or the draft failed a check. Raises
-    only when the request itself failed, which the caller reports and which
+
+def teach(
+    text: str,
+    sender: str,
+    *,
+    kind: str = MAIL,
+    known: dict | None = None,
+    using: Claude | Drafter | None = None,
+) -> Path | None:
+    """Draft, check and keep a template for one of this sender's document types.
+
+    `kind` is MAIL for the message itself and DOCUMENT for the file it carried
+    or linked to; an issuer can need both, and they are separate templates
+    because invoice2data matches one template against one layout. For a
+    document, `known` is what the mail already yielded — the fields the draft
+    must not contradict, and the one place in this module with a right answer
+    to check against rather than a heuristic.
+
+    Returns where it was written, or None when nothing was kept — nothing
+    configured, this already tried, or the draft failed a check. Raises only
+    when the request itself failed, which the caller reports and which
     deliberately leaves no failure marker: a timeout is worth retrying, a
     template that reads the wrong number is not.
     """
     domain = domain_of(sender)
-    if not domain or attempted(domain):
+    if not domain or attempted(domain, kind):
         return None
 
     using = using or provider()
     if using is None or not using.is_available():
         return None
 
-    draft = using.extract_structured(grounded(text), TEMPLATE_SCHEMA, instructions=INSTRUCTIONS)
-    template_yaml = render(draft, domain, sender)
+    instructions = INSTRUCTIONS
+    if kind == DOCUMENT and known:
+        summary = ", ".join(
+            f"{name}={known[name]}" for name in sorted(known) if name in FIELD_NAMES
+        )
+        instructions += DOCUMENT_NOTE.format(known=summary or "nothing")
+
+    draft = using.extract_structured(grounded(text), TEMPLATE_SCHEMA, instructions=instructions)
+    template_yaml = render(draft, domain, sender, kind=kind, known=known)
 
     fields = parse_with(template_yaml, text)
-    reason = rejection(fields, text)
+    reason = rejection(fields, text, known)
     if reason:
-        log.warning("discarded the template drafted for %s: it %s", domain, reason)
-        _record_failure(domain, reason)
+        log.warning("discarded the %s template drafted for %s: it %s", kind, domain, reason)
+        _record_failure(domain, kind, reason)
         return None
 
     note = advisory(fields, text)
     if note:
-        template_yaml = render(draft, domain, sender, note=note)
+        template_yaml = render(draft, domain, sender, note=note, kind=kind, known=known)
 
     directory = extract.GENERATED_TEMPLATE_DIR
     directory.mkdir(parents=True, exist_ok=True)
-    path = directory / f"{slug(domain)}.yml"
+    path = directory / f"{stem(domain, kind)}.yml"
     path.write_text(template_yaml, encoding="utf-8")
     extract.forget_templates()
-    log.info("learned a template for %s at %s", domain, path)
+    log.info("learned a %s template for %s at %s", kind, domain, path)
     return path

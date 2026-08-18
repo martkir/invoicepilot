@@ -1,0 +1,26 @@
+# An Uber trip receipt, in the mail body. Drafted by the learn loop and reviewed
+# before landing here — see README, "Teaching itself an issuer".
+#
+# The total is not the largest figure on the receipt: a discounted trip reads
+# "Total $17.46" against "Trip fare $24.29" and "Promotion -$7.49". Anchoring on
+# the Total label rather than on the biggest number is the whole point.
+issuer: Uber Technologies
+keywords:
+  - Uber Technologies
+fields:
+  # "Aug 1, 2026 , 5:00 PM" — the trip's own timestamp.
+  date: '([A-Z][a-z]{2} \d{1,2}, \d{4})\s*,\s*\d{1,2}:\d{2}\s*[AP]M'
+  amount: 'Total\s+\$\s*([\d.,]+)'
+required_fields:
+  # Without this the default demands an invoice_number, and this issuer's
+  # receipts carry none — the template would match and then extract nothing.
+  - date
+  - amount
+options:
+  # Static because this issuer's receipts carry no currency code, only the
+  # symbol. Wrong for a rider billed in another currency, which is a reason to
+  # revisit this rather than a reason not to read the ones that are right.
+  currency: USD
+  decimal_separator: '.'
+  date_formats:
+    - '%b %d, %Y'

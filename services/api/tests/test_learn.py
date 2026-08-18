@@ -316,3 +316,104 @@ def test_the_drafter_sends_the_schema_and_reads_back_the_draft(monkeypatch):
     assert seen["body"]["system"] == "be terse"
     assert "Total 1.00" in seen["body"]["prompt"]
     assert "decimal_separator" in seen["body"]["prompt"]
+
+
+DOCUMENT = """\
+Фактура: 1000389093
+Дата: 2026-08-08
+Общо (EUR): 0.98
+ДДС (EUR): 0.20
+Общо с ДДС (EUR): 1.17
+"""
+
+# What the mail already established, and what a document template must not
+# contradict — merge_fields lets the document win every field they share.
+FROM_MAIL = {"issuer": "Bolt Operations OU", "amount": 1.17, "date": "2026-08-08"}
+
+DOCUMENT_DRAFT = {
+    "issuer": "ignored — the mail's issuer wins",
+    "keywords": ["Фактура"],
+    "date_format": "%Y-%m-%d",
+    "currency_code": "EUR",
+    "decimal_separator": ".",
+    "fields": {
+        "date": r"Дата:\s*(\d{4}-\d{2}-\d{2})",
+        "amount": r"Общо с ДДС \(EUR\):\s*([\d.,]+)",
+        "invoice_number": r"Фактура:\s*(\d+)",
+        "amount_untaxed": r"Общо \(EUR\):\s*([\d.,]+)",
+        "amount_tax": r"(?<!с )ДДС \(EUR\):\s*([\d.,]+)",
+        "currency": "",
+        "vat_number": "",
+    },
+}
+
+
+def document_draft_with(**fields):
+    return dict(DOCUMENT_DRAFT, fields=dict(DOCUMENT_DRAFT["fields"], **fields))
+
+
+def test_a_document_template_is_a_second_template_for_the_same_issuer(templates_dir):
+    """One template reads one layout, and Bolt sends two."""
+    learn.teach(RECEIPT, "receipts@bolt.eu", using=StubModel(GOOD_DRAFT))
+    path = learn.teach(
+        DOCUMENT,
+        "receipts@bolt.eu",
+        kind=learn.DOCUMENT,
+        known=FROM_MAIL,
+        using=StubModel(DOCUMENT_DRAFT),
+    )
+
+    assert path is not None
+    assert {p.name for p in templates_dir.glob("*.yml")} == {"bolt-eu.yml", "bolt-eu-document.yml"}
+    fields = learn.parse_with(path.read_text(encoding="utf-8"), DOCUMENT)
+    assert fields["invoice_number"] == "1000389093"
+    assert fields["amount_untaxed"] == 0.98
+    assert fields["amount_tax"] == 0.20
+
+
+def test_the_document_takes_the_issuer_the_mail_established(templates_dir):
+    """enrich() discards the merge when the two disagree, so it is not the
+    model's to choose."""
+    path = learn.teach(
+        DOCUMENT,
+        "receipts@bolt.eu",
+        kind=learn.DOCUMENT,
+        known=FROM_MAIL,
+        using=StubModel(DOCUMENT_DRAFT),
+    )
+
+    assert "issuer: 'Bolt Operations OU'" in path.read_text(encoding="utf-8")
+
+
+def test_a_document_template_that_contradicts_the_mail_is_rejected(templates_dir):
+    """The strongest check in the module: the mail parsed first, so there is a
+    right answer. Reading the net 0.98 as the amount would replace a correct
+    1.17, because the document wins every field the two share.
+    """
+    model = StubModel(document_draft_with(amount=r"Общо \(EUR\):\s*([\d.,]+)"))
+
+    path = learn.teach(
+        DOCUMENT, "receipts@bolt.eu", kind=learn.DOCUMENT, known=FROM_MAIL, using=model
+    )
+
+    assert path is None
+    assert (templates_dir / "bolt-eu-document.failed").is_file()
+
+
+def test_a_document_template_that_adds_nothing_is_rejected(templates_dir):
+    """It costs a request and a merge; it has to be worth one."""
+    model = StubModel(document_draft_with(invoice_number="", amount_untaxed="", amount_tax=""))
+
+    assert (
+        learn.teach(DOCUMENT, "receipts@bolt.eu", kind=learn.DOCUMENT, known=FROM_MAIL, using=model)
+        is None
+    )
+
+
+def test_the_two_kinds_are_tried_independently(templates_dir):
+    """A taught mail template must not suppress the document one, or the fix
+    would never fire for the issuer that motivated it."""
+    learn.teach(RECEIPT, "receipts@bolt.eu", using=StubModel(GOOD_DRAFT))
+
+    assert learn.attempted("bolt.eu", learn.MAIL)
+    assert not learn.attempted("bolt.eu", learn.DOCUMENT)

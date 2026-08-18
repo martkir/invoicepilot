@@ -391,25 +391,29 @@ def candidates(message: dict, fetch: Fetch, *, include_body: bool = True) -> lis
     return found
 
 
-def candidate_text(candidate: Candidate) -> str:
-    """The text invoice2data would match this candidate against.
+def pdf_text(blob: bytes) -> str:
+    """A PDF's text, or empty when it has none that can be read.
 
-    What a generated template has to be written for, and what the model that
-    drafts it is shown — never the raw bytes, which for a PDF say nothing.
+    What a template is actually matched against, and so what the model drafting
+    one has to be shown — never the raw bytes, which say nothing.
     """
-    if candidate.suffix == ".txt":
-        return candidate.blob.decode("utf-8", errors="replace")
-
     from invoice2data.input import pdfium
 
-    with tempfile.NamedTemporaryFile(suffix=candidate.suffix, prefix="invoicepilot-") as handle:
-        handle.write(candidate.blob)
+    with tempfile.NamedTemporaryFile(suffix=".pdf", prefix="invoicepilot-") as handle:
+        handle.write(blob)
         handle.flush()
         try:
             return pdfium.to_text(handle.name) or ""
         except Exception as exc:  # noqa: BLE001 — an unreadable document is not an error here
-            log.debug("could not read %s as text: %s", candidate.source_name, exc)
+            log.debug("could not read a document as text: %s", exc)
             return ""
+
+
+def candidate_text(candidate: Candidate) -> str:
+    """The text invoice2data would match this candidate against."""
+    if candidate.suffix == ".txt":
+        return candidate.blob.decode("utf-8", errors="replace")
+    return pdf_text(candidate.blob)
 
 
 def merge_fields(body: dict, document: dict) -> dict:
