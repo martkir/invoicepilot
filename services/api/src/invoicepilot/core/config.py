@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     # deployment rather than a broken one.
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5"
+    # Last resort, and a borrowed one: the OAuth token Claude Code keeps for
+    # itself. Read-only and never refreshed — see learn.claude_code_token for
+    # why that matters. Mount it read-only to use it from a container.
+    claude_credentials_file: Path = Path.home() / ".claude" / ".credentials.json"
 
     api_host: str = "127.0.0.1"
     api_port: int = 8000

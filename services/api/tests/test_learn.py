@@ -7,7 +7,9 @@ and reads the wrong figure is worse than no template, so the tests are mostly
 about what gets *rejected*.
 """
 
+import json
 import os
+import time
 
 import pytest
 
@@ -63,6 +65,21 @@ class StubModel:
     def extract_structured(self, text, json_schema, *, instructions=None):
         self.calls += 1
         return self.draft
+
+
+@pytest.fixture(autouse=True)
+def isolated_credentials(tmp_path_factory, monkeypatch):
+    """No test picks up this machine's real Claude Code credential by accident.
+
+    Autouse because the file is at a fixed path in a home directory: a test
+    that forgets to isolate it passes here and fails on a build machine, or
+    worse, quietly borrows a live token.
+    """
+    absent = tmp_path_factory.mktemp("credentials") / "absent.json"
+    monkeypatch.setenv("CLAUDE_CREDENTIALS_FILE", str(absent))
+    learn.get_settings.cache_clear()
+    yield
+    learn.get_settings.cache_clear()
 
 
 @pytest.fixture
@@ -249,3 +266,85 @@ def test_an_empty_api_key_does_not_shadow_a_token(monkeypatch):
 
     assert learn.provider() is not None
     assert "ANTHROPIC_API_KEY" not in os.environ
+
+
+CLAUDE_CODE_FILE = {
+    "claudeAiOauth": {
+        "accessToken": "sk-ant-oat01-example",
+        "refreshToken": "sk-ant-ort01-example",
+        "expiresAt": 0,
+        "scopes": ["user:inference"],
+        "subscriptionType": "max",
+    }
+}
+
+
+def write_claude_code_credentials(tmp_path, monkeypatch, *, expires_in_hours):
+    path = tmp_path / ".credentials.json"
+    payload = json.loads(json.dumps(CLAUDE_CODE_FILE))
+    payload["claudeAiOauth"]["expiresAt"] = int((time.time() + expires_in_hours * 3600) * 1000)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_CREDENTIALS_FILE", str(path))
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("ANTHROPIC_PROFILE", raising=False)
+    monkeypatch.setenv("ANTHROPIC_CONFIG_DIR", str(tmp_path / "absent"))
+    learn.get_settings.cache_clear()
+    return path
+
+
+def test_a_live_claude_code_token_is_borrowed(tmp_path, monkeypatch):
+    write_claude_code_credentials(tmp_path, monkeypatch, expires_in_hours=1)
+
+    assert learn.claude_code_token() == "sk-ant-oat01-example"
+    assert learn.credentials_available()
+
+
+def test_an_expired_claude_code_token_is_no_credential(tmp_path, monkeypatch):
+    """Nothing renews it on our behalf, so expired means skip — not fail.
+
+    A scan that finds no valid token teaches nothing and marks nothing, so the
+    issuer is tried again next time rather than burned.
+    """
+    write_claude_code_credentials(tmp_path, monkeypatch, expires_in_hours=-1)
+
+    assert learn.claude_code_token() is None
+    assert not learn.credentials_available()
+    assert learn.provider() is None
+
+
+def test_the_borrowed_file_is_never_written(tmp_path, monkeypatch):
+    """Refreshing rotates the refresh token, which would log Claude Code out."""
+    path = write_claude_code_credentials(tmp_path, monkeypatch, expires_in_hours=1)
+    before = path.read_bytes(), path.stat().st_mtime_ns
+
+    learn.claude_code_token()
+    learn.credentials_available()
+    learn.provider()
+
+    assert (path.read_bytes(), path.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "body",
+    ["", "not json", "{}", '{"claudeAiOauth": {}}', '{"claudeAiOauth": {"accessToken": ""}}'],
+    ids=["empty", "malformed", "no-key", "no-token", "blank-token"],
+)
+def test_an_unreadable_credential_file_is_no_credential(tmp_path, monkeypatch, body):
+    """The format is Claude Code's, undocumented, and free to change."""
+    path = tmp_path / ".credentials.json"
+    path.write_text(body, encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_CREDENTIALS_FILE", str(path))
+    learn.get_settings.cache_clear()
+
+    assert learn.claude_code_token() is None
+
+
+def test_a_configured_key_wins_over_the_borrowed_token(tmp_path, monkeypatch):
+    """Ours before theirs: a real credential should never be passed over."""
+    write_claude_code_credentials(tmp_path, monkeypatch, expires_in_hours=1)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-configured")
+    learn.get_settings.cache_clear()
+
+    assert learn.sdk_credentials()
+    assert learn.provider()._api_key == "sk-ant-configured"

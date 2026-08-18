@@ -25,13 +25,15 @@ into templates/invoice2data/ by hand.
 
 Credentials are whatever the Anthropic SDK can resolve — an API key, an
 ANTHROPIC_AUTH_TOKEN, an `ant auth login` OAuth profile, or workload identity
-federation. Nothing configured disables the module rather than failing a scan.
+federation — and, last, the token Claude Code happens to be holding. Nothing
+configured disables the module rather than failing a scan.
 """
 
 import json
 import os
 import re
 import tempfile
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -160,6 +162,29 @@ class Claude:
     def is_available(self) -> bool:
         return True
 
+    def client(self):
+        """A client for whichever credential is available, checked in order.
+
+        Built per call rather than held, because the borrowed token at the end
+        of the chain expires and is re-read every time — see claude_code_token.
+        """
+        from anthropic import Anthropic
+
+        if self._api_key:
+            return Anthropic(api_key=self._api_key)
+        # Anything the SDK resolves itself — auth token, OAuth profile,
+        # federation — is left to it, so its own precedence is not second
+        # guessed here.
+        if sdk_credentials():
+            return Anthropic()
+        token = claude_code_token()
+        if token:
+            return Anthropic(auth_token=token, default_headers={"anthropic-beta": OAUTH_BETA})
+        # provider() gates on the same question, so reaching this means the
+        # token expired between then and now. Said plainly, because an
+        # unauthenticated client would fail with a 401 that explains nothing.
+        raise RuntimeError("no Anthropic credentials are available")
+
     def extract_structured(
         self,
         text: str,
@@ -167,15 +192,7 @@ class Claude:
         *,
         instructions: str | None = None,
     ) -> dict:
-        from anthropic import Anthropic
-
-        # Constructed with no key unless one is configured, so the SDK resolves
-        # credentials itself and every supported way in works: an API key, an
-        # ANTHROPIC_AUTH_TOKEN, an `ant auth login` OAuth profile, or workload
-        # identity federation. Passing api_key=None explicitly would be the
-        # same thing, but saying it this way keeps the two paths visible.
-        client = Anthropic(api_key=self._api_key) if self._api_key else Anthropic()
-        response = client.messages.create(
+        response = self.client().messages.create(
             model=self._model,
             max_tokens=MAX_TOKENS,
             system=instructions or "",
@@ -205,13 +222,17 @@ FEDERATION_VARS = (
 )
 
 
-def credentials_available() -> bool:
-    """Whether the SDK has anything to authenticate with.
+# OAuth access tokens go on Authorization: Bearer, which this header is what
+# makes the API accept.
+OAUTH_BETA = "oauth-2025-04-20"
 
-    Mirrors its own resolution order — API key, auth token, OAuth profile,
-    workload identity federation — because a client constructs happily with no
-    credentials at all and only fails at request time. Asking here is what
-    keeps "nothing configured" a quiet no-op instead of one error per message.
+
+def sdk_credentials() -> bool:
+    """Whether the SDK can authenticate from its own resolution order.
+
+    API key, auth token, OAuth profile, workload identity federation. Asked
+    here because a client constructs happily with no credentials at all and
+    only fails at request time, so there is nothing to test but the inputs.
     """
     if get_settings().anthropic_api_key or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
         return True
@@ -224,6 +245,38 @@ def credentials_available() -> bool:
         os.environ.get("ANTHROPIC_IDENTITY_TOKEN_FILE")
         or os.environ.get("ANTHROPIC_IDENTITY_TOKEN")
     )
+
+
+def claude_code_token() -> str | None:
+    """Claude Code's own access token, if one is there and still valid.
+
+    A borrowed credential, and treated like one. It is read fresh every time
+    and never cached, because Claude Code rewrites the file when it refreshes;
+    it is never written, because that refresh rotates the refresh token and a
+    second writer would invalidate the session Claude Code is holding — logging
+    the user out of the tool they are sitting in front of.
+
+    Nothing renews it on our behalf, so an expired token is simply no
+    credential: a scan skips teaching and tries again next time, rather than
+    burning the issuer. The file is also private to Claude Code and undocumented,
+    which is the other reason every read is defensive.
+    """
+    path = get_settings().claude_credentials_file
+    try:
+        oauth = json.loads(Path(path).read_text(encoding="utf-8"))["claudeAiOauth"]
+        expires_at = float(oauth["expiresAt"]) / 1000
+        token = oauth["accessToken"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if not token or expires_at <= time.time():
+        log.debug("Claude Code's token is expired or unreadable; not teaching this scan")
+        return None
+    return token
+
+
+def credentials_available() -> bool:
+    """Whether anything at all can authenticate a request right now."""
+    return sdk_credentials() or claude_code_token() is not None
 
 
 def provider() -> Claude | None:

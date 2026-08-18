@@ -63,11 +63,21 @@ services:
       # and writable, and its refresh token expires.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
+      CLAUDE_CREDENTIALS_FILE: /run/claude-credentials.json
       DEBUG_LOGS_ENABLED: ${DEBUG_LOGS_ENABLED:-false}
     volumes:
       # The extracted documents. A named volume rather than a bind mount: these
       # are real invoices, and they must not depend on a checkout staying put.
       - invoice_data:/app/.data
+      # Last-resort credential: the OAuth token Claude Code holds for itself.
+      # Read-only on purpose — refreshing it rotates the refresh token, and a
+      # second writer would log Claude Code out. Nothing renews it here, so an
+      # expired token simply means this scan teaches nothing.
+      #
+      # Defaults to /dev/null rather than a path, so a host without Claude Code
+      # mounts something readable-and-empty instead of having Docker create a
+      # stray directory where the file was expected.
+      - ${CLAUDE_CREDENTIALS_FILE:-/dev/null}:/run/claude-credentials.json:ro
     depends_on:
       postgres:
         condition: service_healthy
