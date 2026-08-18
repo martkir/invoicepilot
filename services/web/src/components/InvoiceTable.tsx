@@ -15,7 +15,10 @@ interface Props {
   loading: boolean
   scanning: boolean
   scanLabel: string
-  lastUpdate: string
+  /** The line beside the Update button: the scan's own tally while it runs,
+   *  the age of the last one otherwise, the reason when one failed. Composed
+   *  by the caller — the table shows it and knows nothing about which it is. */
+  meta: string
   onUpdate: () => void
   selected: Set<string>
   onToggle: (id: string) => void
@@ -27,7 +30,7 @@ export function InvoiceTable({
   loading,
   scanning,
   scanLabel,
-  lastUpdate,
+  meta,
   onUpdate,
   selected,
   onToggle,
@@ -97,7 +100,7 @@ export function InvoiceTable({
           Invoices <em id="doc-count">{invoices.length} documents</em>
         </h1>
         <div className="tools">
-          <span className="last-update">{lastUpdate}</span>
+          <span className="last-update">{meta}</span>
           <div className="tool-divider"></div>
           <button className="update-btn" data-busy={scanning} onClick={onUpdate} disabled={scanning}>
             <Refresh />

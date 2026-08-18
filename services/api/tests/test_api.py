@@ -110,10 +110,10 @@ def test_a_scan_reports_progress_and_refuses_a_second_one(
     release = threading.Event()
 
     def blocking_scan(*, limit: int, follow_links: bool, on_progress=None) -> ScanResult:
-        on_progress(Progress("me@example.com", "March invoice", 1, 1, 0))
+        on_progress(Progress("me@example.com", "March invoice", 3, 8, 1))
         reported.set()
         release.wait(timeout=5)
-        return ScanResult(mailboxes=("me@example.com",), messages_scanned=1)
+        return ScanResult(mailboxes=("me@example.com",), messages_scanned=8, invoices_found=1)
 
     monkeypatch.setattr(scan_jobs, "scan_all", blocking_scan)
 
@@ -125,8 +125,12 @@ def test_a_scan_reports_progress_and_refuses_a_second_one(
     assert refused.status_code == 409
     assert job_id in refused.json()["detail"]
 
+    # Mid-scan the counts are the last report's, not zeros: that is what the
+    # dashboard puts on screen instead of leaving the line frozen.
     assert reported.wait(timeout=5)
-    assert client.get(f"/scan/{job_id}").json()["progress"] == "me@example.com: March invoice"
+    running = client.get(f"/scan/{job_id}").json()
+    assert running["status"] == "running"
+    assert (running["messages_scanned"], running["invoices_found"]) == (3, 1)
 
     release.set()
     for _ in range(500):
@@ -137,10 +141,9 @@ def test_a_scan_reports_progress_and_refuses_a_second_one(
         "id": job_id,
         "status": "done",
         "detail": None,
-        "progress": "",
         "mailboxes": ["me@example.com"],
-        "messages_scanned": 1,
-        "invoices_found": 0,
+        "messages_scanned": 8,
+        "invoices_found": 1,
         "invoices_new": 0,
         "errors": [],
     }

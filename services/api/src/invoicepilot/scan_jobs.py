@@ -17,7 +17,7 @@ import uuid
 from dataclasses import dataclass, replace
 
 from invoicepilot.core.logging import get_logger
-from invoicepilot.process import ScanResult, scan_all
+from invoicepilot.process import Progress, ScanResult, scan_all
 
 log = get_logger(__name__)
 
@@ -33,7 +33,27 @@ class Job:
     status: str = "running"
     result: ScanResult | None = None
     detail: str | None = None
-    progress: str = ""
+    # The last report from the running scan, and None once there is a result.
+    progress: Progress | None = None
+
+    @property
+    def counts(self) -> ScanResult:
+        """How far the scan has got, whether or not it has finished.
+
+        A poller wants the same two numbers throughout, so a running job
+        answers from its last progress report rather than with the zeros a
+        missing result would give. The fields a scan only knows at the end —
+        mailboxes, errors, invoices_new — keep their empty defaults until then,
+        which is what makes one shape serve both states.
+        """
+        if self.result:
+            return self.result
+        if self.progress is None:
+            return ScanResult()
+        return ScanResult(
+            messages_scanned=self.progress.messages_scanned,
+            invoices_found=self.progress.invoices_found,
+        )
 
 
 class ScanInProgress(RuntimeError):
@@ -73,10 +93,10 @@ def start(*, limit: int, follow_links: bool) -> Job:
         _JOBS[job.id] = job
 
     def run() -> None:
-        def on_progress(progress) -> None:
+        def on_progress(progress: Progress) -> None:
             current = get(job.id)
             if current:
-                _put(replace(current, progress=f"{progress.mailbox}: {progress.subject}"))
+                _put(replace(current, progress=progress))
 
         try:
             result = scan_all(limit=limit, follow_links=follow_links, on_progress=on_progress)

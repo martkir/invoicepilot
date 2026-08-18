@@ -331,18 +331,18 @@ def _owned(share: Share, owner_key: str) -> None:
 
 
 def _as_job(job: scan_jobs.Job) -> ScanJob:
-    result = job.result
+    # `counts` answers from the running scan's last report or from its finished
+    # result, whichever the job has, so there is no running/done branch here.
+    counts = job.counts
     return ScanJob(
         id=job.id,
         status=job.status,
         detail=job.detail,
-        progress=job.progress,
-        mailboxes=list(result.mailboxes) if result else [],
-        messages_scanned=result.messages_scanned if result else 0,
-        invoices_found=result.invoices_found if result else 0,
-        invoices_new=result.invoices_new if result else 0,
+        mailboxes=list(counts.mailboxes),
+        messages_scanned=counts.messages_scanned,
+        invoices_found=counts.invoices_found,
+        invoices_new=counts.invoices_new,
         errors=[
-            {"mailbox": e.mailbox, "subject": e.subject, "detail": e.detail}
-            for e in (result.errors if result else ())
+            {"mailbox": e.mailbox, "subject": e.subject, "detail": e.detail} for e in counts.errors
         ],
     )

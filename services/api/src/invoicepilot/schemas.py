@@ -50,18 +50,17 @@ class ScanErrorOut(BaseModel):
 class ScanJob(BaseModel):
     id: str
     status: Literal["running", "done", "error"]
-    mailboxes: list[str] = []
+    # These two climb while `status` is "running" — they are what a poller
+    # shows so a long scan reads as progress rather than as a hang.
     messages_scanned: int = 0
     invoices_found: int = 0
+    # Known only once the scan is over, so empty for as long as it runs.
+    mailboxes: list[str] = []
     invoices_new: int = 0
     errors: list[ScanErrorOut] = []
     # Set only when status is "error": the scan itself failed, as opposed to
     # individual documents failing, which are reported in `errors`.
     detail: str | None = None
-    # What the scan is on right now, as "<mailbox>: <subject>". Empty before
-    # the first message and once the scan is over; a poller shows it while
-    # `status` is "running" and has the counts to show after that.
-    progress: str = ""
 
 
 class InvoicePage(BaseModel):

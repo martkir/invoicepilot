@@ -62,6 +62,17 @@ export function initials(name: string): string {
 // a palette of accents, and the design system allows exactly one; the vendor is
 // identified by its name, in the cell beside the mark.
 
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`
+}
+
+/** "Scanned 9 emails · 1 invoice" — a scan's tally while it is still running.
+ *  It replaces the clock rather than joining it: a scan in flight is what the
+ *  line is for at that moment, and the age of the last one can wait. */
+export function scanned(messages: number, invoices: number): string {
+  return `Scanned ${plural(messages, 'email')} · ${plural(invoices, 'invoice')}`
+}
+
 /** "just now", "3 min ago" — the age of the last successful scan. */
 export function relative(since: number): string {
   const seconds = Math.round((Date.now() - since) / 1000)

@@ -10,7 +10,7 @@ the identical payload, because invoice_store builds it once and hands it back.
 """
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from importlib.metadata import version
 
 from invoicepilot import extract
@@ -41,7 +41,14 @@ class ScanError:
 
 @dataclass(frozen=True)
 class Progress:
-    """Where a scan has got to, for whoever is watching it."""
+    """Where a scan has got to, for whoever is watching it.
+
+    `mailbox` and `subject` are the message in hand. The three counts are for
+    the scan as a whole, not the mailbox in hand: scan_account can only count
+    its own, so scan_all adds the finished mailboxes' tally back on before the
+    report goes out. `messages_total` is therefore what is known so far — it
+    grows as each further mailbox is listed.
+    """
 
     mailbox: str
     subject: str
@@ -161,6 +168,22 @@ def scan_all(
 
     result = ScanResult()
     for account in accounts:
+        # scan_account counts from zero, so its reports are shifted by what the
+        # finished mailboxes already came to. Without this a watcher sees the
+        # count fall back to 1 every time the scan crosses into another
+        # mailbox. `done` is bound as a default so each account's relay holds
+        # the tally as it stood when the account started rather than the loop
+        # variable's latest value.
+        def relay(progress: Progress, done: ScanResult = result) -> None:
+            on_progress(
+                replace(
+                    progress,
+                    messages_scanned=done.messages_scanned + progress.messages_scanned,
+                    messages_total=done.messages_scanned + progress.messages_total,
+                    invoices_found=done.invoices_found + progress.invoices_found,
+                )
+            )
+
         try:
             result = result.merge(
                 scan_account(
@@ -169,7 +192,7 @@ def scan_all(
                     account,
                     limit=limit,
                     follow_links=follow_links,
-                    on_progress=on_progress,
+                    on_progress=relay if on_progress else None,
                 )
             )
         except UnipileError as exc:

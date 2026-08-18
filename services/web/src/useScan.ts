@@ -7,15 +7,12 @@ import type { Invoice } from './api/types'
 // fetch linked PDFs from vendors, so it takes far longer than a request can
 // wait. The API hands back a job id; this polls it.
 //
-// Polling costs latency twice over: once waiting to ask the first time, and
-// again in the gap between the job finishing and the next question. A fixed
-// interval pays both at full price — at 1500ms it added up to 3s to a scan
-// that took 2s. So the first question goes out immediately and the gap widens
-// only as the scan proves itself long. GET /scan/{id} is a dictionary lookup,
-// which is what makes the early questions cheap enough to ask.
-const FIRST_POLL_MS = 150
-const POLL_GROWTH = 1.3
-const MAX_POLL_MS = 2000
+// A flat second, not a widening gap. Each answer now carries the counts the
+// dashboard puts on screen, so a poll is a frame of an animation rather than
+// an impatient "are we there yet" — and one that comes every second reads as
+// steady where one that arrives after 150ms and then not for 2s does not.
+// GET /scan/{id} is a dictionary lookup, which is what makes that affordable.
+const POLL_MS = 1000
 
 type Phase = 'idle' | 'scanning' | 'done' | 'uptodate' | 'error'
 
@@ -27,12 +24,21 @@ const LABELS: Record<Phase, string> = {
   error: 'Failed',
 }
 
+/** What the running scan has got through. Null when none is running, and
+ *  null again the moment one finishes — the new rows are the report then, and
+ *  a tally left behind beside them would just be the same news twice. */
+export interface ScanProgress {
+  messages: number
+  invoices: number
+}
+
 export function useScan() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<number | null>(null)
+  const [progress, setProgress] = useState<ScanProgress | null>(null)
 
   // Cleared on unmount so a poll or a label reset cannot fire into a gone tree.
   const timers = useRef<number[]>([])
@@ -58,26 +64,49 @@ export function useScan() {
     void refresh()
   }, [refresh])
 
+  const failed = useCallback((detail: string) => {
+    setPhase('error')
+    setError(detail)
+    setProgress(null)
+    // The reason clears with the button. Left up, it would still be sitting
+    // there an hour later where the clock belongs.
+    later(() => {
+      setPhase('idle')
+      setError(null)
+    }, 4000)
+  }, [])
+
   const update = useCallback(async () => {
     setPhase('scanning')
     setError(null)
+    // A previous scan's tally must not be what the first frame of this one
+    // shows.
+    setProgress(null)
     try {
       const started = await startScan()
 
-      const poll = async (gap: number) => {
+      const poll = async () => {
         const job = await getScan(started.id)
         if (job.status === 'running') {
-          later(() => void poll(Math.min(gap * POLL_GROWTH, MAX_POLL_MS)), gap)
+          // Zero of everything is not progress — it is the scan still listing
+          // the mailbox. Reported as nothing, so the line can say so in words
+          // instead of counting up from a pair of noughts.
+          if (job.messages_scanned > 0) {
+            setProgress({ messages: job.messages_scanned, invoices: job.invoices_found })
+          }
+          later(() => void poll(), POLL_MS)
           return
         }
         if (job.status === 'error') {
-          setPhase('error')
-          setError(job.detail ?? 'The scan failed.')
-          later(() => setPhase('idle'), 4000)
+          failed(job.detail ?? 'The scan failed.')
           return
         }
 
+        // Rows first, then the tally comes down: swapping them would blank the
+        // line for the length of the fetch, which reads as the scan dropping
+        // what it had just told you.
         await refresh()
+        setProgress(null)
         setLastUpdate(Date.now())
         // Distinguish "found nothing new" from "found something", the way the
         // original mockup's button did.
@@ -89,15 +118,11 @@ export function useScan() {
         }
       }
 
-      // Straight away rather than after a wait: the scan has been running since
-      // POST returned, and a short one can already be over.
-      void poll(FIRST_POLL_MS)
+      later(() => void poll(), POLL_MS)
     } catch (exc) {
-      setPhase('error')
-      setError(exc instanceof Error ? exc.message : String(exc))
-      later(() => setPhase('idle'), 4000)
+      failed(exc instanceof Error ? exc.message : String(exc))
     }
-  }, [refresh])
+  }, [refresh, failed])
 
   return {
     invoices,
@@ -105,6 +130,7 @@ export function useScan() {
     error,
     scanning: phase === 'scanning',
     scanLabel: LABELS[phase],
+    progress,
     lastUpdate,
     update,
     refresh,

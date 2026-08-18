@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 
 import { InvoiceTable } from '../components/InvoiceTable'
 import { SourcesCard } from '../components/SourcesCard'
-import { relative } from '../lib/format'
+import { relative, scanned } from '../lib/format'
 import { useAccounts } from '../useAccounts'
 import { useScan } from '../useScan'
 
 export default function Dashboard() {
-  const { invoices, loading, error, scanning, scanLabel, lastUpdate, update } = useScan()
+  const { invoices, loading, error, scanning, scanLabel, progress, lastUpdate, update } = useScan()
   const {
     accounts,
     error: accountError,
@@ -26,6 +26,16 @@ export default function Dashboard() {
     const id = window.setInterval(() => setTick((n) => n + 1), 20000)
     return () => clearInterval(id)
   }, [])
+
+  // The one line above the table, in the order it takes precedence: a failure
+  // outranks everything, a scan in flight speaks for itself, and the clock is
+  // what is left when nothing is happening. A scanning job with no progress
+  // yet is one that has not reached its first message.
+  const meta = () => {
+    if (error) return error
+    if (scanning) return progress ? scanned(progress.messages, progress.invoices) : 'Starting scan…'
+    return lastUpdate ? `Updated ${relative(lastUpdate)}` : 'Not scanned yet'
+  }
 
   const toggle = (id: string) =>
     setSelected((current) => {
@@ -63,9 +73,7 @@ export default function Dashboard() {
             loading={loading}
             scanning={scanning}
             scanLabel={scanLabel}
-            lastUpdate={
-              error ? error : lastUpdate ? `Updated ${relative(lastUpdate)}` : 'Not scanned yet'
-            }
+            meta={meta()}
             onUpdate={() => void update()}
             selected={selected}
             onToggle={toggle}
