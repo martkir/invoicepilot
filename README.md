@@ -43,12 +43,12 @@ exempt and open to anyone holding the link.
 Working today:
 
 - **Dashboard** — React app listing stored invoices (vendor, amount, issued).
-  **Update** scans the 20 most recent messages in every connected mailbox and
-  the table refreshes with whatever parsed. **Add source** runs the hosted
-  Unipile wizard to connect a new mailbox.
+  **Update** scans whatever has arrived in every connected mailbox since it was
+  last scanned through, and the table refreshes with whatever parsed. **Add
+  source** runs the hosted Unipile wizard to connect a new mailbox.
 - **Extraction pipeline** — mail through Unipile, `invoice2data` over
   attachments, forwarded `.eml` contents, message bodies and PDFs linked from
-  a body. Shared by the API and `services/api/scripts/parse_invoices.py`.
+  a body. Shared by the API and `invoicepilot scan`.
 - **Storage** — Postgres for the metadata the dashboard queries, plus
   `.data/<mailbox>/<date>__<vendor>__<amount>__<id>/` for the vendor's own
   document. Both are keyed identically, so re-scanning updates rather than
@@ -243,8 +243,14 @@ of `.env.example`, commented out and marked as such.
 ## Invoice extraction
 
 ```bash
-python scripts/parse_invoices.py --help
+invoicepilot scan --help          # incremental: whatever is new since last time
+invoicepilot scan --since 2026-01-01   # work through history, or re-parse a range
+invoicepilot scan --no-keywords        # read everything, not just invoice-ish mail
 ```
+
+A scan covers each mailbox from where the last one left off. A mailbox nobody
+has scanned before reaches 60 days back, and mail is prefiltered to messages
+whose text looks like an invoice — see `INVOICE_KEYWORDS` in `process.py`.
 
 Documents are matched against `invoice2data` templates: 215 built-in ones, plus
 any YAML you add under [templates/invoice2data/](templates/invoice2data/), which

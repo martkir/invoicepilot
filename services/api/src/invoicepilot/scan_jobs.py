@@ -78,7 +78,7 @@ def get(job_id: str) -> Job | None:
         return _JOBS.get(job_id)
 
 
-def start(*, limit: int, follow_links: bool) -> Job:
+def start(*, follow_links: bool) -> Job:
     """Kick off a scan in the background and return its handle immediately.
 
     Raises ScanInProgress if one is already running.
@@ -99,7 +99,7 @@ def start(*, limit: int, follow_links: bool) -> Job:
                 _put(replace(current, progress=progress))
 
         try:
-            result = scan_all(limit=limit, follow_links=follow_links, on_progress=on_progress)
+            result = scan_all(follow_links=follow_links, on_progress=on_progress)
         except Exception as exc:  # noqa: BLE001 — the failure belongs in the job, not a traceback
             log.warning("scan %s failed: %s", job.id, exc)
             _put(replace(job, status="error", detail=str(exc)))

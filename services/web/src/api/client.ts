@@ -54,8 +54,9 @@ export const getInvoices = () => call<InvoicePage>('/invoices')
  *  `call` — it is a PDF for an <iframe>, not JSON. */
 export const documentUrl = (id: string) => `${BASE}/invoices/${encodeURIComponent(id)}/document`
 
-export const startScan = () =>
-  call<ScanJob>('/scan', { method: 'POST', body: JSON.stringify({ limit: 20 }) })
+/** No body: how much mail a scan covers is whatever has arrived since the
+ *  mailbox was last scanned through, which only the server knows. */
+export const startScan = () => call<ScanJob>('/scan', { method: 'POST' })
 
 export const getScan = (id: string) => call<ScanJob>(`/scan/${id}`)
 

@@ -98,10 +98,6 @@ def test_paging_out_of_range_is_rejected_before_the_database(
     assert client.get(f"/invoices?{query}").status_code == 422
 
 
-def test_scan_rejects_a_limit_below_one(client: TestClient) -> None:
-    assert client.post("/scan", json={"limit": 0}).status_code == 422
-
-
 def test_a_scan_reports_progress_and_refuses_a_second_one(
     client: TestClient, monkeypatch: pytest.MonkeyPatch, no_jobs: None
 ) -> None:
@@ -109,7 +105,7 @@ def test_a_scan_reports_progress_and_refuses_a_second_one(
     reported = threading.Event()
     release = threading.Event()
 
-    def blocking_scan(*, limit: int, follow_links: bool, on_progress=None) -> ScanResult:
+    def blocking_scan(*, follow_links, on_progress=None, **options) -> ScanResult:
         on_progress(Progress("me@example.com", "March invoice", 3, 8, 1))
         reported.set()
         release.wait(timeout=5)

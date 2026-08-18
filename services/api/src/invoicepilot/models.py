@@ -1,9 +1,9 @@
 """Domain types and ORM tables.
 
-One table. Everything the parser found lives in `data` as JSONB — exactly the
-payload invoicepilot/invoice_store.py writes to disk, so a single serialiser feeds
-both sinks and there is no field mapping to keep in step. Columns exist only
-where the database needs to sort or join on a value.
+Everything the parser found lives in `data` as JSONB — exactly the payload
+invoicepilot/invoice_store.py writes to disk, so a single serialiser feeds both
+sinks and there is no field mapping to keep in step. Columns exist only where
+the database needs to sort or join on a value.
 """
 
 from datetime import date, datetime
@@ -44,6 +44,34 @@ class Invoice(Base):
 
     def __repr__(self) -> str:  # pragma: no cover — debugging aid
         return f"<Invoice {self.id!r}>"
+
+
+class MailboxScan(Base):
+    """How far one mailbox has been scanned.
+
+    Keyed on the address rather than the Unipile account id: reconnecting a
+    mailbox mints a new account, and keying on that would silently reset the
+    watermark — the same reasoning that makes invoice_store.mail_token hash the
+    sender's Message-ID instead.
+
+    One row per mailbox, so there is no index beyond the primary key.
+    """
+
+    __tablename__ = "mailbox_scans"
+
+    mailbox: Mapped[str] = mapped_column(String, primary_key=True)
+
+    # The date of the newest message actually processed — never now(). A clock
+    # reading would step over mail the provider had not finished syncing, and
+    # nothing would ever come back for it.
+    scanned_through: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover — debugging aid
+        return f"<MailboxScan {self.mailbox!r} through {self.scanned_through!r}>"
 
 
 class Share(Base):

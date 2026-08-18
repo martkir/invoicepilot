@@ -103,7 +103,7 @@ def start_scan(request: ScanRequest | None = None) -> ScanJob:
     """Start scanning every connected mailbox. Returns immediately with a job id."""
     options = request or ScanRequest()
     try:
-        return _as_job(scan_jobs.start(limit=options.limit, follow_links=options.follow_links))
+        return _as_job(scan_jobs.start(follow_links=options.follow_links))
     except scan_jobs.ScanInProgress as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

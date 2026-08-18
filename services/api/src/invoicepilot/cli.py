@@ -3,6 +3,9 @@
 Installed as `invoicepilot`; also runnable as `python -m invoicepilot`.
 """
 
+from datetime import UTC, datetime
+from typing import Annotated
+
 import typer
 
 from invoicepilot import __version__
@@ -42,6 +45,80 @@ def migrate() -> None:
     from invoicepilot import migrate as migration
 
     migration.run()
+
+
+@cli.command()
+def scan(
+    since: Annotated[
+        datetime | None,
+        typer.Option(
+            formats=["%Y-%m-%d"],
+            help="Ignore the watermark and scan from this date — the way to work "
+            "through history, or to re-parse a range after adding a template.",
+        ),
+    ] = None,
+    keywords: Annotated[
+        bool,
+        typer.Option(
+            help="Filter to mail whose text looks like an invoice. --no-keywords "
+            "reads everything in the range, which is how you find out what the "
+            "filter is skipping.",
+        ),
+    ] = True,
+    follow_links: Annotated[
+        bool,
+        typer.Option(
+            help="Fetch invoices linked from a message body. --no-follow-links stays offline."
+        ),
+    ] = True,
+) -> None:
+    """Scan connected mailboxes for invoices and file what parses.
+
+    With no options this is exactly what the dashboard's Update button runs:
+    whatever has arrived since each mailbox was last scanned through.
+
+    Recognition is per-issuer — invoice2data reports a document only when one of
+    its templates matches — so an invoice from an untaught vendor parses to
+    nothing and looks like ordinary mail here. Add YAML under
+    templates/invoice2data/ to teach a new issuer.
+    """
+    from invoicepilot.invoice_store import DATA_ROOT
+    from invoicepilot.process import Progress, scan_all
+    from invoicepilot.unipile import UnipileError
+
+    def show(progress: Progress) -> None:
+        subject = progress.subject[:52]
+        typer.echo(
+            f"  [{progress.messages_scanned}/{progress.messages_total}] {subject:54} "
+            f"{progress.invoices_found} invoice(s) so far"
+        )
+
+    try:
+        result = scan_all(
+            follow_links=follow_links,
+            keywords=keywords,
+            since=since.replace(tzinfo=UTC) if since else None,
+            on_progress=show,
+        )
+    except UnipileError as exc:
+        log.error("%s", exc)
+        raise SystemExit(1) from exc
+
+    typer.echo(
+        f"\nScanned {result.messages_scanned} message(s) across "
+        f"{len(result.mailboxes)} mailbox(es): {', '.join(result.mailboxes)}."
+    )
+    if result.errors:
+        typer.echo(f"\n{len(result.errors)} could not be read — these were NOT checked:")
+        for error in result.errors:
+            typer.echo(f"  {error.mailbox} | {error.subject[:40]}: {error.detail}")
+    if not result.invoices_found:
+        typer.echo("\nNo invoices recognised.")
+        return
+    typer.echo(
+        f"\n{result.invoices_found} invoice(s) recognised, {result.invoices_new} of them new."
+        f"\nFiled under {DATA_ROOT} and in the database."
+    )
 
 
 def main() -> None:

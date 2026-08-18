@@ -5,8 +5,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from invoicepilot.process import DEFAULT_LIMIT
-
 # Enough to catch a typed address that cannot be delivered, without taking a
 # dependency on a full RFC 5322 validator for one field.
 EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
@@ -32,9 +30,10 @@ class ConnectLink(BaseModel):
 
 
 class ScanRequest(BaseModel):
-    # Messages per mailbox. The default is the scanner's own, imported rather
-    # than restated so the two cannot drift.
-    limit: int = Field(default=DEFAULT_LIMIT, ge=1)
+    # How much mail a scan covers is not the caller's to choose: it is whatever
+    # has arrived since the mailbox was last scanned through, which only the
+    # server knows. That is why there is no `limit` here.
+    #
     # Following a link contacts the vendor's own servers rather than Unipile,
     # which also trips their tracking redirects. On by default for parity with
     # the CLI, because it is how several vendors' PDFs are reachable at all.

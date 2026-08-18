@@ -11,19 +11,66 @@ the identical payload, because invoice_store builds it once and hands it back.
 
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime, timedelta
 from importlib.metadata import version
 
-from invoicepilot import extract
+from invoicepilot import extract, mailboxes
 from invoicepilot.accounts import list_connected
 from invoicepilot.core.db import session_scope
 from invoicepilot.core.logging import get_logger
 from invoicepilot.invoice_store import mail_token, save_invoice
 from invoicepilot.invoices import row_id, save
-from invoicepilot.unipile import UnipileError, credentials, download_attachment, list_emails
+from invoicepilot.unipile import UnipileError, credentials, download_attachment, iter_emails
 
 log = get_logger(__name__)
 
-DEFAULT_LIMIT = 20
+# How far back a mailbox nobody has scanned before reaches. A rolling window
+# rather than calendar months: "this month and last" is 31 days on the 1st and
+# 61 on the 31st, which would make a first scan's depth depend on the day the
+# button happened to be pressed.
+SEED_LOOKBACK = timedelta(days=60)
+
+# How far back of already-scanned mail each scan re-reads. A message can carry
+# a date behind its delivery — sender clock skew, a delayed relay — so one
+# dated 23:58 can arrive after the mailbox was scanned through 23:59. Re-read
+# mail costs time; mail stepped over is never seen again.
+RESCAN_OVERLAP = timedelta(days=1)
+
+# A backstop against a mailbox that somehow matches thousands of messages, not
+# a page size. Hitting it means a scan could not finish the range it asked for,
+# which is reported rather than quietly rounded off — see scan_account.
+MAX_MESSAGES_PER_SCAN = 500
+
+# Mail worth opening. Unipile hands this to the provider as a full-text query
+# over subject, body, attachment filenames and attachment contents, so it is
+# the difference between parsing every message in a mailbox and parsing the few
+# that could be invoices.
+#
+# Multilingual because the vendors are: templates/invoice2data/bolt_invoice_bg.yml
+# parses Bulgarian, so an English-only list would miss the very document it was
+# written for. Widening this costs a little scan time and nothing else;
+# narrowing it loses invoices silently, so it errs wide.
+INVOICE_KEYWORDS = (
+    "invoice",
+    "invoices",
+    "receipt",
+    "receipts",
+    "billing",
+    "statement",
+    "subscription",
+    "payment",
+    "paid",
+    # bg — the Bolt PDF template's own language.
+    "Фактура",
+    "фактури",
+    "разписка",
+    "плащане",
+    # de, fr, es/ro, it
+    "Rechnung",
+    "facture",
+    "factura",
+    "fattura",
+)
 
 
 @dataclass(frozen=True)
@@ -78,20 +125,76 @@ class ScanResult:
 OnProgress = Callable[[Progress], None]
 
 
+def keyword_query(keywords: tuple[str, ...] = INVOICE_KEYWORDS) -> str:
+    """`a OR b OR c`, the only joining the provider understands.
+
+    Verified against a live mailbox: a space between terms means AND and a
+    comma means nothing at all — both match no mail whatsoever.
+    """
+    return " OR ".join(keywords)
+
+
+def scan_from(mailbox: str, since: datetime | None = None) -> datetime:
+    """The oldest message date this mailbox's next scan should reach.
+
+    An explicit `since` wins. Otherwise the mailbox's own watermark, rolled
+    back by RESCAN_OVERLAP, and for a mailbox never scanned, the seed window.
+
+    A watermark older than the seed window is honoured rather than clamped to
+    it. Clamping would advance the mark past mail nobody had looked at, and an
+    invoice skipped that way is skipped permanently; the keyword filter is what
+    makes honouring it affordable.
+    """
+    if since:
+        return since
+    with session_scope() as session:
+        mark = mailboxes.watermark(session, mailbox)
+    if mark:
+        return mark - RESCAN_OVERLAP
+    return datetime.now(UTC) - SEED_LOOKBACK
+
+
+def message_date(message: dict) -> datetime | None:
+    """A message's own date, or None when it has none or one that will not parse."""
+    raw = message.get("date")
+    if not raw:
+        return None
+    try:
+        at = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return at if at.tzinfo else at.replace(tzinfo=UTC)
+
+
 def scan_account(
     base: str,
     api_key: str,
     account: dict,
     *,
-    limit: int = DEFAULT_LIMIT,
     follow_links: bool = True,
+    keywords: bool = True,
+    since: datetime | None = None,
     on_progress: OnProgress | None = None,
 ) -> ScanResult:
-    """Parse the most recent `limit` messages in one mailbox and file what parses."""
+    """Parse one mailbox's unscanned mail and file what parses.
+
+    Which mail that is comes from the mailbox's watermark, which this advances
+    on the way out — so a second call straight afterwards has almost nothing
+    left to do. `since` overrides the watermark for a backfill; `keywords=False`
+    drops the invoice-word filter, which is how you measure what it skips.
+    """
     account_id = account["id"]
     mailbox = account.get("name") or account_id
 
-    messages = list_emails(base, api_key, account_id, limit=limit)
+    after = scan_from(mailbox, since)
+    messages, capped = iter_emails(
+        base,
+        api_key,
+        account_id,
+        after=after,
+        search=keyword_query() if keywords else None,
+        cap=MAX_MESSAGES_PER_SCAN,
+    )
     if not messages:
         return ScanResult(mailboxes=(mailbox,))
 
@@ -145,6 +248,26 @@ def scan_account(
         if on_progress:
             on_progress(Progress(mailbox, subject, index, len(messages), found))
 
+    # Only now, and only over a range that was scanned end to end. `messages`
+    # is oldest-first, so the last dated one is the newest processed — the
+    # honest mark. now() would claim mail the provider had not yet synced.
+    if capped:
+        # The uncollected messages are older than every one just handled, which
+        # no single watermark can express. Left where it was, so the next scan
+        # covers the same range again rather than stepping over the remainder.
+        detail = (
+            f"Stopped after {MAX_MESSAGES_PER_SCAN} messages, so mail older than "
+            f"{messages[0].get('date')} in this range is still unscanned. "
+            f"Run `invoicepilot scan --since` to work through it."
+        )
+        log.warning("%s: %s", mailbox, detail)
+        errors.append(ScanError(mailbox, "", detail))
+    else:
+        newest = max((d for d in map(message_date, messages) if d), default=None)
+        if newest:
+            with session_scope() as session:
+                mailboxes.set_watermark(session, mailbox, newest)
+
     return ScanResult(
         mailboxes=(mailbox,),
         messages_scanned=len(messages),
@@ -156,8 +279,9 @@ def scan_account(
 
 def scan_all(
     *,
-    limit: int = DEFAULT_LIMIT,
     follow_links: bool = True,
+    keywords: bool = True,
+    since: datetime | None = None,
     on_progress: OnProgress | None = None,
 ) -> ScanResult:
     """Scan every connected mailbox. Raises UnipileError if none can be reached."""
@@ -190,8 +314,9 @@ def scan_all(
                     base,
                     api_key,
                     account,
-                    limit=limit,
                     follow_links=follow_links,
+                    keywords=keywords,
+                    since=since,
                     on_progress=relay if on_progress else None,
                 )
             )

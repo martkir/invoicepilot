@@ -55,6 +55,7 @@ invoicepilot/
     │           ├── unipile.py      # domain: hosted-auth provider + mail transport
     │           ├── invoice_store.py# domain: extracted invoices on disk
     │           ├── invoices.py     # domain: extracted invoices in Postgres
+    │           ├── mailboxes.py    # domain: how far each mailbox is scanned
     │           ├── shares.py       # domain: share links and what a token resolves to
     │           ├── share_zip.py    # domain: the download — invoices.csv + the documents
     │           ├── share_mail.py   # domain: the mail a share is sent with

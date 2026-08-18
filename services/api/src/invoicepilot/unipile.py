@@ -21,6 +21,8 @@ from invoicepilot.core.config import get_settings
 API_PREFIX = "/api/v1"
 DEFAULT_TIMEOUT = 30
 POLL_SECONDS = 3
+# Unipile's own ceiling for `limit` on /emails.
+MAX_PAGE = 250
 
 # Providers the hosted wizard can offer. X/TWITTER and FACEBOOK_MESSENGER are
 # documented as no longer maintained, so they are left out.
@@ -190,6 +192,49 @@ def wait_for_account(
         time.sleep(interval)
 
 
+def stamp(moment: datetime) -> str:
+    """The ISO-8601 UTC form Unipile's `after`/`before` filters require."""
+    return moment.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def _emails_page(
+    base: str,
+    api_key: str,
+    account_id: str,
+    *,
+    limit: int,
+    role: str | None,
+    after: datetime | None = None,
+    before: datetime | None = None,
+    search: str | None = None,
+    cursor: str | None = None,
+) -> dict:
+    """One page of the envelope: {"items": [...], "cursor": str | None}.
+
+    `after` and `before` filter on the *message's* date rather than on when
+    Unipile ingested it — checked against a live mailbox, because a watermark
+    built on ingestion time would be worthless. `after` is inclusive in
+    practice despite the documentation calling it exclusive, so the boundary
+    message comes back on every scan; the invoice upsert absorbs it.
+
+    `search` is a provider-side full-text query covering subject, body,
+    attachment filenames and attachment contents. Terms must be joined with an
+    explicit " OR " — a space means AND and a comma means nothing.
+    """
+    params: dict[str, object] = {"account_id": account_id, "limit": limit}
+    if role:
+        params["role"] = role
+    if after:
+        params["after"] = stamp(after)
+    if before:
+        params["before"] = stamp(before)
+    if search:
+        params["search"] = search
+    if cursor:
+        params["cursor"] = cursor
+    return request("GET", base, "/emails", api_key, params=params)
+
+
 def list_emails(
     base: str,
     api_key: str,
@@ -198,11 +243,55 @@ def list_emails(
     limit: int = 10,
     role: str | None = "inbox",
 ) -> list[dict]:
-    """Most recent mail first. `role` filters by folder; None spans all of them."""
-    params: dict[str, object] = {"account_id": account_id, "limit": limit}
-    if role:
-        params["role"] = role
-    return request("GET", base, "/emails", api_key, params=params).get("items", [])
+    """One page, most recent mail first. `role` filters by folder; None spans all."""
+    return _emails_page(base, api_key, account_id, limit=limit, role=role).get("items", [])
+
+
+def iter_emails(
+    base: str,
+    api_key: str,
+    account_id: str,
+    *,
+    after: datetime | None = None,
+    before: datetime | None = None,
+    search: str | None = None,
+    role: str | None = "inbox",
+    cap: int,
+) -> tuple[list[dict], bool]:
+    """Every message matching the filters, **oldest first**, and whether `cap` bit.
+
+    Reversed on the way out because Unipile serves newest-first and the order
+    is not configurable, while a watermark can only advance over a contiguous
+    run of messages. Processing newest-first would leave the older half of an
+    interrupted pass behind a mark that had already moved past it.
+
+    `cap` is a runaway backstop, not a page size — it is why the second element
+    of the return exists. A capped pass holds the *newest* `cap` messages, so
+    the ones it did not collect are older than everything it did, and no single
+    watermark can describe that. The caller's job is to not advance one.
+    """
+    collected: list[dict] = []
+    cursor: str | None = None
+    while True:
+        page = _emails_page(
+            base,
+            api_key,
+            account_id,
+            limit=min(MAX_PAGE, cap - len(collected)),
+            role=role,
+            after=after,
+            before=before,
+            search=search,
+            cursor=cursor,
+        )
+        items = page.get("items") or []
+        collected.extend(items)
+        cursor = page.get("cursor")
+        if not items or not cursor or len(collected) >= cap:
+            break
+
+    collected.reverse()
+    return collected, len(collected) >= cap
 
 
 def wait_for_emails(

@@ -3,8 +3,8 @@
 # a document).
 #
 # Example of a local template: invoice2data ships 215 built-ins, none of which
-# cover Bolt. Drop more YAML files beside this one and parse_invoices.py picks
-# them up automatically.
+# cover Bolt. Drop more YAML files beside this one and every scan picks them up
+# automatically.
 issuer: Bolt Operations OÜ
 keywords:
   - Bolt Operations
