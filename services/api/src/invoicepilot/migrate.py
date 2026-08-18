@@ -27,7 +27,7 @@ from invoicepilot.core.db import get_engine, session_scope
 from invoicepilot.core.logging import get_logger
 from invoicepilot.invoice_store import DATA_ROOT, workspace_root
 from invoicepilot.invoices import save
-from invoicepilot.models import Base
+from invoicepilot.models import Base, WorkspaceAccount
 from invoicepilot.workspaces import ID_BYTES
 
 log = get_logger("migrate")
@@ -190,6 +190,40 @@ def backfill(workspace_id: str, root: Path = DATA_ROOT) -> tuple[int, int]:
     return filed, created
 
 
+def adopt_accounts(workspace_id: str) -> int:
+    """Give the workspace the mailboxes already connected to the tenant.
+
+    Before workspaces there was one user, so every account on the tenant was
+    theirs — which makes this unambiguous exactly once, during the migration
+    that creates the first workspace. Running it later would hand one visitor
+    everybody's mailboxes, which is why it is only ever called from `run()`
+    behind a successful adopt_existing().
+
+    Without it the migrated workspace keeps its invoices but owns no mailbox:
+    the dashboard shows the history and offers no way to scan for more.
+
+    Failure is logged, not raised. The mailbox can be reconnected from the UI,
+    and an unreachable Unipile is no reason to leave the container unable to
+    boot.
+    """
+    try:
+        from invoicepilot.unipile import credentials, list_accounts
+
+        tenant = list_accounts(*credentials())
+    except Exception as exc:  # noqa: BLE001 — a boot must not depend on Unipile
+        log.warning("could not read the tenant's accounts, none adopted: %s", exc)
+        return 0
+
+    if not tenant:
+        return 0
+
+    with session_scope() as session:
+        for account in tenant:
+            session.merge(WorkspaceAccount(workspace_id=workspace_id, account_id=account["id"]))
+    log.info("adopted %d connected mailbox(es)", len(tenant))
+    return len(tenant)
+
+
 def run() -> None:
     engine = get_engine()
     Base.metadata.create_all(engine)
@@ -203,6 +237,7 @@ def run() -> None:
         log.info("no pre-workspace data to migrate")
         return
 
+    adopt_accounts(adopted)
     relocate_documents(adopted)
     filed, created = backfill(adopted)
     log.info("backfilled %d invoice(s), %d new", filed, created)
