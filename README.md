@@ -282,8 +282,21 @@ just fmt                  # apply autofixes and formatting
 just clean                # drop venv, caches, frontend build output
 ```
 
-CI runs the same lint and test steps plus a frontend build — see
-[.github/workflows/ci.yml](.github/workflows/ci.yml).
+There is no CI. `just lint` and `just test` before a commit are the whole
+gate, so they are worth actually running.
+
+One thing to know about `just test`: the workspace isolation tests — that one
+browser cannot read another's invoices — need a real Postgres and **skip
+silently without one**. They are the tests that cover the only security
+boundary this app has, so run them against a database before changing anything
+about workspaces, shares or scoping:
+
+```bash
+just start-db                                          # or any Postgres
+DATABASE_URL=postgresql+psycopg://…/invoicepilot_test just test
+```
+
+Watch the skip count. `57 passed, 24 skipped` means they did not run.
 
 ## Security notes
 

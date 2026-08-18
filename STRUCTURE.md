@@ -14,7 +14,6 @@ invoicepilot/
 ├── justfile                        # the only file that spans services
 ├── ruff.toml                       # repo-wide lint config
 ├── README.md  STRUCTURE.md  CHANGELOG.md  LICENSE
-├── .github/workflows/ci.yml
 ├── docs/                           # assets/  flows/  ui-sketches/
 │
 ├── deploy/
@@ -82,7 +81,7 @@ invoicepilot/
 ## Repo rules
 
 1. **The root owns nothing service-specific.** Everything at top level is
-   either cross-cutting (`compose*.yml`, `justfile`, `ruff.toml`, CI) or shared
+   either cross-cutting (`compose*.yml`, `justfile`, `ruff.toml`) or shared
    (`docs/`). The moment a root file is only meaningful to one service, it
    belongs inside that service. This is the rule the old layout broke:
    `pyproject.toml`, `tests/` and `templates/` sat at the root but were the
@@ -170,9 +169,14 @@ trees read the same shape.
    a published port.
 4. **`justfile`** — the recipes a person types. Follow the existing naming:
    `<service>` runs it in dev, `<service>-build` builds it.
-5. **`.github/workflows/ci.yml`** — a job with `working-directory:
-   services/<name>`. A service with no CI job is a service that breaks silently.
-6. **This file** — add it to the tree and say in one line what it is.
+5. **This file** — add it to the tree and say in one line what it is.
+
+There is no CI to add a job to. It was removed deliberately: nothing here is
+released on a schedule and one person runs the deploy, so `just lint` and
+`just test` before a commit are the whole gate. The cost is that a service
+with no local run is a service that breaks silently — see the note in
+README.md about the isolation tests, which skip rather than fail when no
+database is configured.
 
 ### Rules for the service itself
 
