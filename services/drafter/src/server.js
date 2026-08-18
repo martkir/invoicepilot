@@ -68,7 +68,10 @@ async function draft(prompt, system) {
         }
       }
       if (message.type === "result" && message.is_error) {
-        throw new Error(`claude code failed: ${message.subtype}`);
+        // A `success` subtype with is_error set is a turn that ended on an API
+        // error, and the reason is in `result` — reporting the subtype instead
+        // produces the useless "claude code failed: success".
+        throw new Error(`claude code failed: ${message.result || message.subtype}`);
       }
     }
   } finally {

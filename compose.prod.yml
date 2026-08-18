@@ -106,7 +106,7 @@ services:
       # Defaults to /dev/null rather than a path, so a host without Claude Code
       # mounts something readable and empty instead of having Docker create a
       # stray directory where the file was expected.
-      - ${CLAUDE_CREDENTIALS_FILE:-/dev/null}:/home/drafter/.claude/.credentials.json:ro
+      - ${CLAUDE_CREDENTIALS_FILE:-/dev/null}:/root/.claude/.credentials.json:ro
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s

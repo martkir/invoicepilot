@@ -32,6 +32,7 @@ Reference 4429
 
 # What a well-behaved model returns for RECEIPT: labels anchored, values not.
 GOOD_DRAFT = {
+    "is_invoice": True,
     "issuer": "Uber",
     "keywords": ["Thanks for riding"],
     "date_format": "%B %d, %Y",
@@ -331,6 +332,7 @@ DOCUMENT = """\
 FROM_MAIL = {"issuer": "Bolt Operations OU", "amount": 1.17, "date": "2026-08-08"}
 
 DOCUMENT_DRAFT = {
+    "is_invoice": True,
     "issuer": "ignored — the mail's issuer wins",
     "keywords": ["Фактура"],
     "date_format": "%Y-%m-%d",
@@ -417,3 +419,17 @@ def test_the_two_kinds_are_tried_independently(templates_dir):
 
     assert learn.attempted("bolt.eu", learn.MAIL)
     assert not learn.attempted("bolt.eu", learn.DOCUMENT)
+
+
+def test_a_document_that_is_not_an_invoice_is_not_templated(templates_dir):
+    """The gate cannot tell, and this is what it costs when nothing else asks.
+
+    A Bulgarian social-security declaration reads "Общ доход: 6 200.00 EUR" —
+    a date and a total, shaped exactly like a receipt. A template was written
+    for one, and it filed the taxpayer's own income as an expense.
+    """
+    model = StubModel(dict(GOOD_DRAFT, is_invoice=False))
+
+    assert learn.teach(RECEIPT, "info@vp-consulting.org", using=model) is None
+    assert (templates_dir / "vp-consulting-org.failed").is_file()
+    assert "not an invoice" in (templates_dir / "vp-consulting-org.failed").read_text()

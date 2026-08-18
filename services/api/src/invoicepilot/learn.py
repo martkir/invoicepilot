@@ -73,6 +73,7 @@ REQUIRED_FIELDS = ("date", "amount")
 TEMPLATE_SCHEMA = {
     "type": "object",
     "properties": {
+        "is_invoice": {"type": "boolean"},
         "issuer": {"type": "string"},
         "keywords": {"type": "array", "items": {"type": "string"}},
         "date_format": {"type": "string"},
@@ -86,6 +87,7 @@ TEMPLATE_SCHEMA = {
         },
     },
     "required": [
+        "is_invoice",
         "issuer",
         "keywords",
         "date_format",
@@ -101,8 +103,17 @@ You write extraction templates for the invoice2data library. You are given the
 text of one invoice or receipt from a single issuer, and you return the rules
 for reading every future document from that issuer.
 
-Return a regular expression per field, each with exactly ONE capturing group
-around the value. Rules that matter:
+First decide `is_invoice`. It is true only for a bill or a receipt — a demand
+for payment, or evidence that one was made. It is false for a statement of
+income, a tax or social-security declaration, a reminder that something will be
+due, a booking that has not been paid, or a notification that a document exists
+somewhere else. Such a document can state a date and a total and still not be an
+invoice: a Bulgarian social-security declaration reads "Общ доход: 6 200.00 EUR",
+and that figure is the taxpayer's income, not a charge. When `is_invoice` is
+false, return empty strings for every field; nothing else matters.
+
+Then return a regular expression per field, each with exactly ONE capturing
+group around the value. Rules that matter:
 
 - Anchor on the LABEL, never on the value. `Total charged\\s*€?([\\d.,]+)` is
   right; `Total charged €1\\.17` matches this document and nothing else.
@@ -115,8 +126,13 @@ around the value. Rules that matter:
   number, a billing domain. All of them must appear, and they must not appear
   in this issuer's marketing mail. Never use a bare word like "Invoice" or
   "Total".
-- `amount` is the gross total actually charged. `amount_untaxed` is the net and
-  `amount_tax` the VAT, when the document separates them.
+- `amount` is the gross total actually charged, in the currency it was charged
+  in. Documents often restate that total converted into a local currency — "Total
+  Price € 57.67" beside "Price in Bulgarian Leva BGN 112.79", or "£394.80" beside
+  "Charged €478.93". Capture the charge, never the conversion, and set
+  `currency_code` to the charge's currency.
+- `amount_untaxed` is the net and `amount_tax` the VAT, when the document
+  separates them.
 - Leave a field as an empty string when the document does not carry it. Do not
   invent a pattern for something that is not there.
 - `date_format` is the strptime format matching what your `date` regex
@@ -631,6 +647,16 @@ def teach(
         instructions += DOCUMENT_NOTE.format(known=summary or "nothing")
 
     draft = using.extract_structured(grounded(text), TEMPLATE_SCHEMA, instructions=instructions)
+
+    # Asked because the gate cannot tell: it passes anything shaped like a
+    # receipt, and a social-security declaration stating "Общ доход: 6 200.00
+    # EUR" is shaped exactly like one. Without this a template was written for
+    # that document and filed the taxpayer's own income as an expense.
+    if not draft.get("is_invoice", True):
+        log.info("not teaching %s: the document is not an invoice or a receipt", domain)
+        _record_failure(domain, kind, "the document is not an invoice or a receipt")
+        return None
+
     template_yaml = render(draft, domain, sender, kind=kind, known=known)
 
     fields = parse_with(template_yaml, text)
