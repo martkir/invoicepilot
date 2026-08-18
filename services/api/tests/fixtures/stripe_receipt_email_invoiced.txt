@@ -1,0 +1,5 @@
+Northwind Traders, Inc.  (https://www.example.com/)
+Northwind Traders, Inc.
+Receipt from Northwind Traders, Inc. €180.00 Paid June 20, 2026 (invoice illustration [https://images.example/invoice.png]) Download invoice (https://pay.stripe.com/invoice/acct_0/live_0/pdf?s=em) Download receipt (https://dashboard.stripe.com/receipts/invoices/AAAA/pdf?s=em) Receipt number 1111-2222-3333 Invoice number ABCDEFGH-0042 Payment method - 0000
+Receipt #1111-2222-3333 Jun 20–Jul 20, 2026 Some plan Qty 1 €180.00 Total €180.00 Amount paid €180.00 Questions? Visit our support site (https://support.example.com/).
+Powered by    stripe logo (https://stripe.com)

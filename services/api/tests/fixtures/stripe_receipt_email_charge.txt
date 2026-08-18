@@ -1,0 +1,19 @@
+Receipt from Contoso Software Receipt #4444-5555
+Amount paid
+$6.00
+
+Date paid
+Jul 9, 2026, 3:45:17 PM
+
+Payment method
+- 0000
+
+Summary
+
+-   - Renewed Some Plan ($5.00/month) for 1 months : $5.00
+
+- Subtotal : $5.00
+- VAT (20%) : $1.00
+- Amount paid : $6.00
+If you have any questions, visit our support site at https://help.example.com/ (https://help.example.com/).
+You're receiving this email because you made a purchase at Contoso Software, which partners with Stripe (https://stripe.com/) to provide invoicing and payment processing.

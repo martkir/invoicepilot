@@ -25,6 +25,7 @@ import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import lru_cache
+from html.parser import HTMLParser
 from pathlib import Path
 
 from invoicepilot.core.logging import get_logger
@@ -48,9 +49,6 @@ EML_MIMES = frozenset({"message/rfc822"})
 SCRIPT_RE = re.compile(r"<(style|script)\b[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
 TAG_RE = re.compile(r"<[^>]+>")
 BLANK_RE = re.compile(r"\n{3,}")
-ANCHOR_RE = re.compile(
-    r"<a\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", re.IGNORECASE | re.DOTALL
-)
 INVOICE_LINK_RE = re.compile(r"invoice|receipt|facture|rechnung|factura|billing|\.pdf", re.I)
 
 # Enough links to cover a receipt that offers the document twice, few enough
@@ -130,7 +128,16 @@ def parse_bytes(blob: bytes, suffix: str) -> tuple[dict | None, str | None]:
             result = extract_data(handle.name, templates=templates(), input_module=module)
         except Exception as exc:  # noqa: BLE001 — one bad document must not stop a scan
             return None, f"{type(exc).__name__}: {exc}"
-    return (result or None), None
+    if not result:
+        return None, None
+
+    # invoice2data builds `desc` from the issuer the template *declares*, not
+    # the one the document yielded. That is only the same thing for a template
+    # written per vendor; the Stripe templates here capture the issuer, so
+    # every vendor Stripe bills for would otherwise be described as Stripe.
+    if result.get("issuer"):
+        result["desc"] = f"Invoice from {result['issuer']}"
+    return result, None
 
 
 def readable_text(blob: bytes, is_html: bool) -> str:
@@ -144,12 +151,58 @@ def readable_text(blob: bytes, is_html: bool) -> str:
     return BLANK_RE.sub("\n\n", text).strip()
 
 
+class _Anchors(HTMLParser):
+    r"""Collects every `<a href>` in a body as (href, link text).
+
+    A parser rather than a regex, because vendor mail is reliably malformed and
+    a regex has to guess where an anchor ends. Bolt's receipts are the case in
+    point: a formatter puts the closing bracket on its own line, `</a\n>`, so a
+    `</a>` pattern misses that close and runs on to the next anchor's — eating
+    the "Download PDF invoice" link, which is the one this module exists to
+    follow. HTMLParser also unescapes attribute values on its own.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.links: list[tuple[str, str]] = []
+        self._href: str | None = None
+        self._text: list[str] = []
+
+    def _close_open_anchor(self) -> None:
+        if self._href is not None:
+            self.links.append((self._href, "".join(self._text)))
+        self._href, self._text = None, []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag != "a":
+            return
+        # An unclosed anchor is closed by the next one rather than discarded:
+        # what it linked to is still a link, and its text is still its label.
+        self._close_open_anchor()
+        self._href = dict(attrs).get("href")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "a":
+            self._close_open_anchor()
+
+    def handle_data(self, data: str) -> None:
+        if self._href is not None:
+            self._text.append(data)
+
+    def close(self) -> None:
+        super().close()
+        self._close_open_anchor()
+
+
 def invoice_links(markup: str) -> list[str]:
     """https links that advertise themselves as the invoice document."""
+    parser = _Anchors()
+    parser.feed(markup)
+    parser.close()
+
     found: list[str] = []
-    for match in ANCHOR_RE.finditer(markup):
-        href = html_module.unescape(match.group(1)).strip()
-        label = TAG_RE.sub(" ", match.group(2))
+    for raw, label in parser.links:
+        href = (raw or "").strip()
         if not href.lower().startswith("https://"):
             continue
         if not (INVOICE_LINK_RE.search(label) or INVOICE_LINK_RE.search(href)):

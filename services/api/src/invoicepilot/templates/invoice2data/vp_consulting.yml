@@ -1,0 +1,36 @@
+# ВИ ПИ ПАРТНЪРС ООД (vp-consulting.org) — the monthly accounting invoice,
+# attached to "<name> / <month> - Invoice Monthly Accounting".
+#
+# The PDF has no text layer worth the name: pdfium returns the page in draw
+# order, so labels arrive as one block and their values as another. Every field
+# here is therefore anchored on something adjacent in that order rather than on
+# its own label, and the anchors are the reason each one looks indirect.
+issuer: ВИ ПИ ПАРТНЪРС ООД
+keywords:
+  - ВИ ПИ ПАРТНЪРС
+  - ФАКТУРА
+fields:
+  # "№ 0000016360" then, on the next line, the issue date. The payment
+  # reference further down repeats the number as "ф. 0000016360", without the
+  # №, so this matches once.
+  invoice_number: '№\s*(\d{6,})'
+  date: '№\s*\d{6,}\s+(\d{2}\.\d{2}\.\d{4})'
+  # The gross total, the only figure the document writes with the ISO code. It
+  # has to start a line: the amount in words ends "... и .69 EUR" and would
+  # otherwise match too, and two different values make invoice2data return a
+  # list rather than a number.
+  amount: '\n([\d.,]+) EUR'
+  amount_untaxed: 'сума:\s*([\d.,]+)'
+  # The VAT line has no label beside it — the totals arrive as net, VAT, gross
+  # on consecutive lines, so the net line is what identifies the VAT one.
+  amount_tax: '\n\s*[\d.,]+ €\s*\n\s*([\d.,]+) €'
+# No vat_number or company_number: the page carries two ЕИК/ДДС pairs, the
+# seller's and the buyer's, and draw order does not say which is which. A
+# wrong number filed as fact is worse than a field left empty.
+options:
+  currency: EUR
+  languages:
+    - bg
+  decimal_separator: '.'
+  date_formats:
+    - '%d.%m.%Y'

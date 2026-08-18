@@ -1,0 +1,28 @@
+Page 1 of 1
+Receipt
+Invoice number ABCDEFGH-0042
+Receipt number 1111-2222-3333
+Date paid June 20, 2026
+Northwind Traders, Inc. (@northwind)
+1 Example Street
+Springfield, Example 00000
+United States
+billing@example.com
+Bill to
+buyer@example.com's Organization
+2 Sample Road
+Exampleton, Example 00000
+United States
+buyer@example.com
+€180.00 paid on June 20, 2026
+Description Qty Unit price Amount
+Some plan
+Jun 20–Jul 20, 2026
+1 €150.00 €150.00
+Subtotal €150.00
+VAT (20%) €30.00
+Total €180.00
+Amount paid €180.00
+Payment history
+Payment method Date Amount paid Receipt number
+Mastercard - 0000 June 20, 2026 €180.00 1111-22223333

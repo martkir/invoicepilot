@@ -1,0 +1,23 @@
+# Telekom's HotSpot receipt, attached as a PDF to "Your HotSpot receipt".
+# In-flight and station wifi, billed by T-Mobile HotSpot GmbH.
+issuer: T-Mobile HotSpot GmbH
+keywords:
+  - T-Mobile HotSpot GmbH
+  - HotSpot Receipt
+fields:
+  invoice_number: 'Receipt number\s+(\d+)'
+  date: 'Date\s+(\d{2}/\d{2}/\d{2})'
+  # Upper case on purpose: it is the total row's own label, and it keeps this
+  # off the sentence below it, "Total of 29.00 EUR debited from your Credit
+  # Card", which states the same figure in prose.
+  amount: 'TOTAL\s+([\d.,]+)'
+  vat_number: 'VAT identification no\.:\s*([A-Z]{2}\d+)'
+  company_number: 'Amtsgericht Bonn HRB (\d+)'
+options:
+  # The document states it: "Service Overview Amounts (EUR)".
+  currency: EUR
+  languages:
+    - en
+  decimal_separator: '.'
+  date_formats:
+    - '%d/%m/%y'

@@ -1,0 +1,59 @@
+# The receipt email Stripe sends on a vendor's behalf, as it arrives in the
+# body. Deliberately not one vendor's template: Stripe bills a large share of
+# the SaaS a mailbox sees, and every one of those receipts shares this layout —
+# so the issuer is captured from the document rather than declared here.
+#
+# The two shapes it has to cover, both real:
+#   "Receipt from Anthropic, PBC / €180.00 / Paid June 20, 2026"
+#   "Receipt from Positron Technologies Ltd / Amount paid / £394.80 / Date paid"
+# Hence the alternations. The vendor's own PDF is linked from these mails, and
+# stripe_invoice_pdf.yml reads it once extract.enrich follows the link.
+#
+# The Stripe wordmark is deliberately not a keyword: vendors customise the
+# footer and Anthropic's own receipts dropped it between June and July 2026.
+# "Receipt from <vendor>" over "Amount paid" is the part that does not move.
+issuer: Stripe
+keywords:
+  - Receipt from
+  - Amount paid
+fields:
+  # What follows "Receipt from", up to whatever ends it. Three endings, because
+  # the same receipt reaches this template in three shapes: as the plain-text
+  # part, where the vendor runs straight into "Receipt #1520-2233" or into the
+  # amount on one line, and as stripped HTML, where the line simply ends.
+  # Excluding "[" is what skips the preheader, whose "<vendor> [#1229-6155]"
+  # would otherwise match a second, different value and yield a list.
+  issuer: 'Receipt from ([^\[\n]+?)(?:\s+Receipt #|\s+[A-Z]{3}[\d.,]|\s*\n|\s*$)'
+  # Stripe states an invoice number when the charge came from an invoice and a
+  # bare receipt number when it did not, so both are accepted — in that order,
+  # because the invoice number is the one the vendor's own PDF repeats.
+  invoice_number:
+    parser: regex
+    regex:
+      - 'Invoice number\s+([\w-]+)'
+      - 'Receipt #([\w-]+)'
+    group: first
+  date: '(?:Date paid|Paid)\s+(\w{3,9} \d{1,2}, \d{4})'
+  # The optional colon is the plain-text part's summary list, "- Subtotal :
+  # £329.00", where the HTML puts the label and the figure on separate lines.
+  amount: 'Amount paid\s*:?\s*[A-Z]{3}\s*([\d.,]+)'
+  amount_untaxed: 'Subtotal\s*:?\s*[A-Z]{3}\s*([\d.,]+)'
+  amount_tax: 'VAT \(\d+%\)\s*:?\s*[A-Z]{3}\s*([\d.,]+)'
+  # Read from the document rather than fixed, because the same template serves
+  # vendors billing in different currencies — see the `replace` below.
+  currency: 'Amount paid\s*:?\s*([A-Z]{3})'
+options:
+  # Stripe prints the symbol, not the code. Rewriting it up front is what lets
+  # the amount and the currency be captured by one anchor apiece instead of a
+  # symbol table in every field. `replace` runs after keyword matching, so the
+  # keywords above are unaffected.
+  replace:
+    - ['€', 'EUR']
+    - ['£', 'GBP']
+    - ['\$', 'USD']
+  languages:
+    - en
+  decimal_separator: '.'
+  date_formats:
+    - '%B %d, %Y'
+    - '%b %d, %Y'

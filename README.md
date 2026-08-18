@@ -253,8 +253,27 @@ has scanned before reaches 60 days back, and mail is prefiltered to messages
 whose text looks like an invoice — see `INVOICE_KEYWORDS` in `process.py`.
 
 Documents are matched against `invoice2data` templates: 215 built-in ones, plus
-any YAML you add under [templates/invoice2data/](templates/invoice2data/), which
-is auto-loaded. Point `--templates` elsewhere to override.
+any YAML you add under
+[services/api/src/invoicepilot/templates/invoice2data/](services/api/src/invoicepilot/templates/invoice2data/),
+which is auto-loaded. Point `--templates` elsewhere to override.
+
+Recognition is per-issuer, so an invoice from a vendor with no template looks
+like an ordinary email. The templates that ship here are the ones the built-ins
+missed:
+
+| Template | Reads |
+| --- | --- |
+| `stripe_receipt_email.yml` | the receipt mail Stripe sends for a vendor |
+| `stripe_invoice_pdf.yml` | the PDF behind its "Download invoice" link |
+| `bolt_ride_receipt.yml` | a Bolt ride receipt, in the mail body |
+| `bolt_invoice_bg.yml` | Bolt's own invoice PDF, in Bulgarian |
+| `telekom_hotspot.yml` | Telekom's HotSpot receipt |
+| `vp_consulting.yml` | ВИ ПИ ПАРТНЪРС ООД's monthly accounting invoice |
+
+The two Stripe ones are not per-vendor: they capture the issuer from the
+document, so they cover every vendor Stripe bills for. Adding a template is the
+cheapest way to widen coverage — drop a YAML file in and the next scan picks it
+up, with `tests/test_templates.py` as the pattern for covering it.
 
 Recognised invoices are written under `.data/`, one directory per invoice
 holding `invoice.json`, the original `invoice.pdf` (when there was an

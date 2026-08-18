@@ -1,0 +1,45 @@
+<!-- A vendor receipt as the mail formatter really emits it: closing tags with
+     the bracket on the next line, `</a\n>`. Bolt's ride receipts are the
+     original of this; the values are made up but the shape is theirs.
+
+     The link that matters is the second one. A `</a>` pattern misses the first
+     anchor's close, runs on to the second's, and returns the support article
+     while swallowing the invoice — which is the regression this guards. -->
+<html>
+  <body>
+    <table>
+      <tr>
+        <td>
+          <a
+            href="https://tracker.example/L0/https:%2F%2Fsupport.example%2Farticles%2F123%2F/1/abc"
+            class="bodyMedium"
+            style="
+              color: #101010;
+              text-decoration: underline;
+            "
+            ><span style="line-height: 20px">Learn more about card authorisation.</span
+          ></a
+          >
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <a
+            href="https://tracker.example/L0/https:%2F%2Fdoclink.example%2Finvoice%2Fpdf%3Fi=ABC-123%26k=xyz/1/abc"
+            class="bodyMedium"
+            style="
+              color: #101010;
+            "
+            ><span style="line-height: 20px">Download PDF invoice</span
+          ></a
+          >
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <a href="https://tracker.example/L0/https:%2F%2Fwww.example.com%2Fsocial/1/abc"></a>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

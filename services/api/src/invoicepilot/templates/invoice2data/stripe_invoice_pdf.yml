@@ -1,0 +1,42 @@
+# The PDF Stripe generates for a vendor — the document behind the "Download
+# invoice" / "Download receipt" links in stripe_receipt_email.yml.
+#
+# Generic for the same reason that template is: this layout is Stripe's, not
+# any one vendor's. Both documents Stripe issues per charge match here, the
+# invoice ("Date of issue", "Amount due") and the receipt ("Date paid", "Amount
+# paid"), and both extract the same fields — so an email carrying both files
+# still files one invoice, because the identity is derived from the fields.
+issuer: Stripe
+keywords:
+  - Invoice number
+  - Bill to
+  - Description Qty Unit price Amount
+fields:
+  # The vendor's name is the line after the last of the dated header rows.
+  # There is no label to anchor on: the header is a block of "<label> <value>"
+  # rows and the issuer block simply follows it. The trailing Stripe account
+  # handle is dropped: the same vendor prints it three ways — "Anthropic, PBC",
+  # "Anthropic, PBC @anthropic", "Anthropic, PBC (@anthropic)" — and left in,
+  # one vendor files under three names. Only an @handle is stripped, so a
+  # bracketed company name like "Acme (UK) Ltd" survives intact.
+  issuer: 'Date (?:due|paid) [^\n]+\n(.+?)\s*(?:\(?@[\w.-]+\)?)?\s*\n'
+  invoice_number: 'Invoice number\s+([\w-]+)'
+  # "Date due" is deliberately not accepted: on an unpaid invoice it is the
+  # deadline, not the day the invoice was issued.
+  date: 'Date (?:of issue|paid)\s+(\w{3,9} \d{1,2}, \d{4})'
+  amount: 'Amount (?:due|paid)\s+[A-Z]{3}\s*([\d.,]+)'
+  amount_untaxed: 'Subtotal\s+[A-Z]{3}\s*([\d.,]+)'
+  currency: 'Amount (?:due|paid)\s+([A-Z]{3})'
+options:
+  # As in stripe_receipt_email.yml: the symbol is what the document prints, and
+  # rewriting it to the ISO code lets one anchor serve every currency.
+  replace:
+    - ['€', 'EUR']
+    - ['£', 'GBP']
+    - ['\$', 'USD']
+  languages:
+    - en
+  decimal_separator: '.'
+  date_formats:
+    - '%B %d, %Y'
+    - '%b %d, %Y'
