@@ -9,7 +9,6 @@ about what gets *rejected*.
 
 import json
 import os
-import time
 
 import pytest
 
@@ -68,15 +67,10 @@ class StubModel:
 
 
 @pytest.fixture(autouse=True)
-def isolated_credentials(tmp_path_factory, monkeypatch):
-    """No test picks up this machine's real Claude Code credential by accident.
-
-    Autouse because the file is at a fixed path in a home directory: a test
-    that forgets to isolate it passes here and fails on a build machine, or
-    worse, quietly borrows a live token.
-    """
-    absent = tmp_path_factory.mktemp("credentials") / "absent.json"
-    monkeypatch.setenv("CLAUDE_CREDENTIALS_FILE", str(absent))
+def isolated_credentials(monkeypatch):
+    """No test picks up a credential this machine happens to have configured."""
+    for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_PROFILE", "DRAFTER_URL"):
+        monkeypatch.delenv(name, raising=False)
     learn.get_settings.cache_clear()
     yield
     learn.get_settings.cache_clear()
@@ -268,83 +262,57 @@ def test_an_empty_api_key_does_not_shadow_a_token(monkeypatch):
     assert "ANTHROPIC_API_KEY" not in os.environ
 
 
-CLAUDE_CODE_FILE = {
-    "claudeAiOauth": {
-        "accessToken": "sk-ant-oat01-example",
-        "refreshToken": "sk-ant-ort01-example",
-        "expiresAt": 0,
-        "scopes": ["user:inference"],
-        "subscriptionType": "max",
-    }
-}
-
-
-def write_claude_code_credentials(tmp_path, monkeypatch, *, expires_in_hours):
-    path = tmp_path / ".credentials.json"
-    payload = json.loads(json.dumps(CLAUDE_CODE_FILE))
-    payload["claudeAiOauth"]["expiresAt"] = int((time.time() + expires_in_hours * 3600) * 1000)
-    path.write_text(json.dumps(payload), encoding="utf-8")
-    monkeypatch.setenv("CLAUDE_CREDENTIALS_FILE", str(path))
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
-    monkeypatch.delenv("ANTHROPIC_PROFILE", raising=False)
-    monkeypatch.setenv("ANTHROPIC_CONFIG_DIR", str(tmp_path / "absent"))
+def test_a_configured_key_wins_over_the_drafter(monkeypatch):
+    """A direct request beats a spawned process, and is metered separately."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-configured")
+    monkeypatch.setenv("DRAFTER_URL", "http://drafter:8100")
     learn.get_settings.cache_clear()
-    return path
+
+    assert isinstance(learn.provider(), learn.Claude)
 
 
-def test_a_live_claude_code_token_is_borrowed(tmp_path, monkeypatch):
-    write_claude_code_credentials(tmp_path, monkeypatch, expires_in_hours=1)
+def test_the_drafter_is_used_when_there_is_no_key(monkeypatch):
+    """The only path that works on a deployment with a borrowed credential."""
+    monkeypatch.setenv("DRAFTER_URL", "http://drafter:8100")
+    learn.get_settings.cache_clear()
 
-    assert learn.claude_code_token() == "sk-ant-oat01-example"
+    assert isinstance(learn.provider(), learn.Drafter)
     assert learn.credentials_available()
 
 
-def test_an_expired_claude_code_token_is_no_credential(tmp_path, monkeypatch):
-    """Nothing renews it on our behalf, so expired means skip — not fail.
-
-    A scan that finds no valid token teaches nothing and marks nothing, so the
-    issuer is tried again next time rather than burned.
-    """
-    write_claude_code_credentials(tmp_path, monkeypatch, expires_in_hours=-1)
-
-    assert learn.claude_code_token() is None
+def test_nothing_configured_is_still_not_an_error():
     assert not learn.credentials_available()
     assert learn.provider() is None
 
 
-def test_the_borrowed_file_is_never_written(tmp_path, monkeypatch):
-    """Refreshing rotates the refresh token, which would log Claude Code out."""
-    path = write_claude_code_credentials(tmp_path, monkeypatch, expires_in_hours=1)
-    before = path.read_bytes(), path.stat().st_mtime_ns
+def test_the_drafter_sends_the_schema_and_reads_back_the_draft(monkeypatch):
+    """The service knows nothing about invoices, so the schema travels with the
+    request and the rules stay in this module."""
+    seen = {}
 
-    learn.claude_code_token()
-    learn.credentials_available()
-    learn.provider()
+    class Response:
+        def read(self):
+            return json.dumps({"draft": {"issuer": "Acme"}}).encode()
 
-    assert (path.read_bytes(), path.stat().st_mtime_ns) == before
+        def __enter__(self):
+            return self
 
+        def __exit__(self, *args):
+            return False
 
-@pytest.mark.parametrize(
-    "body",
-    ["", "not json", "{}", '{"claudeAiOauth": {}}', '{"claudeAiOauth": {"accessToken": ""}}'],
-    ids=["empty", "malformed", "no-key", "no-token", "blank-token"],
-)
-def test_an_unreadable_credential_file_is_no_credential(tmp_path, monkeypatch, body):
-    """The format is Claude Code's, undocumented, and free to change."""
-    path = tmp_path / ".credentials.json"
-    path.write_text(body, encoding="utf-8")
-    monkeypatch.setenv("CLAUDE_CREDENTIALS_FILE", str(path))
-    learn.get_settings.cache_clear()
+    def fake_urlopen(request, timeout=None):
+        seen["url"] = request.full_url
+        seen["body"] = json.loads(request.data)
+        return Response()
 
-    assert learn.claude_code_token() is None
+    monkeypatch.setattr(learn.urllib.request, "urlopen", fake_urlopen)
 
+    draft = learn.Drafter("http://drafter:8100/").extract_structured(
+        "Total 1.00", learn.TEMPLATE_SCHEMA, instructions="be terse"
+    )
 
-def test_a_configured_key_wins_over_the_borrowed_token(tmp_path, monkeypatch):
-    """Ours before theirs: a real credential should never be passed over."""
-    write_claude_code_credentials(tmp_path, monkeypatch, expires_in_hours=1)
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-configured")
-    learn.get_settings.cache_clear()
-
-    assert learn.sdk_credentials()
-    assert learn.provider()._api_key == "sk-ant-configured"
+    assert draft == {"issuer": "Acme"}
+    assert seen["url"] == "http://drafter:8100/draft"
+    assert seen["body"]["system"] == "be terse"
+    assert "Total 1.00" in seen["body"]["prompt"]
+    assert "decimal_separator" in seen["body"]["prompt"]

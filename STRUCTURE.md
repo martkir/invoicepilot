@@ -24,6 +24,7 @@ invoicepilot/
 │   └── cloudcli/                   # Dockerfile + compose.yml
 │
 └── services/
+    ├── drafter/            # runs Claude Code; drafts a template, knows no domain
     ├── api/
     │   ├── Dockerfile
     │   ├── .dockerignore

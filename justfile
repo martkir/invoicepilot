@@ -134,6 +134,11 @@ deploy:
   @echo "Dashboard on loopback only, at WEB_LOCAL_PORT from .env (default 8090)."
   @echo "Put it on the internet with deploy/caddy-public.caddy."
 
+# The drafter, on the host. `npm install` in services/drafter first.
+# Point the api at it with DRAFTER_URL=http://127.0.0.1:8100.
+drafter:
+  cd services/drafter && npm start
+
 # Follow the deployed stack's logs
 deploy-logs *ARGS:
   docker compose -f compose.prod.yml logs -f {{ARGS}}

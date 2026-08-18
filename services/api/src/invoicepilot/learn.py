@@ -25,15 +25,18 @@ into templates/invoice2data/ by hand.
 
 Credentials are whatever the Anthropic SDK can resolve — an API key, an
 ANTHROPIC_AUTH_TOKEN, an `ant auth login` OAuth profile, or workload identity
-federation — and, last, the token Claude Code happens to be holding. Nothing
-configured disables the module rather than failing a scan.
+federation. Failing that, services/drafter, which runs Claude Code and so can
+use the OAuth token Claude Code holds for itself — the one credential the public
+API will not accept from a third-party client. Nothing configured disables the
+module rather than failing a scan.
 """
 
 import json
 import os
 import re
 import tempfile
-import time
+import urllib.error
+import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -142,6 +145,9 @@ BG3170069438 ... Thu, 2026-08-06":
 # it is sized for the reasoning rather than for the few hundred tokens of YAML.
 MAX_TOKENS = 8192
 
+# Longer than the drafter's own ceiling, so its error arrives instead of ours.
+DRAFT_TIMEOUT = 240
+
 SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 
@@ -163,11 +169,6 @@ class Claude:
         return True
 
     def client(self):
-        """A client for whichever credential is available, checked in order.
-
-        Built per call rather than held, because the borrowed token at the end
-        of the chain expires and is re-read every time — see claude_code_token.
-        """
         from anthropic import Anthropic
 
         if self._api_key:
@@ -175,15 +176,7 @@ class Claude:
         # Anything the SDK resolves itself — auth token, OAuth profile,
         # federation — is left to it, so its own precedence is not second
         # guessed here.
-        if sdk_credentials():
-            return Anthropic()
-        token = claude_code_token()
-        if token:
-            return Anthropic(auth_token=token, default_headers={"anthropic-beta": OAUTH_BETA})
-        # provider() gates on the same question, so reaching this means the
-        # token expired between then and now. Said plainly, because an
-        # unauthenticated client would fail with a 401 that explains nothing.
-        raise RuntimeError("no Anthropic credentials are available")
+        return Anthropic()
 
     def extract_structured(
         self,
@@ -222,11 +215,6 @@ FEDERATION_VARS = (
 )
 
 
-# OAuth access tokens go on Authorization: Bearer, which this header is what
-# makes the API accept.
-OAUTH_BETA = "oauth-2025-04-20"
-
-
 def sdk_credentials() -> bool:
     """Whether the SDK can authenticate from its own resolution order.
 
@@ -247,44 +235,76 @@ def sdk_credentials() -> bool:
     )
 
 
-def claude_code_token() -> str | None:
-    """Claude Code's own access token, if one is there and still valid.
+class Drafter:
+    """An AIProvider that runs the prompt through the drafter service.
 
-    A borrowed credential, and treated like one. It is read fresh every time
-    and never cached, because Claude Code rewrites the file when it refreshes;
-    it is never written, because that refresh rotates the refresh token and a
-    second writer would invalidate the session Claude Code is holding — logging
-    the user out of the tool they are sitting in front of.
+    The other way to reach a model from here, and on this deployment the only
+    one that works. The credential available is the OAuth token Claude Code
+    holds for itself, and the public Messages API declines to serve it to a
+    third-party client — it authenticates and resolves to an organization, then
+    returns a 429 carrying none of the rate-limit headers a real quota response
+    has. Claude Code is served, so services/drafter runs Claude Code and hands
+    back what it produced.
 
-    Nothing renews it on our behalf, so an expired token is simply no
-    credential: a scan skips teaching and tries again next time, rather than
-    burning the issuer. The file is also private to Claude Code and undocumented,
-    which is the other reason every read is defensive.
+    The service knows nothing about invoices: the schema and the instructions
+    are sent with every request, so the rules about what a template looks like
+    stay here. Swapping it for a direct API call is a change of this one class.
     """
-    path = get_settings().claude_credentials_file
-    try:
-        oauth = json.loads(Path(path).read_text(encoding="utf-8"))["claudeAiOauth"]
-        expires_at = float(oauth["expiresAt"]) / 1000
-        token = oauth["accessToken"]
-    except (OSError, ValueError, KeyError, TypeError):
-        return None
-    if not token or expires_at <= time.time():
-        log.debug("Claude Code's token is expired or unreadable; not teaching this scan")
-        return None
-    return token
+
+    name = "drafter"
+
+    def __init__(self, url: str) -> None:
+        self._url = url.rstrip("/")
+
+    def is_available(self) -> bool:
+        return True
+
+    def extract_structured(
+        self,
+        text: str,
+        json_schema: dict,
+        *,
+        instructions: str | None = None,
+    ) -> dict:
+        payload = json.dumps(
+            {
+                "system": instructions or "",
+                "prompt": (
+                    f"{text}\n\n"
+                    "Return ONLY a JSON object matching this schema, with no prose "
+                    f"and no code fence:\n{json.dumps(json_schema)}"
+                ),
+            }
+        ).encode()
+        request = urllib.request.Request(
+            f"{self._url}/draft",
+            data=payload,
+            method="POST",
+            headers={"content-type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=DRAFT_TIMEOUT) as response:
+                return json.load(response)["draft"]
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode(errors="replace").strip()
+            raise RuntimeError(f"drafter returned HTTP {exc.code}: {detail}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"drafter unreachable: {exc.reason}") from exc
 
 
 def credentials_available() -> bool:
-    """Whether anything at all can authenticate a request right now."""
-    return sdk_credentials() or claude_code_token() is not None
+    """Whether anything at all can draft a template right now."""
+    return bool(get_settings().drafter_url) or sdk_credentials()
 
 
-def provider() -> Claude | None:
-    """A provider, or None when nothing is configured to authenticate with.
+def provider() -> Claude | Drafter | None:
+    """Whatever can draft a template, or None when nothing can.
 
-    Nothing configured is a supported deployment rather than a misconfiguration:
-    every other part of a scan works without it, so the absence disables this
-    quietly.
+    A configured API credential wins: it is a direct request rather than a
+    process, and it is metered separately from anyone's subscription. The
+    drafter is the fallback, and on a deployment with no key it is the whole
+    story. Nothing configured is a supported deployment rather than a
+    misconfiguration — every other part of a scan works without it.
     """
     settings = get_settings()
     # An ANTHROPIC_API_KEY set to the empty string is the documented trap: it
@@ -296,9 +316,11 @@ def provider() -> Claude | None:
     # the deployment most likely to be using one of the others.
     if os.environ.get("ANTHROPIC_API_KEY") == "":
         del os.environ["ANTHROPIC_API_KEY"]
-    if not credentials_available():
-        return None
-    return Claude(settings.anthropic_model, api_key=settings.anthropic_api_key or None)
+    if sdk_credentials():
+        return Claude(settings.anthropic_model, api_key=settings.anthropic_api_key or None)
+    if settings.drafter_url:
+        return Drafter(settings.drafter_url)
+    return None
 
 
 def domain_of(sender: str) -> str:

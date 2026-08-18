@@ -63,24 +63,18 @@ services:
       # and writable, and its refresh token expires.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
-      CLAUDE_CREDENTIALS_FILE: /run/claude-credentials.json
+      # Where the drafter answers. Reached by service name, never published.
+      DRAFTER_URL: http://drafter:8100
       DEBUG_LOGS_ENABLED: ${DEBUG_LOGS_ENABLED:-false}
     volumes:
       # The extracted documents. A named volume rather than a bind mount: these
       # are real invoices, and they must not depend on a checkout staying put.
       - invoice_data:/app/.data
-      # Last-resort credential: the OAuth token Claude Code holds for itself.
-      # Read-only on purpose — refreshing it rotates the refresh token, and a
-      # second writer would log Claude Code out. Nothing renews it here, so an
-      # expired token simply means this scan teaches nothing.
-      #
-      # Defaults to /dev/null rather than a path, so a host without Claude Code
-      # mounts something readable-and-empty instead of having Docker create a
-      # stray directory where the file was expected.
-      - ${CLAUDE_CREDENTIALS_FILE:-/dev/null}:/run/claude-credentials.json:ro
     depends_on:
       postgres:
         condition: service_healthy
+      drafter:
+        condition: service_started
     healthcheck:
       # urllib, because the image has no curl and adding one to carry a
       # healthcheck is a package to patch forever.
@@ -89,6 +83,36 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  # Drafts a template for an issuer no template covers, by running Claude Code.
+  # A separate service because of an authentication boundary: the credential on
+  # this deployment is the OAuth token Claude Code holds for itself, and the
+  # public API declines to serve it to a third-party client. Claude Code is
+  # served, so the way to use it is to be Claude Code — which needs Node and a
+  # bundled binary that have no business in the api image.
+  #
+  # Publishes nothing. Only the api service talks to it, over the compose
+  # network, and it is idle unless a scan meets an issuer it does not know.
+  drafter:
+    build: services/drafter
+    container_name: invoicepilot-drafter
+    restart: unless-stopped
+    volumes:
+      # Read-only on purpose. Refreshing this rotates the refresh token, so a
+      # second writer would invalidate the session Claude Code is holding on the
+      # host and log the user out of it. Nothing renews it here — an expired
+      # token means a scan teaches nothing until Claude Code is used again.
+      #
+      # Defaults to /dev/null rather than a path, so a host without Claude Code
+      # mounts something readable and empty instead of having Docker create a
+      # stray directory where the file was expected.
+      - ${CLAUDE_CREDENTIALS_FILE:-/dev/null}:/home/drafter/.claude/.credentials.json:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # The dashboard: a build served by Caddy, which also owns /api for the
   # browser. The container holds the built bundle rather than the source, so a

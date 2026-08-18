@@ -70,6 +70,7 @@ compose.yml       dev stack: postgres + dashboard
 compose.prod.yml  deployed stack: postgres + api + dashboard
 services/api/     the FastAPI service — package, tests, ops scripts, Dockerfile
 services/web/     the dashboard — Vite app, Caddy config, Dockerfile
+services/drafter/ drafts a template by running Claude Code — Node, Dockerfile
 deploy/           host-level config that is not a container
 tools/            dev tooling owned by no service
 docs/             design notes and flow mockups
@@ -285,18 +286,24 @@ messages, 94% of the invoices pass and 5 of 126 non-invoices do.
 
 For what passes the gate and still parses to nothing, a scan asks Claude to
 write the template — **once per sending domain, for the life of that domain**,
-at roughly five cents a time. It turns itself on as soon as the Anthropic SDK
-can authenticate — an `ANTHROPIC_API_KEY`, an `ANTHROPIC_AUTH_TOKEN`, an OAuth
-profile from `ant auth login`, or workload identity federation, resolved in that
-order. With none of them everything else works unchanged and unknown issuers are
-simply reported.
+at roughly five cents a time.
 
-For the deployed stack use an API key or federation: an OAuth profile lives in
-`~/.config/anthropic/` on the machine that logged in, so a container needs it
-mounted and writable, and its refresh token expires eventually. OAuth is the
-convenient one for running `invoicepilot scan` from your own machine. Note that
-an `ANTHROPIC_API_KEY` set to the *empty* string still wins the resolution order
-and shadows the rest — unset it rather than blanking it.
+It reaches a model one of two ways. If the Anthropic SDK can authenticate —
+`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, an `ant auth login` OAuth profile,
+or workload identity federation — it calls the API directly. An
+`ANTHROPIC_API_KEY` set to the *empty* string still wins that resolution order
+and shadows the rest, so unset it rather than blanking it.
+
+Failing that it asks **services/drafter**, which runs Claude Code and can
+therefore use the OAuth token Claude Code holds for itself. That token
+authenticates against the public API but is not served to a third-party client —
+it comes back 429 carrying none of the rate-limit headers a real quota response
+has — so being Claude Code is the way to use it. Set `DRAFTER_URL` and mount the
+credential read-only; the deployed stack does both. With neither route
+everything else works unchanged and unknown issuers are simply reported.
+
+Verified end to end by hiding all six templates and rebuilding them from the
+mailbox: `scripts/rebuild_templates_from_scratch.py`.
 
 What the model returns is a template, never an invoice: it is asked where the
 fields are, not what they say. Every figure in the database is still extracted

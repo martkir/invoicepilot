@@ -1,0 +1,15 @@
+{
+  "name": "invoicepilot-drafter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Drafts invoice2data templates by running Claude Code",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.234"
+  }
+}
