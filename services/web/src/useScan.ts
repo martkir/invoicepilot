@@ -6,7 +6,16 @@ import type { Invoice } from './api/types'
 // A scan downloads attachments, runs invoice2data over every candidate and may
 // fetch linked PDFs from vendors, so it takes far longer than a request can
 // wait. The API hands back a job id; this polls it.
-const POLL_MS = 1500
+//
+// Polling costs latency twice over: once waiting to ask the first time, and
+// again in the gap between the job finishing and the next question. A fixed
+// interval pays both at full price — at 1500ms it added up to 3s to a scan
+// that took 2s. So the first question goes out immediately and the gap widens
+// only as the scan proves itself long. GET /scan/{id} is a dictionary lookup,
+// which is what makes the early questions cheap enough to ask.
+const FIRST_POLL_MS = 150
+const POLL_GROWTH = 1.3
+const MAX_POLL_MS = 2000
 
 type Phase = 'idle' | 'scanning' | 'done' | 'uptodate' | 'error'
 
@@ -55,10 +64,10 @@ export function useScan() {
     try {
       const started = await startScan()
 
-      const poll = async () => {
+      const poll = async (gap: number) => {
         const job = await getScan(started.id)
         if (job.status === 'running') {
-          later(() => void poll(), POLL_MS)
+          later(() => void poll(Math.min(gap * POLL_GROWTH, MAX_POLL_MS)), gap)
           return
         }
         if (job.status === 'error') {
@@ -80,7 +89,9 @@ export function useScan() {
         }
       }
 
-      later(() => void poll(), POLL_MS)
+      // Straight away rather than after a wait: the scan has been running since
+      // POST returned, and a short one can already be over.
+      void poll(FIRST_POLL_MS)
     } catch (exc) {
       setPhase('error')
       setError(exc instanceof Error ? exc.message : String(exc))

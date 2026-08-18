@@ -21,8 +21,10 @@ fi
 export CLAUDE_AUTO_COMMIT_RUNNING=1
 
 # --- locate project + binary ----------------------------------------------
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-/home/clickhouse/invoicepilot}"
-CLAUDE_BIN="/home/clickhouse/.local/bin/claude"
+# Both default to values derived at runtime rather than hardcoded absolute
+# paths, so the hook survives being run under a different user or checkout.
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(dirname "$(dirname "$HOOK_DIR")")}"
 LOG_FILE="$PROJECT_DIR/.claude/hooks/session-end.log"
 PID_FILE="$PROJECT_DIR/.claude/hooks/session-end.pid"
 
@@ -31,6 +33,16 @@ cd "$PROJECT_DIR"
 # Nothing changed? Don't bother spawning Claude.
 if [[ -z "$(git status --porcelain)" ]]; then
   echo "$(date -Iseconds) SessionEnd: working tree clean, nothing to commit" >> "$LOG_FILE"
+  exit 0
+fi
+
+# PATH is minimal under a hook, so check the usual install location too.
+CLAUDE_BIN="$(command -v claude || true)"
+if [[ -z "$CLAUDE_BIN" && -x "$HOME/.local/bin/claude" ]]; then
+  CLAUDE_BIN="$HOME/.local/bin/claude"
+fi
+if [[ -z "$CLAUDE_BIN" ]]; then
+  echo "$(date -Iseconds) SessionEnd: no claude binary on PATH or in \$HOME/.local/bin, skipping" >> "$LOG_FILE"
   exit 0
 fi
 
