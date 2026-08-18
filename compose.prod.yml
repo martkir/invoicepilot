@@ -55,6 +55,9 @@ services:
       UNIPILE_API_KEY: ${UNIPILE_API_KEY:-}
       UNIPILE_DSN: ${UNIPILE_DSN:-}
       UNIPILE_NOTIFY_URL: ${UNIPILE_NOTIFY_URL:-}
+      # Optional. Without it a scan still runs; it just cannot teach
+      # itself an issuer no template covers.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       DEBUG_LOGS_ENABLED: ${DEBUG_LOGS_ENABLED:-false}
     volumes:
       # The extracted documents. A named volume rather than a bind mount: these

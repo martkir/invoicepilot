@@ -29,13 +29,19 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from invoicepilot.core.logging import get_logger
-from invoicepilot.invoice_store import Document
+from invoicepilot.invoice_store import DATA_ROOT, Document
 
 log = get_logger(__name__)
 
 # Loaded on top of the built-ins when present. Package data, resolved downward
 # from this module, so it is found the same way in a checkout and in a wheel.
 TEMPLATE_DIR = Path(__file__).resolve().parent / "templates" / "invoice2data"
+
+# Where learn.py writes the templates it drafts. Under the data directory
+# rather than beside the package's own, because the package ships inside a
+# container image: a template written there is lost on the next rebuild, while
+# this sits on the volume that already holds the invoices.
+GENERATED_TEMPLATE_DIR = DATA_ROOT / "templates"
 
 # invoice2data reads images only through OCR (tesseract), which is not a
 # dependency here — so images are never parsed. They are still filed when the
@@ -96,19 +102,36 @@ class Extracted:
 
 @lru_cache(maxsize=1)
 def templates() -> list:
-    """Built-in templates plus any local ones, loaded once per process.
+    """Built-in templates, then the repository's, then the generated ones.
 
     Cached because a server scans repeatedly and this reads ~215 YAML files.
+    Generated templates come last and carry a lower `priority`, so they can
+    never win a match over one a person wrote — which matters more than the
+    ordering suggests, because invoice2data runs only the *first* template
+    whose keywords match and does not fall through to the next when its fields
+    come up empty. A sloppy generated template that outranked a curated one
+    would not merely lose to it; it would silently block it.
     """
     from invoice2data.extract.loader import read_templates
 
     loaded = read_templates()
-    if TEMPLATE_DIR.is_dir():
-        local = read_templates(str(TEMPLATE_DIR))
-        log.debug("loaded %d built-in and %d local template(s)", len(loaded), len(local))
-        return loaded + local
-    log.debug("loaded %d built-in template(s)", len(loaded))
+    for directory in (TEMPLATE_DIR, GENERATED_TEMPLATE_DIR):
+        if not directory.is_dir():
+            continue
+        extra = read_templates(str(directory))
+        log.debug("loaded %d template(s) from %s", len(extra), directory)
+        loaded = loaded + extra
     return loaded
+
+
+def forget_templates() -> None:
+    """Drop the cache, so a template written since this process started loads.
+
+    Only learn.py needs this, and only right after it saves one — a long-lived
+    API process would otherwise go on failing to recognise the issuer it just
+    taught itself until the next restart.
+    """
+    templates.cache_clear()
 
 
 def parse_bytes(blob: bytes, suffix: str) -> tuple[dict | None, str | None]:
@@ -308,6 +331,19 @@ def nested_candidates(blob: bytes) -> list[Candidate]:
     return found
 
 
+def body_text(message: dict) -> str:
+    """A message's body as readable text — the provider's, or the markup stripped.
+
+    Shared with the gate, so what decides a message is worth teaching an issuer
+    for is exactly what a template would have been matched against.
+    """
+    text = message.get("body_plain") or ""
+    markup = message.get("body") or ""
+    if not text.strip() and markup:
+        text = readable_text(markup.encode(), is_html=True)
+    return text
+
+
 def candidates(message: dict, fetch: Fetch, *, include_body: bool = True) -> list[Candidate]:
     """Every document in one message worth handing to invoice2data."""
     found: list[Candidate] = []
@@ -339,9 +375,7 @@ def candidates(message: dict, fetch: Fetch, *, include_body: bool = True) -> lis
 
     if include_body:
         markup = message.get("body") or ""
-        text = message.get("body_plain") or ""
-        if not text.strip() and markup:
-            text = readable_text(markup.encode(), is_html=True)
+        text = body_text(message)
         if text.strip():
             found.append(
                 Candidate(
@@ -355,6 +389,27 @@ def candidates(message: dict, fetch: Fetch, *, include_body: bool = True) -> lis
             )
 
     return found
+
+
+def candidate_text(candidate: Candidate) -> str:
+    """The text invoice2data would match this candidate against.
+
+    What a generated template has to be written for, and what the model that
+    drafts it is shown — never the raw bytes, which for a PDF say nothing.
+    """
+    if candidate.suffix == ".txt":
+        return candidate.blob.decode("utf-8", errors="replace")
+
+    from invoice2data.input import pdfium
+
+    with tempfile.NamedTemporaryFile(suffix=candidate.suffix, prefix="invoicepilot-") as handle:
+        handle.write(candidate.blob)
+        handle.flush()
+        try:
+            return pdfium.to_text(handle.name) or ""
+        except Exception as exc:  # noqa: BLE001 — an unreadable document is not an error here
+            log.debug("could not read %s as text: %s", candidate.source_name, exc)
+            return ""
 
 
 def merge_fields(body: dict, document: dict) -> dict:

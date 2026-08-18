@@ -19,6 +19,11 @@ dependencies = [
     # already; `bitmap.to_pil()` is what needs this, and there is no WebP
     # encoder in the standard library.
     "pillow>=10.0",
+    # Drafts a template for an issuer no template covers (invoicepilot/learn.py).
+    # A hard dependency although the feature is optional, because the import is
+    # inside the request path and a missing package there would surface as a
+    # scan error rather than as the "no key configured" it actually is.
+    "anthropic>=0.69",
 ]
 
 [project.optional-dependencies]

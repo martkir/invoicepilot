@@ -275,6 +275,31 @@ document, so they cover every vendor Stripe bills for. Adding a template is the
 cheapest way to widen coverage — drop a YAML file in and the next scan picks it
 up, with `tests/test_templates.py` as the pattern for covering it.
 
+### Teaching itself an issuer
+
+A message that parses to nothing is ambiguous: either it is not an invoice, or
+it is one from an issuer nobody has written a template for. `gate.py` separates
+the two without calling anything — a total-shaped label next to a figure, a PDF
+attachment, or a sender like `receipts@`/`invoicing@`. Measured against 162 real
+messages, 94% of the invoices pass and 5 of 126 non-invoices do.
+
+For what passes the gate and still parses to nothing, a scan asks Claude to
+write the template — **once per sending domain, for the life of that domain**,
+at roughly five cents a time. Set `ANTHROPIC_API_KEY` to turn it on; without one
+everything else works unchanged and unknown issuers are simply reported.
+
+What the model returns is a template, never an invoice: it is asked where the
+fields are, not what they say. Every figure in the database is still extracted
+by regex from a YAML file you can read, and re-parsing an old invoice calls
+nothing. A draft is kept only if it reproduces the document it was written from
+and reads an amount that document actually states; otherwise it is discarded and
+the domain marked so the next scan does not pay to fail the same way.
+
+Kept templates land in `<data_dir>/templates/`, carry `priority: 1` so they can
+never outrank a hand-written one, and are unreviewed until you move them into
+`templates/invoice2data/` yourself. Run `invoicepilot scan --no-learn` to keep a
+scan entirely offline of any model.
+
 Recognised invoices are written under `.data/`, one directory per invoice
 holding `invoice.json`, the original `invoice.pdf` (when there was an
 attachment) and `source.html`. **`.data/` is gitignored** — it holds real

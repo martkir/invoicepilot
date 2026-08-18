@@ -14,7 +14,7 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from importlib.metadata import version
 
-from invoicepilot import extract, mailboxes
+from invoicepilot import extract, gate, learn, mailboxes
 from invoicepilot.accounts import list_connected
 from invoicepilot.core.db import session_scope
 from invoicepilot.core.logging import get_logger
@@ -40,6 +40,12 @@ RESCAN_OVERLAP = timedelta(days=1)
 # a page size. Hitting it means a scan could not finish the range it asked for,
 # which is reported rather than quietly rounded off — see scan_account.
 MAX_MESSAGES_PER_SCAN = 500
+
+# How many issuers one scan may teach itself. learn.teach already records every
+# domain it tries, so the real bound is the number of distinct senders and this
+# never binds twice; it exists so that the *first* scan of an unusually varied
+# mailbox cannot spend without limit before anyone sees the result.
+MAX_TEMPLATES_PER_SCAN = 8
 
 # Mail worth opening. Unipile hands this to the provider as a full-text query
 # over subject, body, attachment filenames and attachment contents, so it is
@@ -134,6 +140,24 @@ def keyword_query(keywords: tuple[str, ...] = INVOICE_KEYWORDS) -> str:
     return " OR ".join(keywords)
 
 
+def teachable_text(candidates: list) -> str:
+    """The one document from a message worth writing a template for.
+
+    A vendor's own attachment wins over the mail that carried it: the PDF is
+    the invoice, while the body is a summary of it, and only the document
+    states the invoice number and the VAT split. Failing that, the longest
+    text, which is the body rather than a footer or a signature block.
+    """
+    longest = ""
+    for candidate in candidates:
+        text = extract.candidate_text(candidate)
+        if candidate.document is not None and text.strip():
+            return text
+        if len(text) > len(longest):
+            longest = text
+    return longest
+
+
 def scan_from(workspace_id: str, mailbox: str, since: datetime | None = None) -> datetime:
     """The oldest message date this mailbox's next scan should reach.
 
@@ -176,6 +200,7 @@ def scan_account(
     *,
     follow_links: bool = True,
     keywords: bool = True,
+    learn_issuers: bool = True,
     since: datetime | None = None,
     on_progress: OnProgress | None = None,
 ) -> ScanResult:
@@ -207,17 +232,13 @@ def scan_account(
 
     tool = f"invoice2data {version('invoice2data')}"
     errors: list[ScanError] = []
-    found = new = 0
+    found = new = taught = 0
 
-    for index, message in enumerate(messages, start=1):
-        subject = message.get("subject") or "(no subject)"
-
-        def fetch(attachment_id: str, message: dict = message) -> bytes:
-            return download_attachment(
-                base, api_key, account_id, message["provider_id"], attachment_id
-            )
-
-        for candidate in extract.candidates(message, fetch):
+    def file_candidates(candidates: list, message: dict, subject: str, fetch: extract.Fetch) -> int:
+        """Parse and store whatever of one message parses. Returns how many."""
+        nonlocal found, new
+        filed = 0
+        for candidate in candidates:
             invoice, error = extract.extract(candidate, message, fetch, follow_links=follow_links)
             if error:
                 errors.append(ScanError(mailbox, subject, error))
@@ -252,6 +273,42 @@ def scan_account(
                 if save(session, workspace_id, invoice_id, payload):
                     new += 1
             found += 1
+            filed += 1
+        return filed
+
+    for index, message in enumerate(messages, start=1):
+        subject = message.get("subject") or "(no subject)"
+
+        def fetch(attachment_id: str, message: dict = message) -> bytes:
+            return download_attachment(
+                base, api_key, account_id, message["provider_id"], attachment_id
+            )
+
+        candidates = extract.candidates(message, fetch)
+        filed = file_candidates(candidates, message, subject, fetch)
+
+        # Nothing parsed. Either it is not an invoice, or it is one from an
+        # issuer nobody has taught — which the gate separates without a
+        # request, so only the second case reaches learn.teach.
+        if not filed and learn_issuers and taught < MAX_TEMPLATES_PER_SCAN:
+            sender = (message.get("from_attendee") or {}).get("identifier") or ""
+            if gate.looks_like_invoice(
+                sender,
+                extract.body_text(message),
+                has_attachment=bool(message.get("attachments")),
+            ):
+                try:
+                    path = learn.teach(teachable_text(candidates), sender)
+                except Exception as exc:  # noqa: BLE001 — one issuer must not end a scan
+                    log.warning("could not draft a template for %s: %s", sender, exc)
+                    errors.append(ScanError(mailbox, subject, f"could not draft a template: {exc}"))
+                    path = None
+                if path:
+                    taught += 1
+                    # Re-run the same message against the template it just
+                    # produced, so the invoice that paid for it is also the
+                    # first one filed by it.
+                    filed = file_candidates(candidates, message, subject, fetch)
 
         if on_progress:
             on_progress(Progress(mailbox, subject, index, len(messages), found))
@@ -291,6 +348,7 @@ def scan_all(
     *,
     follow_links: bool = True,
     keywords: bool = True,
+    learn_issuers: bool = True,
     since: datetime | None = None,
     on_progress: OnProgress | None = None,
 ) -> ScanResult:
@@ -332,6 +390,7 @@ def scan_all(
                     account,
                     follow_links=follow_links,
                     keywords=keywords,
+                    learn_issuers=learn_issuers,
                     since=since,
                     on_progress=relay if on_progress else None,
                 )

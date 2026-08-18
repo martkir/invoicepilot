@@ -51,6 +51,8 @@ invoicepilot/
     │           ├── migrate.py      # schema creation + backfill (`invoicepilot migrate`)
     │           ├── accounts.py     # domain: connected mailboxes
     │           ├── extract.py      # domain: documents -> invoice fields (pure)
+    │           ├── gate.py         # domain: is this message an invoice at all
+    │           ├── learn.py        # domain: draft a template for an untaught issuer
     │           ├── unipile.py      # domain: hosted-auth provider + mail transport
     │           ├── invoice_store.py# domain: extracted invoices on disk
     │           ├── invoices.py     # domain: extracted invoices in Postgres

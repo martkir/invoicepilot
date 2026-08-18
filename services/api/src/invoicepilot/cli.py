@@ -106,6 +106,14 @@ def scan(
             help="Fetch invoices linked from a message body. --no-follow-links stays offline."
         ),
     ] = True,
+    learn_issuers: Annotated[
+        bool,
+        typer.Option(
+            "--learn/--no-learn",
+            help="Draft a template for an issuer no template covers, once per sender. "
+            "Needs ANTHROPIC_API_KEY; without one the scan behaves as --no-learn.",
+        ),
+    ] = True,
 ) -> None:
     """Scan connected mailboxes for invoices and file what parses.
 
@@ -142,6 +150,7 @@ def scan(
             allowed,
             follow_links=follow_links,
             keywords=keywords,
+            learn_issuers=learn_issuers,
             since=since.replace(tzinfo=UTC) if since else None,
             on_progress=show,
         )
