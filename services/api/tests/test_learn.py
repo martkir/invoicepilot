@@ -7,6 +7,8 @@ and reads the wrong figure is worse than no template, so the tests are mostly
 about what gets *rejected*.
 """
 
+import os
+
 import pytest
 
 from invoicepilot import extract, learn
@@ -232,3 +234,18 @@ def test_nothing_configured_is_not_an_error(tmp_path, monkeypatch):
 
     assert not learn.credentials_available()
     assert learn.provider() is None
+
+
+def test_an_empty_api_key_does_not_shadow_a_token(monkeypatch):
+    """compose passes `${ANTHROPIC_API_KEY:-}`, so unset arrives as empty.
+
+    Left in place it wins the SDK's resolution order and authenticates with
+    nothing, which is a 401 that names neither the variable nor the token it
+    hid. Removing it is what makes the auth-token deployment work at all.
+    """
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "sk-ant-oat01-example")
+    learn.get_settings.cache_clear()
+
+    assert learn.provider() is not None
+    assert "ANTHROPIC_API_KEY" not in os.environ

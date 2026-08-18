@@ -235,14 +235,14 @@ def provider() -> Claude | None:
     """
     settings = get_settings()
     # An ANTHROPIC_API_KEY set to the empty string is the documented trap: it
-    # still wins its place in the resolution order and authenticates with
-    # nothing, shadowing a profile that would have worked. Worth saying out
-    # loud, because the resulting 401 names none of this.
+    # still wins its place in the SDK's resolution order and authenticates with
+    # nothing, shadowing a token or profile that would have worked, and the 401
+    # it produces mentions none of that. Removed rather than warned about,
+    # because compose.prod.yml passes `${ANTHROPIC_API_KEY:-}` and so sets it
+    # empty on every deployment that has not configured one — which is exactly
+    # the deployment most likely to be using one of the others.
     if os.environ.get("ANTHROPIC_API_KEY") == "":
-        log.warning(
-            "ANTHROPIC_API_KEY is set but empty, which shadows every other "
-            "credential source. Unset it, or give it a value."
-        )
+        del os.environ["ANTHROPIC_API_KEY"]
     if not credentials_available():
         return None
     return Claude(settings.anthropic_model, api_key=settings.anthropic_api_key or None)
